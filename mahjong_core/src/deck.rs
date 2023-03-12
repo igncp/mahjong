@@ -3,8 +3,8 @@ use rand::thread_rng;
 use std::collections::HashMap;
 
 use crate::{
-    Deck, Dragon, DragonTile, Flower, FlowerTile, HandTile, Hands, Player, Season, SeasonTile,
-    Suit, SuitTile, Table, Tile, TileId, Wind, WindTile,
+    Deck, Dragon, DragonTile, Flower, FlowerTile, HandTile, Hands, Player, Round, Season,
+    SeasonTile, Suit, SuitTile, Table, Tile, TileId, Wind, WindTile,
 };
 
 pub fn get_default_deck() -> Deck {
@@ -113,5 +113,13 @@ pub fn create_table(deck: &Deck, players: &[Player]) -> Table {
         board: vec![],
         draw_wall,
         hands,
+    }
+}
+
+pub fn create_round() -> Round {
+    Round {
+        player_index: 0,
+        wall_tile_drawn: None,
+        wind: Wind::East,
     }
 }

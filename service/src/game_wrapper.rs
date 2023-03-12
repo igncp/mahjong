@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use mahjong_core::{
-    deck::{create_table, get_default_deck},
+    deck::{create_round, create_table, get_default_deck},
     Game, GamePhase, Player, Score,
 };
 use uuid::Uuid;
@@ -25,6 +25,7 @@ pub fn create_game() -> Game {
 
     let deck = get_default_deck();
     let table = create_table(&deck, &players);
+    let round = create_round();
 
     Game {
         deck,
@@ -32,6 +33,7 @@ pub fn create_game() -> Game {
         name: "Service Game".to_string(),
         phase: GamePhase::Beginning,
         players,
+        round,
         score,
         table,
     }

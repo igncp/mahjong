@@ -120,12 +120,20 @@ pub type Score = HashMap<PlayerId, u32>;
 pub type Deck = HashMap<TileId, Tile>;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Round {
+    player_index: usize,
+    wind: Wind,
+    wall_tile_drawn: Option<TileId>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Game {
     pub deck: Deck,
     pub id: String,
     pub name: String,
     pub phase: GamePhase,
     pub players: Vec<Player>,
+    pub round: Round,
     pub score: Score,
     pub table: Table,
 }
