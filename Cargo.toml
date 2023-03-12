@@ -1,0 +1,13 @@
+[workspace]
+members = [
+    "tui_client",
+    "mahjong_core",
+    "service"
+]
+
+[profile.release]
+opt-level = 'z'
+codegen-units = 1
+lto = true
+strip = true
+panic = "abort"

@@ -1,0 +1,13 @@
+[package]
+name = "mahjong_tui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.1.8", features = ["cargo"] }
+crossterm = "0.26.1"
+mahjong_core = { path = "../mahjong_core" }
+reqwest = { version = "0.11.14", features = ["json"] }
+serde_json = "1.0.94"
+tokio = { version = "1.26.0", features = ["full"] }
+tui = "0.19.0"

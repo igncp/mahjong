@@ -1,0 +1,12 @@
+[package]
+name = "mahjong_service"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4.3.1"
+async-trait = "0.1.66"
+mahjong_core = { path = "../mahjong_core" }
+serde = { version = "1.0.155", features = ["derive"] }
+serde_json = "1.0.94"
+uuid = { version = "1.3.0", features = ["v4", "fast-rng", "macro-diagnostics"] }
