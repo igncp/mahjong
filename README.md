@@ -1,6 +1,6 @@
 # 麻雀 - Mahjong
 
-- ![Check](https://github.com/github/docs/actions/workflows/check.yml/badge.svg)
+- ![Checks](https://github.com/igncp/mahjong/actions/workflows/checks.yml/badge.svg)
 
 Proof of concept project to practice Rust programming. The idea is to include:
 
