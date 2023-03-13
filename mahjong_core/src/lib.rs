@@ -1,12 +1,17 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
+use tile::{Tile, TileId};
 
 pub mod deck;
+pub mod meld;
+pub mod round;
 mod test_deck;
+mod test_meld;
+mod test_round;
+pub mod tile;
 
 type PlayerId = String;
-type TileId = u32;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Player {
@@ -14,14 +19,14 @@ pub struct Player {
     pub id: PlayerId,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum GamePhase {
     Beginning,
     End,
     Playing,
 }
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Suit {
     Bamboo,
     Characters,
@@ -35,7 +40,7 @@ pub struct SuitTile {
     suit: Suit,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Wind {
     East,
     North,
@@ -43,13 +48,16 @@ pub enum Wind {
     West,
 }
 
+// Note that this order is reversed to the compass directions, since it is counter-clockwise
+pub const WINDS_ROUND_ORDER: &[Wind] = &[Wind::East, Wind::South, Wind::West, Wind::North];
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WindTile {
     id: TileId,
     value: Wind,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Dragon {
     Green,
     Red,
@@ -62,7 +70,7 @@ pub struct DragonTile {
     value: Dragon,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Flower {
     Bamboo,
     Chrysanthemum,
@@ -76,7 +84,7 @@ pub struct FlowerTile {
     value: Flower,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Season {
     Autumn,
     Spring,
@@ -88,15 +96,6 @@ pub enum Season {
 pub struct SeasonTile {
     id: TileId,
     value: Season,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum Tile {
-    Dragon(DragonTile),
-    Suit(SuitTile),
-    Wind(WindTile),
-    Flower(FlowerTile),
-    Season(SeasonTile),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -119,11 +118,20 @@ pub struct Table {
 pub type Score = HashMap<PlayerId, u32>;
 pub type Deck = HashMap<TileId, Tile>;
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct RoundTileClaimed {
+    by: Option<PlayerId>,
+    from: PlayerId,
+    id: TileId,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Round {
+    dealer_player_index: usize,
     player_index: usize,
-    wind: Wind,
+    tile_claimed: Option<RoundTileClaimed>,
     wall_tile_drawn: Option<TileId>,
+    wind: Wind,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

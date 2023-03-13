@@ -3,8 +3,8 @@ use rand::thread_rng;
 use std::collections::HashMap;
 
 use crate::{
-    Deck, Dragon, DragonTile, Flower, FlowerTile, HandTile, Hands, Player, Round, Season,
-    SeasonTile, Suit, SuitTile, Table, Tile, TileId, Wind, WindTile,
+    Deck, Dragon, DragonTile, Flower, FlowerTile, HandTile, Hands, Player, Season, SeasonTile,
+    Suit, SuitTile, Table, Tile, TileId, Wind, WindTile,
 };
 
 pub fn get_default_deck() -> Deck {
@@ -73,13 +73,7 @@ pub fn get_default_deck() -> Deck {
     deck_list.iter().enumerate().for_each(|(index, tile)| {
         let mut tile = tile.clone();
         let id = u32::try_from(index).unwrap();
-        match tile {
-            Tile::Suit(ref mut tile) => tile.id = id,
-            Tile::Wind(ref mut tile) => tile.id = id,
-            Tile::Dragon(ref mut tile) => tile.id = id,
-            Tile::Season(ref mut tile) => tile.id = id,
-            Tile::Flower(ref mut tile) => tile.id = id,
-        }
+        tile.set_id(id);
         deck.insert(id, tile);
     });
 
@@ -113,13 +107,5 @@ pub fn create_table(deck: &Deck, players: &[Player]) -> Table {
         board: vec![],
         draw_wall,
         hands,
-    }
-}
-
-pub fn create_round() -> Round {
-    Round {
-        player_index: 0,
-        wall_tile_drawn: None,
-        wind: Wind::East,
     }
 }

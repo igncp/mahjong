@@ -5,3 +5,5 @@
     - http://mahjongtime.com/scoring-chart.html
 
 - PoC written in TS: https://github.com/igncp/board-games/tree/master/mahjong
+- Melds:
+    - Pung: http://mahjong.wikidot.com/pung
