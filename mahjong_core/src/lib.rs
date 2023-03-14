@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
+pub use game::{Game, GamePhase};
 use serde::{Deserialize, Serialize};
-use tile::{Tile, TileId};
+pub use tile::{Tile, TileId};
 
 pub mod deck;
+pub mod game;
 pub mod meld;
 pub mod round;
 mod test_deck;
@@ -17,13 +19,6 @@ type PlayerId = String;
 pub struct Player {
     pub name: String,
     pub id: PlayerId,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub enum GamePhase {
-    Beginning,
-    End,
-    Playing,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
@@ -98,19 +93,22 @@ pub struct SeasonTile {
     value: Season,
 }
 
+pub type SetId = Option<String>;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HandTile {
     concealed: bool,
     id: TileId,
-    set_id: Option<String>,
+    set_id: SetId,
 }
 
 pub type Hand = Vec<HandTile>;
+pub type Board = Vec<TileId>;
 pub type Hands = HashMap<PlayerId, Hand>;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Table {
-    board: Vec<TileId>,
+    board: Board,
     draw_wall: Vec<TileId>,
     hands: Hands,
 }
@@ -132,16 +130,4 @@ pub struct Round {
     tile_claimed: Option<RoundTileClaimed>,
     wall_tile_drawn: Option<TileId>,
     wind: Wind,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Game {
-    pub deck: Deck,
-    pub id: String,
-    pub name: String,
-    pub phase: GamePhase,
-    pub players: Vec<Player>,
-    pub round: Round,
-    pub score: Score,
-    pub table: Table,
 }

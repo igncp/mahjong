@@ -7,3 +7,9 @@
 - PoC written in TS: https://github.com/igncp/board-games/tree/master/mahjong
 - Melds:
     - Pung: http://mahjong.wikidot.com/pung
+    - Chow: http://mahjong.wikidot.com/chow
+    - Kong: http://mahjong.wikidot.com/kong
+
+- https://www.mahjongtime.com/hong-kong-mahjong-rules.html
+- http://mahjong.wikidot.com/
+- https://en.wikipedia.org/wiki/Mahjong_tiles
