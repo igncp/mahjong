@@ -1,9 +1,6 @@
 #[cfg(test)]
 mod test {
-    use crate::{
-        round::{continue_round, move_round_after_win},
-        GamePhase, HandTile, Round, Wind,
-    };
+    use crate::{GamePhase, HandTile, Round, Wind};
 
     fn compare_rounds(round: &Round, expected_round: &Round, test_index: usize) {
         assert_eq!(
@@ -66,12 +63,13 @@ mod test {
     }
 
     #[test]
-    fn test_continue_round() {
+    fn test_round_next() {
         for (test_index, (round, expected_round)) in
             get_continue_round_fixtures().iter().enumerate()
         {
             let mut round = round.clone();
             let mut hands: Vec<Vec<HandTile>> = vec![vec![]];
+
             for _ in 0..13 {
                 hands[0].push(HandTile {
                     concealed: false,
@@ -79,7 +77,8 @@ mod test {
                     set_id: None,
                 });
             }
-            continue_round(&mut round, hands);
+
+            round.next(hands);
 
             compare_rounds(&round, expected_round, test_index);
         }
@@ -151,7 +150,7 @@ mod test {
         {
             let mut round = round.clone();
             let mut initial_phase = GamePhase::Playing;
-            move_round_after_win(&mut round, &mut initial_phase);
+            round.move_after_win(&mut initial_phase);
 
             compare_rounds(&round, expected_round, test_index);
             assert_eq!(initial_phase, *expected_phase, "test_index: {test_index}",);

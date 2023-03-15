@@ -2,6 +2,7 @@
 mod test {
     use std::collections::HashMap;
 
+    use crate::deck::DeckContent;
     use crate::meld::{
         get_is_chow, get_is_kong, get_is_pung, get_possible_melds, GetPossibleMelds, Meld,
         PlayerDiff, SetCheckOpts,
@@ -114,10 +115,11 @@ mod test {
     fn test_is_pung() {
         for (index, (tiles, expected_is_pung)) in get_is_pung_fixtures().iter().enumerate() {
             let sub_hand = tiles.iter().map(|tile| tile.get_id()).collect();
-            let deck = tiles
+            let deck_content: DeckContent = tiles
                 .iter()
                 .map(|tile| (tile.get_id(), tile.clone()))
                 .collect();
+            let deck = Deck(deck_content);
             let opts = SetCheckOpts {
                 board_tile_player_diff: None,
                 claimed_tile: None,
@@ -229,10 +231,12 @@ mod test {
             get_is_chow_fixtures().iter().enumerate()
         {
             let sub_hand = tiles.iter().map(|tile| tile.get_id()).collect();
-            let deck = tiles
-                .iter()
-                .map(|tile| (tile.get_id(), tile.clone()))
-                .collect();
+            let deck = Deck(
+                tiles
+                    .iter()
+                    .map(|tile| (tile.get_id(), tile.clone()))
+                    .collect(),
+            );
             let opts = SetCheckOpts {
                 board_tile_player_diff: *board_tile_player_diff,
                 claimed_tile: *claimed_tile,
@@ -275,10 +279,12 @@ mod test {
     fn test_get_is_kong() {
         for (index, (tiles, expected_is_kong)) in get_is_kong_fixtures().iter().enumerate() {
             let sub_hand = tiles.iter().map(|tile| tile.get_id()).collect();
-            let deck = tiles
-                .iter()
-                .map(|tile| (tile.get_id(), tile.clone()))
-                .collect();
+            let deck = Deck(
+                tiles
+                    .iter()
+                    .map(|tile| (tile.get_id(), tile.clone()))
+                    .collect(),
+            );
             let opts = SetCheckOpts {
                 board_tile_player_diff: None,
                 claimed_tile: None,
@@ -316,7 +322,12 @@ mod test {
                 get_hand_tile(2),
                 get_hand_tile(3),
             ],
-            HashMap::from_iter(vec![get_tile(0), get_tile(1), get_tile(2), get_tile(3)]),
+            Deck(HashMap::from_iter(vec![
+                get_tile(0),
+                get_tile(1),
+                get_tile(2),
+                get_tile(3),
+            ])),
             Some(0),
             vec![
                 vec![0, 1, 2],
@@ -334,8 +345,8 @@ mod test {
             get_possible_melds_fixtures().iter().enumerate()
         {
             let opts = GetPossibleMelds {
-                hand: hand.clone(),
-                deck: deck.clone(),
+                hand,
+                deck,
                 board_tile_player_diff: *player_diff,
                 claimed_tile: None,
             };

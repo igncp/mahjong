@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+pub use deck::Deck;
 pub use game::{Game, GamePhase};
 use serde::{Deserialize, Serialize};
 pub use tile::{Tile, TileId};
@@ -8,7 +9,9 @@ pub mod deck;
 pub mod game;
 pub mod meld;
 pub mod round;
+pub mod score;
 mod test_deck;
+mod test_game;
 mod test_meld;
 mod test_round;
 pub mod tile;
@@ -95,26 +98,36 @@ pub struct SeasonTile {
 
 pub type SetId = Option<String>;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct HandTile {
     concealed: bool,
     id: TileId,
     set_id: SetId,
 }
 
+impl HandTile {
+    pub fn from_id(id: TileId) -> Self {
+        Self {
+            id,
+            set_id: None,
+            concealed: true,
+        }
+    }
+}
+
 pub type Hand = Vec<HandTile>;
 pub type Board = Vec<TileId>;
 pub type Hands = HashMap<PlayerId, Hand>;
+pub type DrawWall = Vec<TileId>;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Table {
     board: Board,
-    draw_wall: Vec<TileId>,
+    draw_wall: DrawWall,
     hands: Hands,
 }
 
 pub type Score = HashMap<PlayerId, u32>;
-pub type Deck = HashMap<TileId, Tile>;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct RoundTileClaimed {
@@ -123,11 +136,13 @@ pub struct RoundTileClaimed {
     id: TileId,
 }
 
+pub type TileClaimed = Option<RoundTileClaimed>;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Round {
     dealer_player_index: usize,
     player_index: usize,
-    tile_claimed: Option<RoundTileClaimed>,
+    tile_claimed: TileClaimed,
     wall_tile_drawn: Option<TileId>,
     wind: Wind,
 }

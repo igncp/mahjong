@@ -1,4 +1,8 @@
-use crate::{Deck, HandTile, Hands, Player, PlayerId, Round, SetId, SuitTile, Tile, TileId};
+use std::collections::HashMap;
+
+use crate::{
+    Deck, HandTile, Hands, Player, PlayerId, Round, SetId, SuitTile, Tile, TileClaimed, TileId,
+};
 
 pub type PlayerDiff = Option<i32>;
 
@@ -19,8 +23,8 @@ pub fn get_is_pung(opts: &SetCheckOpts) -> bool {
 
     for tile_index in 1..3 {
         let tile_id = opts.sub_hand[tile_index];
-        let last_tile = opts.deck.get(&last_tile_id);
-        let tile = opts.deck.get(&tile_id);
+        let last_tile = opts.deck.0.get(&last_tile_id);
+        let tile = opts.deck.0.get(&tile_id);
 
         if tile.is_none() || last_tile.is_none() {
             return false;
@@ -66,7 +70,7 @@ pub fn get_is_chow(opts: &SetCheckOpts) -> bool {
     let mut suit_tiles: Vec<SuitTile> = vec![];
 
     for tile_id in opts.sub_hand.clone() {
-        let tile = opts.deck.get(&tile_id);
+        let tile = opts.deck.0.get(&tile_id);
 
         if tile.is_none() {
             return false;
@@ -89,7 +93,7 @@ pub fn get_is_chow(opts: &SetCheckOpts) -> bool {
     let mut last_tile_id = suit_tiles[0].id;
 
     for tile_index in 1..3 {
-        let last_tile = opts.deck.get(&last_tile_id);
+        let last_tile = opts.deck.0.get(&last_tile_id);
         let tile = suit_tiles.get(tile_index);
 
         if tile.is_none() || last_tile.is_none() {
@@ -125,8 +129,8 @@ pub fn get_is_kong(opts: &SetCheckOpts) -> bool {
 
     for tile_index in 1..4 {
         let tile_id = opts.sub_hand[tile_index];
-        let last_tile = opts.deck.get(&last_tile_id);
-        let tile = opts.deck.get(&tile_id);
+        let last_tile = opts.deck.0.get(&last_tile_id);
+        let tile = opts.deck.0.get(&tile_id);
 
         if tile.is_none() || last_tile.is_none() {
             return false;
@@ -152,15 +156,15 @@ pub fn get_is_kong(opts: &SetCheckOpts) -> bool {
     true
 }
 
-pub struct GetBoardTilePlayerDiff {
-    hand: Vec<HandTile>,
-    players: Vec<Player>,
-    round: Round,
-    player_id: PlayerId,
+pub struct GetBoardTilePlayerDiff<'a> {
+    pub hand: &'a Vec<HandTile>,
+    pub players: &'a Vec<Player>,
+    pub round: &'a Round,
+    pub player_id: &'a PlayerId,
 }
 
-pub fn get_board_tile_player_diff(opts: GetBoardTilePlayerDiff) -> PlayerDiff {
-    let tile_claimed = opts.round.tile_claimed;
+pub fn get_board_tile_player_diff(opts: &GetBoardTilePlayerDiff) -> PlayerDiff {
+    let tile_claimed = opts.round.tile_claimed.clone();
 
     if let Some(tile_claimed) = tile_claimed {
         tile_claimed.by?;
@@ -169,7 +173,7 @@ pub fn get_board_tile_player_diff(opts: GetBoardTilePlayerDiff) -> PlayerDiff {
             return None;
         }
 
-        let player_index = opts.players.iter().position(|p| p.id == opts.player_id);
+        let player_index = opts.players.iter().position(|p| &p.id == opts.player_id);
         let other_player_index = opts.players.iter().position(|p| p.id == tile_claimed.from);
 
         if player_index.is_none() || other_player_index.is_none() {
@@ -185,14 +189,69 @@ pub fn get_board_tile_player_diff(opts: GetBoardTilePlayerDiff) -> PlayerDiff {
     None
 }
 
-pub struct GetPossibleMelds {
-    pub board_tile_player_diff: PlayerDiff,
-    pub claimed_tile: Option<TileId>,
-    pub deck: Deck,
-    pub hand: Vec<HandTile>,
+type MeldsCollection = HashMap<String, Vec<HandTile>>;
+
+pub struct GetHandMeldsReturn {
+    pub melds: MeldsCollection,
+    pub tiles_without_meld: usize,
+}
+
+pub fn get_hand_melds(hand: &Vec<HandTile>) -> GetHandMeldsReturn {
+    let mut melds: MeldsCollection = HashMap::new();
+    let mut tiles_without_meld = 0;
+
+    for hand_tile in hand {
+        if hand_tile.set_id.is_none() {
+            tiles_without_meld += 1;
+
+            continue;
+        }
+        let set_id = hand_tile.set_id.clone().unwrap();
+        let list = melds.get(&set_id);
+
+        let mut list = match list {
+            Some(list) => list.clone(),
+            None => vec![],
+        };
+
+        list.push(hand_tile.clone());
+
+        melds.insert(set_id, list);
+    }
+
+    GetHandMeldsReturn {
+        melds,
+        tiles_without_meld,
+    }
+}
+
+pub fn get_tile_claimed_id_for_user(
+    player_id: &PlayerId,
+    tile_claimed: &TileClaimed,
+) -> Option<TileId> {
+    if tile_claimed.is_none() {
+        return None;
+    }
+
+    let tile_claimed = tile_claimed.clone().unwrap();
+
+    tile_claimed.clone().by?;
+
+    if tile_claimed.by.unwrap() == *player_id {
+        return Some(tile_claimed.id);
+    }
+
+    None
 }
 
 pub type Meld = Vec<TileId>;
+
+pub struct GetPossibleMelds<'a> {
+    pub board_tile_player_diff: PlayerDiff,
+    pub claimed_tile: Option<TileId>,
+    pub deck: &'a Deck,
+    pub hand: &'a Vec<HandTile>,
+}
 
 pub fn get_possible_melds(opts: &GetPossibleMelds) -> Vec<Meld> {
     let hand_filtered: Vec<HandTile> = opts
@@ -214,7 +273,7 @@ pub fn get_possible_melds(opts: &GetPossibleMelds) -> Vec<Meld> {
                 let opts = SetCheckOpts {
                     board_tile_player_diff: opts.board_tile_player_diff,
                     claimed_tile: opts.claimed_tile,
-                    deck: &opts.deck,
+                    deck: opts.deck,
                     sub_hand: &sub_hand,
                 };
 
