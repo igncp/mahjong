@@ -18,7 +18,7 @@ mod test_meld;
 mod test_round;
 pub mod tile;
 
-type PlayerId = String;
+pub type PlayerId = String;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Player {

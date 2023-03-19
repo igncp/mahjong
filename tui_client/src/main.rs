@@ -4,10 +4,10 @@ use std::path::PathBuf;
 use ui::UI;
 
 mod base;
-mod formatter;
 mod log;
 mod service_http_client;
 mod ui;
+mod view;
 
 #[tokio::main]
 async fn main() {

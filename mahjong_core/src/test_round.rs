@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod test {
-    use crate::{GamePhase, HandTile, Round, Wind};
+    use std::collections::HashMap;
+
+    use crate::{GamePhase, Hand, HandTile, Hands, Round, Wind};
 
     fn compare_rounds(round: &Round, expected_round: &Round, test_index: usize) {
         assert_eq!(
@@ -68,17 +70,19 @@ mod test {
             get_continue_round_fixtures().iter().enumerate()
         {
             let mut round = round.clone();
-            let mut hands: Vec<Vec<HandTile>> = vec![vec![]];
+            let mut hands: Hands = HashMap::new();
+
+            hands.insert("0".to_string(), Hand(vec![]));
 
             for _ in 0..13 {
-                hands[0].push(HandTile {
+                hands.get_mut("0").unwrap().0.push(HandTile {
                     concealed: false,
                     id: 0,
                     set_id: None,
                 });
             }
 
-            round.next(hands);
+            round.next(&hands);
 
             compare_rounds(&round, expected_round, test_index);
         }

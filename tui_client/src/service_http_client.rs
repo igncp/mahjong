@@ -1,10 +1,16 @@
+use std::collections::HashSet;
+
 use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
-use mahjong_core::{Game, GameId, Hands};
+use mahjong_core::{Game, GameId, Hands, PlayerId, TileId};
 use reqwest::Error;
-use service_contracts::{AdminGetGamesResponse, AdminPostDrawTileResponse, SocketMessage};
+use service_contracts::{
+    AdminGetGamesResponse, AdminPostCreateMeldRequest, AdminPostCreateMeldResponse,
+    AdminPostDiscardTileRequest, AdminPostDiscardTileResponse, AdminPostDrawTileResponse,
+    AdminPostMovePlayerResponse, SocketMessage,
+};
 use tokio::net::TcpStream;
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 
@@ -64,6 +70,11 @@ impl ServiceHTTPClient {
 
         loop {
             let response = read.next().await;
+
+            if response.is_none() {
+                return Err("Failed to read message".to_string());
+            }
+
             let msg = response.unwrap().unwrap();
             let msg = msg.to_string();
 
@@ -180,6 +191,68 @@ impl ServiceHTTPClient {
             let hand = result.unwrap().json::<AdminPostDrawTileResponse>().await;
             if hand.is_err() {
                 return Err("Tile could not be drawn".to_string());
+            }
+            Ok(hand.unwrap())
+        } else {
+            Err(validation.err().unwrap())
+        }
+    }
+
+    pub async fn admin_create_meld(
+        &self,
+        game_id: &GameId,
+        player_id: &PlayerId,
+        tiles: &HashSet<TileId>,
+    ) -> Result<AdminPostCreateMeldResponse, String> {
+        let url = format!("{}/v1/admin/game/{game_id}/create-meld", self.url);
+        let request_body = AdminPostCreateMeldRequest {
+            player_id: player_id.clone(),
+            tiles: tiles.clone(),
+        };
+        let result = self.client.post(url).json(&request_body).send().await;
+        let validation = validate_response(&result);
+        if validation.is_ok() {
+            let hand = result.unwrap().json::<AdminPostCreateMeldResponse>().await;
+            if hand.is_err() {
+                return Err("Meld could not be created".to_string());
+            }
+            Ok(hand.unwrap())
+        } else {
+            Err(validation.err().unwrap())
+        }
+    }
+
+    pub async fn admin_discard_tile(
+        &self,
+        game_id: &GameId,
+        tile_id: &TileId,
+    ) -> Result<AdminPostDiscardTileResponse, String> {
+        let url = format!("{}/v1/admin/game/{game_id}/discard-tile", self.url);
+        let request_body = AdminPostDiscardTileRequest { tile_id: *tile_id };
+        let result = self.client.post(url).json(&request_body).send().await;
+        let validation = validate_response(&result);
+        if validation.is_ok() {
+            let hand = result.unwrap().json::<AdminPostDiscardTileResponse>().await;
+            if hand.is_err() {
+                return Err("Tile could not be discarded".to_string());
+            }
+            Ok(hand.unwrap())
+        } else {
+            Err(validation.err().unwrap())
+        }
+    }
+
+    pub async fn admin_move_player(
+        &self,
+        game_id: &GameId,
+    ) -> Result<AdminPostMovePlayerResponse, String> {
+        let url = format!("{}/v1/admin/game/{game_id}/move-player", self.url);
+        let result = self.client.post(url).send().await;
+        let validation = validate_response(&result);
+        if validation.is_ok() {
+            let hand = result.unwrap().json::<AdminPostDiscardTileResponse>().await;
+            if hand.is_err() {
+                return Err("Could not move player".to_string());
             }
             Ok(hand.unwrap())
         } else {

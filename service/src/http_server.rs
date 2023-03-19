@@ -1,15 +1,19 @@
-use crate::socket_server::{ClientMessage, MahjongWebsocketServer};
+use crate::common::Storage;
+use crate::game_wrapper;
+use crate::socket_server::MahjongWebsocketServer;
 use crate::socket_session::MahjongWebsocketSession;
-use crate::{common::Storage, game_wrapper::create_game};
 use actix::prelude::*;
 use actix_web::{get, post, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web_actors::ws;
 use serde::Deserialize;
-use service_contracts::{AdminGetGamesResponse, AdminPostDrawTileResponse, SocketMessage};
+use service_contracts::{
+    AdminGetGamesResponse, AdminPostCreateMeldRequest, AdminPostDiscardTileRequest,
+};
 use std::sync::Arc;
 use std::time::Instant;
 
-type StorageData = web::Data<Arc<Box<dyn Storage>>>;
+pub type StorageData = web::Data<Arc<Box<dyn Storage>>>;
+pub type SocketServer = web::Data<Addr<MahjongWebsocketServer>>;
 
 #[get("/health")]
 async fn get_health() -> impl Responder {
@@ -30,14 +34,10 @@ async fn admin_get_games(storage: StorageData) -> impl Responder {
 }
 
 #[post("/v1/admin/game")]
-async fn admin_post_game(storage: StorageData) -> impl Responder {
-    let game = create_game();
-    let save_result = storage.save_game(&game).await;
+async fn admin_post_game(storage: StorageData, srv: SocketServer) -> impl Responder {
+    let game_wrapper = game_wrapper::GameWrapper::from_new_game(storage, srv).await;
 
-    match save_result {
-        Ok(_) => HttpResponse::Ok().json(game),
-        Err(_) => HttpResponse::InternalServerError().body("Error creating game"),
-    }
+    game_wrapper.handle_new_game().await
 }
 
 #[get("/v1/admin/game/{game_id}")]
@@ -54,38 +54,13 @@ async fn admin_get_game_by_id(storage: StorageData, game_id: web::Path<String>) 
 async fn admin_post_game_sort_hands(
     storage: StorageData,
     game_id: web::Path<String>,
-    srv: web::Data<Addr<MahjongWebsocketServer>>,
+    srv: SocketServer,
 ) -> impl Responder {
-    let game = storage.get_game(&game_id.to_string()).await;
+    let game_wrapper = game_wrapper::GameWrapper::from_storage(storage, &game_id, srv).await;
 
-    if game.is_err() {
-        return HttpResponse::InternalServerError().body("Error loading game");
-    }
-
-    let game_content = game.unwrap();
-
-    if game_content.is_none() {
-        return HttpResponse::BadRequest().body("No game found");
-    }
-
-    let mut game = game_content.unwrap();
-
-    for player in game.players.iter() {
-        let hand = game.table.hands.get_mut(&player.id).unwrap();
-        hand.sort_default(&game.deck);
-    }
-
-    let save_result = storage.save_game(&game).await;
-
-    srv.do_send(ClientMessage {
-        id: rand::random(),
-        msg: SocketMessage::GameUpdate(game.clone()),
-        room: game_id.to_string(),
-    });
-
-    match save_result {
-        Ok(_) => HttpResponse::Ok().json(game.table.hands),
-        Err(_) => HttpResponse::InternalServerError().body("Error sorting hands"),
+    match game_wrapper {
+        Ok(mut game_wrapper) => game_wrapper.handle_sort_hands().await,
+        Err(err) => err,
     }
 }
 
@@ -93,29 +68,57 @@ async fn admin_post_game_sort_hands(
 async fn admin_post_game_draw_tile(
     storage: StorageData,
     game_id: web::Path<String>,
+    srv: SocketServer,
 ) -> impl Responder {
-    let game = storage.get_game(&game_id.to_string()).await;
-    if game.is_err() {
-        return HttpResponse::InternalServerError().body("Error loading game");
+    let game_wrapper = game_wrapper::GameWrapper::from_storage(storage, &game_id, srv).await;
+
+    match game_wrapper {
+        Ok(mut game_wrapper) => game_wrapper.handle_draw_tile().await,
+        Err(err) => err,
     }
-    let game_content = game.unwrap();
-    if game_content.is_none() {
-        return HttpResponse::BadRequest().body("No game found");
+}
+
+#[post("/v1/admin/game/{game_id}/move-player")]
+async fn admin_post_game_move_player(
+    storage: StorageData,
+    game_id: web::Path<String>,
+    srv: SocketServer,
+) -> impl Responder {
+    let game_wrapper = game_wrapper::GameWrapper::from_storage(storage, &game_id, srv).await;
+
+    match game_wrapper {
+        Ok(mut game_wrapper) => game_wrapper.handle_move_player().await,
+        Err(err) => err,
     }
-    let mut game = game_content.unwrap();
+}
 
-    game.draw_tile_from_wall();
+#[post("/v1/admin/game/{game_id}/create-meld")]
+async fn admin_post_game_create_meld(
+    storage: StorageData,
+    body: web::Json<AdminPostCreateMeldRequest>,
+    game_id: web::Path<String>,
+    srv: SocketServer,
+) -> impl Responder {
+    let game_wrapper = game_wrapper::GameWrapper::from_storage(storage, &game_id, srv).await;
 
-    let save_result = storage.save_game(&game).await;
-    let current_player_id = game.get_current_player().id.clone();
-    let hand = game.table.hands.get(&current_player_id).unwrap();
+    match game_wrapper {
+        Ok(mut game_wrapper) => game_wrapper.handle_create_meld(&body).await,
+        Err(err) => err,
+    }
+}
 
-    match save_result {
-        Ok(_) => {
-            let response: AdminPostDrawTileResponse = hand.clone();
-            HttpResponse::Ok().json(response)
-        }
-        Err(_) => HttpResponse::InternalServerError().body("Error sorting hands"),
+#[post("/v1/admin/game/{game_id}/discard-tile")]
+async fn admin_post_game_discard_tile(
+    storage: StorageData,
+    body: web::Json<AdminPostDiscardTileRequest>,
+    game_id: web::Path<String>,
+    srv: SocketServer,
+) -> impl Responder {
+    let game_wrapper = game_wrapper::GameWrapper::from_storage(storage, &game_id, srv).await;
+
+    match game_wrapper {
+        Ok(mut game_wrapper) => game_wrapper.handle_discard_tile(&body.tile_id).await,
+        Err(err) => err,
     }
 }
 
@@ -173,6 +176,9 @@ impl MahjongServer {
                 .service(admin_get_game_by_id)
                 .service(admin_post_game_sort_hands)
                 .service(admin_post_game_draw_tile)
+                .service(admin_post_game_create_meld)
+                .service(admin_post_game_discard_tile)
+                .service(admin_post_game_move_player)
                 .service(get_ws)
         })
         .bind((address, port))?

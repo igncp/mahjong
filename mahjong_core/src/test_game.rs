@@ -2,10 +2,7 @@
 mod test {
     use std::collections::HashMap;
 
-    use crate::{
-        game::{discard_tile_to_board, DiscardTileToBoardOpts},
-        Game, Hand, HandTile, Round, RoundTileClaimed,
-    };
+    use crate::{Game, Hand, HandTile, RoundTileClaimed};
 
     #[test]
     fn test_draw_tile_from_wall_moves_tile() {
@@ -57,30 +54,26 @@ mod test {
 
     #[test]
     fn test_discard_tile_to_board() {
-        let board = vec![16, 17, 18];
-        let round = Round::default();
-        let hands = {
+        let mut game = Game::default();
+        game.table.board = vec![16, 17, 18];
+        game.table.hands = {
             let mut hands = HashMap::new();
             let mut player_a_tiles = vec![];
             for i in 1..15 {
                 player_a_tiles.push(HandTile::from_id(i));
             }
-            hands.insert("playerA".to_string(), Hand(player_a_tiles));
-            hands.insert("playerB".to_string(), Hand(vec![HandTile::from_id(15)]));
+            hands.insert(game.players[0].id.clone(), Hand(player_a_tiles));
+            hands.insert(
+                game.players[1].id.clone(),
+                Hand(vec![HandTile::from_id(15)]),
+            );
             hands
         };
 
-        let mut opts = DiscardTileToBoardOpts {
-            board,
-            hands,
-            player_id: "playerA".to_string(),
-            round,
-            tile_id: 2,
-        };
-        let discarded_tile = discard_tile_to_board(&mut opts);
+        let discarded_tile = game.discard_tile_to_board(&2);
 
-        assert_eq!(opts.board, vec![16, 17, 18, 2]);
-        assert_eq!(opts.hands, {
+        assert_eq!(game.table.board, vec![16, 17, 18, 2]);
+        assert_eq!(game.table.hands, {
             let mut hands = HashMap::new();
             let mut player_a_tiles = vec![];
             for i in 1..15 {
@@ -88,16 +81,19 @@ mod test {
                     player_a_tiles.push(HandTile::from_id(i));
                 }
             }
-            hands.insert("playerA".to_string(), Hand(player_a_tiles));
-            hands.insert("playerB".to_string(), Hand(vec![HandTile::from_id(15)]));
+            hands.insert(game.players[0].id.clone(), Hand(player_a_tiles));
+            hands.insert(
+                game.players[1].id.clone(),
+                Hand(vec![HandTile::from_id(15)]),
+            );
             hands
         });
-        assert_eq!(discarded_tile, Some(2));
+        assert!(discarded_tile);
         assert_eq!(
-            opts.round.tile_claimed,
+            game.round.tile_claimed,
             Some(RoundTileClaimed {
                 by: None,
-                from: "playerA".to_string(),
+                from: game.players[0].id.clone(),
                 id: 2,
             })
         );

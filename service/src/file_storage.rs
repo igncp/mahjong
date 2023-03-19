@@ -44,8 +44,13 @@ impl Storage for FileStorage {
 
     async fn get_games_ids(&self) -> Result<Vec<GameId>, String> {
         let file_content = self.get_file();
-        let games_ids = file_content
-            .games
+        let games_ids = file_content.games;
+
+        if games_ids.is_none() {
+            return Ok(vec![]);
+        }
+
+        let games_ids = games_ids
             .unwrap()
             .iter()
             .map(|game| game.id.clone())

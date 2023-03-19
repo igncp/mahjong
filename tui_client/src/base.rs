@@ -1,5 +1,7 @@
-use mahjong_core::{Game, GameId};
-use service_contracts::{AdminPostDrawTileResponse, SocketMessage};
+use std::collections::HashSet;
+
+use mahjong_core::{Game, GameId, Hand, PlayerId, TileId};
+use service_contracts::{AdminPostDiscardTileResponse, AdminPostDrawTileResponse, SocketMessage};
 
 use crate::service_http_client::ServiceHTTPClient;
 
@@ -147,6 +149,59 @@ impl App {
         let current_player = game.get_current_player();
 
         game.table.hands.insert(current_player.id.clone(), hand);
+    }
+
+    pub async fn admin_create_meld(
+        &mut self,
+        player_id: &PlayerId,
+        tiles: &HashSet<TileId>,
+    ) -> Hand {
+        self.waiting = true;
+        let game_id = self.game.as_ref().unwrap().id.clone();
+
+        let hand = self
+            .service_client
+            .admin_create_meld(&game_id, player_id, tiles)
+            .await;
+
+        self.waiting = false;
+
+        if hand.is_err() {
+            println!("Error: {}", hand.err().unwrap());
+            std::process::exit(1);
+        }
+
+        hand.unwrap()
+    }
+
+    pub async fn admin_discard_tile(&mut self, tile_id: &TileId) {
+        self.waiting = true;
+        let game = self.game.as_mut().unwrap();
+        let result = self
+            .service_client
+            .admin_discard_tile(&game.id, tile_id)
+            .await;
+        self.waiting = false;
+
+        if result.is_err() {
+            println!("Error: {}", result.err().unwrap());
+            std::process::exit(1);
+        }
+
+        let game: AdminPostDiscardTileResponse = result.unwrap();
+        self.game = Some(game);
+    }
+
+    pub async fn admin_move_player(&mut self) {
+        self.waiting = true;
+        let game = self.game.as_mut().unwrap();
+        let result = self.service_client.admin_move_player(&game.id).await;
+        self.waiting = false;
+
+        // Ignore the error case
+        if let Ok(game) = result {
+            self.game = Some(game);
+        }
     }
 
     // To be removed

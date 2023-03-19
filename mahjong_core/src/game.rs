@@ -1,9 +1,12 @@
+use std::collections::HashSet;
+
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::{
     meld::{
-        get_board_tile_player_diff, get_is_pair, get_possible_melds, get_tile_claimed_id_for_user,
-        GetBoardTilePlayerDiff, GetPossibleMelds,
+        get_is_chow, get_is_kong, get_is_pair, get_is_pung, get_possible_melds,
+        get_tile_claimed_id_for_user, GetPossibleMelds, PlayerDiff, PossibleMeld, SetCheckOpts,
     },
     Board, Deck, Hand, HandTile, Hands, Player, PlayerId, Round, RoundTileClaimed, Score, Table,
     TileId,
@@ -102,12 +105,6 @@ pub fn claim_tile(opts: &mut ClaimTile) -> bool {
     true
 }
 
-pub struct PossibleMeld {
-    pub player_id: PlayerId,
-    pub tiles: Vec<TileId>,
-    pub discard_tile: Option<TileId>,
-}
-
 impl Game {
     pub fn set_players(&mut self, players: &Vec<Player>) {
         if players.len() != self.players.len() {
@@ -193,14 +190,8 @@ impl Game {
                 });
             }
 
-            let opts = GetBoardTilePlayerDiff {
-                hand: &player_hand,
-                players: &self.players,
-                player_id: &player.id,
-                round: &round,
-            };
-
-            let board_tile_player_diff = get_board_tile_player_diff(&opts);
+            let board_tile_player_diff =
+                self.get_board_tile_player_diff(Some(&round), Some(&hand), &player.id);
             let claimed_tile = get_tile_claimed_id_for_user(&player.id, &round.tile_claimed);
 
             let opts = GetPossibleMelds {
@@ -271,17 +262,9 @@ impl Game {
             .collect();
 
         player_hand.iter().for_each(|hand_tile| {
-            let game_copy = self.clone();
+            let mut game_copy = self.clone();
 
-            let mut opts = DiscardTileToBoardOpts {
-                board: game_copy.table.board.clone(),
-                hands: game_copy.table.hands.clone(),
-                player_id: player_id.clone(),
-                tile_id: hand_tile.id,
-                round: game_copy.round.clone(),
-            };
-
-            discard_tile_to_board(&mut opts);
+            game_copy.discard_tile_to_board(&hand_tile.id);
 
             let new_melds = game_copy.get_possible_melds();
 
@@ -289,6 +272,10 @@ impl Game {
                 .iter()
                 .filter(|m| m.player_id != player_id)
                 .for_each(|meld| {
+                    if !meld.tiles.iter().any(|t| t == &hand_tile.id) {
+                        return;
+                    }
+
                     melds.push(PossibleMeld {
                         discard_tile: Some(hand_tile.id),
                         player_id: meld.player_id.clone(),
@@ -320,60 +307,143 @@ impl Game {
 
         wall_tile_drawn
     }
-}
 
-pub struct DiscardTileToBoardOpts {
-    pub board: Board,
-    pub hands: Hands,
-    pub player_id: PlayerId,
-    pub tile_id: TileId,
-    pub round: Round,
-}
+    pub fn discard_tile_to_board(&mut self, tile_id: &TileId) -> bool {
+        let player_with_14_tiles = self
+            .players
+            .iter()
+            .find(|p| self.table.hands.get(&p.id).unwrap().0.len() == 14);
 
-pub fn discard_tile_to_board(opts: &mut DiscardTileToBoardOpts) -> Option<TileId> {
-    let player_hand = opts.hands.get_mut(&opts.player_id).unwrap();
-
-    if player_hand.0.len() != 14 {
-        return None;
-    }
-
-    let tile_index = player_hand.0.iter().position(|t| t.id == opts.tile_id);
-
-    tile_index?;
-
-    let tile_index = tile_index.unwrap();
-    let tile = player_hand.0.get(tile_index).unwrap().clone();
-
-    if !tile.concealed {
-        return None;
-    }
-
-    if opts.round.tile_claimed.is_some() {
-        let tile_claimed = opts.round.tile_claimed.clone().unwrap();
-        if tile_claimed.by.is_some()
-            && tile_claimed.by.unwrap() == opts.player_id
-            && tile.id != tile_claimed.id
-            && player_hand
-                .0
-                .iter()
-                .find(|t| t.id == tile_claimed.id)
-                .unwrap()
-                .set_id
-                .is_none()
-        {
-            return None;
+        if player_with_14_tiles.is_none() {
+            return false;
         }
+
+        let player_id = player_with_14_tiles.unwrap().id.clone();
+        let player_hand = self.table.hands.get_mut(&player_id).unwrap();
+        let tile_index = player_hand.0.iter().position(|t| &t.id == tile_id);
+
+        if tile_index.is_none() {
+            return false;
+        }
+
+        let tile_index = tile_index.unwrap();
+        let tile = player_hand.0.get(tile_index).unwrap().clone();
+
+        if !tile.concealed || tile.set_id.is_some() {
+            return false;
+        }
+
+        if self.round.tile_claimed.is_some() {
+            let tile_claimed = self.round.tile_claimed.clone().unwrap();
+            if tile_claimed.by.is_some()
+                && tile_claimed.by.unwrap() == player_id
+                && tile.id != tile_claimed.id
+                && player_hand
+                    .0
+                    .iter()
+                    .find(|t| t.id == tile_claimed.id)
+                    .unwrap()
+                    .set_id
+                    .is_none()
+            {
+                return false;
+            }
+        }
+
+        player_hand.0.remove(tile_index);
+
+        self.table.board.push(tile.id);
+
+        self.round.tile_claimed = Some(RoundTileClaimed {
+            from: player_id.clone(),
+            id: tile.id,
+            by: None,
+        });
+
+        true
     }
 
-    player_hand.0.remove(tile_index);
+    pub fn create_meld(&mut self, player_id: &PlayerId, tiles: &HashSet<TileId>) -> bool {
+        let hand = self.table.hands.get(player_id).unwrap();
+        let sub_hand_tiles = hand
+            .0
+            .iter()
+            .filter(|t| tiles.contains(&t.id))
+            .cloned()
+            .collect::<Vec<HandTile>>();
 
-    opts.board.push(tile.id);
+        if sub_hand_tiles
+            .iter()
+            .any(|t| t.set_id.is_some() || !t.concealed)
+        {
+            return false;
+        }
 
-    opts.round.tile_claimed = Some(RoundTileClaimed {
-        from: opts.player_id.clone(),
-        id: tile.id,
-        by: None,
-    });
+        let sub_hand = Hand(sub_hand_tiles);
 
-    Some(tile.id)
+        let board_tile_player_diff =
+            self.get_board_tile_player_diff(None, Some(&sub_hand), player_id);
+
+        let tiles_ids = tiles.iter().cloned().collect::<Vec<TileId>>();
+
+        let opts_claimed_tile = get_tile_claimed_id_for_user(player_id, &self.round.tile_claimed);
+
+        let opts = SetCheckOpts {
+            board_tile_player_diff,
+            claimed_tile: opts_claimed_tile,
+            deck: &self.deck,
+            sub_hand: &tiles_ids,
+        };
+
+        if get_is_pung(&opts) || get_is_chow(&opts) || get_is_kong(&opts) {
+            let set_id = Uuid::new_v4().to_string();
+            let concealed = board_tile_player_diff.is_none();
+            let hand = self.table.hands.get_mut(player_id).unwrap();
+
+            hand.0
+                .iter_mut()
+                .filter(|t| tiles.contains(&t.id))
+                .for_each(|tile| {
+                    tile.concealed = concealed;
+                    tile.set_id = Some(set_id.clone());
+                });
+
+            return true;
+        }
+
+        false
+    }
+
+    pub fn get_board_tile_player_diff(
+        &self,
+        round: Option<&Round>,
+        hand: Option<&Hand>,
+        player_id: &PlayerId,
+    ) -> PlayerDiff {
+        let round = round.unwrap_or(&self.round);
+        let hand = hand.unwrap_or(self.table.hands.get(player_id).unwrap());
+        let tile_claimed = round.tile_claimed.clone();
+
+        if let Some(tile_claimed) = tile_claimed {
+            tile_claimed.by?;
+
+            if !hand.0.iter().any(|h| h.id == tile_claimed.id) {
+                return None;
+            }
+
+            let player_index = self.players.iter().position(|p| &p.id == player_id);
+            let other_player_index = self.players.iter().position(|p| p.id == tile_claimed.from);
+
+            if player_index.is_none() || other_player_index.is_none() {
+                return None;
+            }
+
+            let player_index = player_index.unwrap();
+            let other_player_index = other_player_index.unwrap();
+
+            return Some(player_index as i32 - other_player_index as i32);
+        }
+
+        None
+    }
 }

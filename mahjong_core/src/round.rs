@@ -1,4 +1,4 @@
-use crate::{GamePhase, HandTile, Round, Wind, WINDS_ROUND_ORDER};
+use crate::{GamePhase, Hands, Round, Wind, WINDS_ROUND_ORDER};
 
 impl Default for Round {
     fn default() -> Self {
@@ -14,13 +14,13 @@ impl Default for Round {
 }
 
 impl Round {
-    pub fn next(&mut self, hands: Vec<Vec<HandTile>>) -> bool {
+    pub fn next(&mut self, hands: &Hands) -> bool {
         if self.wall_tile_drawn.is_none() {
             return false;
         }
 
-        for hand in hands {
-            if hand.len() != 13 {
+        for hand in hands.values() {
+            if hand.0.len() != 13 {
                 return false;
             }
         }

@@ -1,9 +1,4 @@
-use std::collections::HashMap;
-
-use crate::{
-    Deck, Hand, HandTile, Hands, Player, PlayerId, Round, SetId, SuitTile, Tile, TileClaimed,
-    TileId,
-};
+use crate::{Deck, Hand, HandTile, Hands, PlayerId, SetId, SuitTile, Tile, TileClaimed, TileId};
 
 pub type PlayerDiff = Option<i32>;
 
@@ -157,75 +152,6 @@ pub fn get_is_kong(opts: &SetCheckOpts) -> bool {
     true
 }
 
-pub struct GetBoardTilePlayerDiff<'a> {
-    pub hand: &'a Hand,
-    pub players: &'a Vec<Player>,
-    pub round: &'a Round,
-    pub player_id: &'a PlayerId,
-}
-
-pub fn get_board_tile_player_diff(opts: &GetBoardTilePlayerDiff) -> PlayerDiff {
-    let tile_claimed = opts.round.tile_claimed.clone();
-
-    if let Some(tile_claimed) = tile_claimed {
-        tile_claimed.by?;
-
-        if !opts.hand.0.iter().any(|h| h.id == tile_claimed.id) {
-            return None;
-        }
-
-        let player_index = opts.players.iter().position(|p| &p.id == opts.player_id);
-        let other_player_index = opts.players.iter().position(|p| p.id == tile_claimed.from);
-
-        if player_index.is_none() || other_player_index.is_none() {
-            return None;
-        }
-
-        let player_index = player_index.unwrap();
-        let other_player_index = other_player_index.unwrap();
-
-        return Some(player_index as i32 - other_player_index as i32);
-    }
-
-    None
-}
-
-type MeldsCollection = HashMap<String, Vec<HandTile>>;
-
-pub struct GetHandMeldsReturn {
-    pub melds: MeldsCollection,
-    pub tiles_without_meld: usize,
-}
-
-pub fn get_hand_melds(hand: &Vec<HandTile>) -> GetHandMeldsReturn {
-    let mut melds: MeldsCollection = HashMap::new();
-    let mut tiles_without_meld = 0;
-
-    for hand_tile in hand {
-        if hand_tile.set_id.is_none() {
-            tiles_without_meld += 1;
-
-            continue;
-        }
-        let set_id = hand_tile.set_id.clone().unwrap();
-        let list = melds.get(&set_id);
-
-        let mut list = match list {
-            Some(list) => list.clone(),
-            None => vec![],
-        };
-
-        list.push(hand_tile.clone());
-
-        melds.insert(set_id, list);
-    }
-
-    GetHandMeldsReturn {
-        melds,
-        tiles_without_meld,
-    }
-}
-
 pub fn get_tile_claimed_id_for_user(
     player_id: &PlayerId,
     tile_claimed: &TileClaimed,
@@ -366,4 +292,21 @@ pub fn break_meld(opts: &mut BreakMeldOpts) -> bool {
     });
 
     true
+}
+
+pub struct PossibleMeld {
+    pub player_id: PlayerId,
+    pub tiles: Vec<TileId>,
+    pub discard_tile: Option<TileId>,
+}
+
+impl PossibleMeld {
+    pub fn sort_tiles(&mut self, deck: &Deck) {
+        self.tiles.sort_by(|a, b| {
+            let tile_a = &deck.0[a];
+            let tile_b = &deck.0[b];
+
+            tile_a.cmp_custom(tile_b)
+        });
+    }
 }

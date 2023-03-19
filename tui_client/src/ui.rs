@@ -1,25 +1,23 @@
-use crossterm::event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent};
+use crossterm::event::{
+    self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyModifiers,
+};
 use crossterm::execute;
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
+use mahjong_core::{HandTile, PlayerId, TileId};
+use std::collections::HashSet;
 use std::io;
 use std::time::Duration;
-use tui::backend::Backend;
-use tui::layout::{Constraint, Direction, Layout};
-use tui::style::{Color, Style};
-use tui::text::Spans;
-use tui::widgets::{Block, Borders, Paragraph, Wrap};
-use tui::Frame;
 use tui::{backend::CrosstermBackend, Terminal};
 
 use crate::base::{App, AppEvent, Mode};
-use crate::formatter::{get_draw_wall, get_hand_str};
+use crate::view::draw_view;
 
 const PAGE_UP_DOWN_SCROLL: u16 = 20;
 
 #[derive(Debug, PartialEq)]
-enum UIScreen {
+pub enum UIScreen {
     Game,
     Init,
 }
@@ -29,7 +27,7 @@ enum UIEvent {
     Message(AppEvent),
 }
 
-struct UIState {
+pub struct UIState {
     pub display_games: bool,
     pub display_hand: bool,
     pub display_help: bool,
@@ -56,149 +54,6 @@ impl UIState {
 pub struct UI {
     terminal: Terminal<CrosstermBackend<io::Stdout>>,
     state: UIState,
-}
-
-fn get_help_text(app: &App, ui_state: &UIState) -> String {
-    let mut help_list = vec!["h: Display or hide this help", "q: Quit"];
-
-    if ui_state.screen == UIScreen::Game {
-        if app.mode == Some(Mode::Admin) {
-            help_list.push("- hd: [Admin] show hands");
-            help_list.push("- draw: [Admin] draw a tile for the player from the tiles wall");
-            help_list.push("- sh: [Admin] sort hands");
-        }
-    } else if app.mode == Some(Mode::Admin) {
-        help_list.push("ss: [Admin] start a game");
-        help_list.push("gg: [Admin] get games");
-    }
-
-    help_list.join("\n")
-}
-
-fn draw<B: Backend>(f: &mut Frame<B>, app: &App, ui_state: &mut UIState) {
-    let size = f.size();
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Length(6), Constraint::Length(10)].as_ref())
-        .split(size);
-
-    let wrapper_block = Block::default()
-        .borders(Borders::ALL)
-        .title("Game Panel (admin view)");
-
-    let paragraph_style = Style::default().fg(Color::White).bg(Color::Black);
-
-    match ui_state.screen {
-        UIScreen::Init => {
-            let init_text = vec![
-                "Welcome to Mahjong!",
-                "Input 'h' to display the help",
-                &ui_state.input,
-            ]
-            .join("\n");
-
-            let paragraph = Paragraph::new(init_text)
-                .block(wrapper_block.clone())
-                .wrap(Wrap { trim: true })
-                .style(paragraph_style);
-
-            f.render_widget(paragraph, chunks[0]);
-
-            if ui_state.display_help {
-                let help_text = get_help_text(app, ui_state);
-
-                let paragraph = Paragraph::new(help_text)
-                    .block(wrapper_block.clone().title("Help"))
-                    .wrap(Wrap { trim: true })
-                    .style(paragraph_style);
-
-                f.render_widget(paragraph, chunks[1]);
-            }
-
-            if ui_state.display_games {
-                let games_ids = app.games_ids.clone().unwrap();
-                let mut paragraph_text = vec![Spans::from(format!("Games ({}):", games_ids.len()))];
-
-                app.games_ids
-                    .clone()
-                    .unwrap()
-                    .iter()
-                    .for_each(|g| paragraph_text.push(Spans::from(format!("- Game: {g}"))));
-
-                let paragraph = Paragraph::new(paragraph_text)
-                    .block(wrapper_block.clone().title("Help"))
-                    .wrap(Wrap { trim: true })
-                    .style(paragraph_style);
-
-                f.render_widget(paragraph, chunks[1]);
-            }
-        }
-        UIScreen::Game => {
-            let game = app.game.as_ref().unwrap();
-            let current_player = game.get_current_player();
-            let draw_wall_str = get_draw_wall(game);
-
-            let paragraph_text = vec![
-                Spans::from(format!("- Input: {}", ui_state.input)),
-                Spans::from(format!(
-                    "- Game ID: {} ({}) {}",
-                    game.id,
-                    match app.mode {
-                        Some(Mode::User) => "user",
-                        Some(Mode::Admin) => "admin",
-                        _ => panic!("Invalid mode"),
-                    },
-                    ui_state.messages_count
-                )),
-                Spans::from(format!("- Phase: {:?}", game.phase)),
-            ];
-
-            let paragraph = Paragraph::new(paragraph_text)
-                .block(wrapper_block.clone())
-                .wrap(Wrap { trim: true })
-                .style(paragraph_style);
-
-            f.render_widget(paragraph, chunks[0]);
-
-            if ui_state.display_help {
-                let help_text = get_help_text(app, ui_state);
-
-                let paragraph = Paragraph::new(help_text)
-                    .block(wrapper_block.clone().title("Help"))
-                    .wrap(Wrap { trim: true })
-                    .style(paragraph_style);
-
-                f.render_widget(paragraph, chunks[1]);
-            } else {
-                let mut secondary_strs = vec![
-                    format!("- Current player: {}", current_player.name),
-                    format!("- Draw wall ({}):", game.table.draw_wall.len(),),
-                    draw_wall_str,
-                ];
-
-                if ui_state.display_hand {
-                    get_hand_str(game)
-                        .iter()
-                        .for_each(|s| secondary_strs.push(s.to_string()));
-                }
-
-                let secondary_spans = secondary_strs
-                    .iter()
-                    .map(|s| Spans::from(s.to_string()))
-                    .collect::<Vec<_>>();
-
-                let wrapper_block = Block::default().borders(Borders::ALL);
-
-                let paragraph = Paragraph::new(secondary_spans)
-                    .scroll((ui_state.scroll, 0))
-                    .block(wrapper_block)
-                    .wrap(Wrap { trim: true })
-                    .style(paragraph_style);
-
-                f.render_widget(paragraph, chunks[1]);
-            }
-        }
-    }
 }
 
 impl UI {
@@ -292,6 +147,66 @@ impl UI {
         }
     }
 
+    fn extract_create_meld_args(&mut self, app: &App) -> Option<(PlayerId, HashSet<TileId>)> {
+        let args = self.state.input.split_whitespace().collect::<Vec<&str>>();
+        if args.len() < 4 {
+            return None;
+        }
+        let player_index = args[1].parse::<usize>();
+        if player_index.is_err() || player_index.clone().unwrap() > 3 {
+            return None;
+        }
+        let game = &app.game.clone().unwrap();
+        let player_id = game.players.clone()[player_index.unwrap()].id.clone();
+        let player_hand = &game.table.hands[&player_id];
+        let tiles = args[2..]
+            .iter()
+            .filter_map(|tile| {
+                let tile_index = tile.parse::<usize>();
+                if tile_index.is_err() {
+                    return None;
+                }
+                let tile_id = player_hand.0[tile_index.unwrap()].id;
+                Some(tile_id)
+            })
+            .collect::<HashSet<TileId>>();
+
+        if tiles.len() < 2 {
+            return None;
+        }
+
+        Some((player_id, tiles))
+    }
+
+    fn extract_discard_tile_args(&mut self, app: &App) -> Option<TileId> {
+        let args = self.state.input.split_whitespace().collect::<Vec<&str>>();
+        if args.len() < 2 {
+            return None;
+        }
+        let tile_index = args[1].parse::<usize>();
+        if tile_index.is_err() {
+            return None;
+        }
+        let tile_index = tile_index.unwrap();
+        for player in &app.game.as_ref().unwrap().players {
+            let player_hand = &app.game.as_ref().unwrap().table.hands[&player.id];
+            if player_hand.0.iter().len() == 14 {
+                let filtered_hand = player_hand
+                    .0
+                    .iter()
+                    .filter(|tile| tile.set_id.is_none())
+                    .collect::<Vec<&HandTile>>();
+                let tile = filtered_hand.get(tile_index);
+
+                if let Some(tile) = tile {
+                    return Some(tile.id);
+                }
+            }
+        }
+
+        None
+    }
+
     pub async fn run(&mut self, app: &mut App) {
         if app.mode == Some(Mode::User) {
             println!("'user' mode is not yet supported");
@@ -307,7 +222,7 @@ impl UI {
         loop {
             self.terminal
                 .draw(|f| {
-                    draw(f, app, &mut self.state);
+                    draw_view(f, app, &mut self.state);
                 })
                 .unwrap();
 
@@ -326,6 +241,9 @@ impl UI {
 
                     match key.code {
                         KeyCode::Char(ch) => {
+                            if ch == 'c' && key.modifiers.contains(KeyModifiers::CONTROL) {
+                                break;
+                            }
                             self.state.input = format!("{}{}", self.state.input, ch);
                         }
                         KeyCode::Down => {
@@ -355,7 +273,10 @@ impl UI {
                                 self.state.display_help = false;
                             }
 
-                            match self.state.input.as_str() {
+                            let input_fragment =
+                                self.state.input.split_whitespace().next().unwrap_or("");
+
+                            match input_fragment {
                                 "h" => {
                                     self.state.display_help = !self.state.display_help;
                                 }
@@ -363,7 +284,7 @@ impl UI {
                                     break;
                                 }
                                 _ => match self.state.screen {
-                                    UIScreen::Init => match self.state.input.as_str() {
+                                    UIScreen::Init => match input_fragment {
                                         "ss" => {
                                             self.create_game(app).await;
                                         }
@@ -372,12 +293,37 @@ impl UI {
                                         }
                                         _ => {}
                                     },
-                                    UIScreen::Game => match self.state.input.as_str() {
+                                    UIScreen::Game => match input_fragment {
+                                        "cm" => {
+                                            let parsed_input = self.extract_create_meld_args(app);
+                                            if let Some((player_id, tiles)) = parsed_input {
+                                                let new_hand =
+                                                    app.admin_create_meld(&player_id, &tiles).await;
+                                                app.game
+                                                    .as_mut()
+                                                    .unwrap()
+                                                    .table
+                                                    .hands
+                                                    .insert(player_id, new_hand);
+                                                self.state.display_hand = true;
+                                            }
+                                        }
+                                        "di" => {
+                                            let parsed_input = self.extract_discard_tile_args(app);
+                                            if let Some(tile_id) = parsed_input {
+                                                app.admin_discard_tile(&tile_id).await;
+                                                self.state.display_hand = true;
+                                            }
+                                        }
                                         "draw" => {
                                             app.admin_draw_tile().await;
                                             self.state.display_hand = true;
                                         }
                                         "hd" => {
+                                            self.state.display_hand = true;
+                                        }
+                                        "n" => {
+                                            app.admin_move_player().await;
                                             self.state.display_hand = true;
                                         }
                                         "sh" => {
