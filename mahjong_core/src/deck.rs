@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::{
-    Dragon, DragonTile, Flower, FlowerTile, HandTile, Hands, Player, Season, SeasonTile, Suit,
-    SuitTile, Table, Tile, TileId, Wind, WindTile,
+    Dragon, DragonTile, Flower, FlowerTile, Hand, HandTile, Hands, Player, Season, SeasonTile,
+    Suit, SuitTile, Table, Tile, TileId, Wind, WindTile,
 };
 
 pub type DeckContent = HashMap<TileId, Tile>;
@@ -98,7 +98,7 @@ impl Deck {
         let hands = players
             .iter()
             .map(|player| {
-                let mut hand: Vec<HandTile> = vec![];
+                let mut hand = Hand(vec![]);
                 for _ in 0..13 {
                     let tile_id = draw_wall.pop().unwrap();
                     let tile = HandTile {
@@ -107,7 +107,7 @@ impl Deck {
                         set_id: None,
                     };
 
-                    hand.push(tile);
+                    hand.0.push(tile);
                 }
                 (player.id.clone(), hand)
             })

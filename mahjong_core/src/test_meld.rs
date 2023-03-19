@@ -8,7 +8,7 @@ mod test {
         PlayerDiff, SetCheckOpts,
     };
     use crate::tile::TileId;
-    use crate::{Deck, Flower, FlowerTile, HandTile, Suit, SuitTile, Tile, Wind, WindTile};
+    use crate::{Deck, Flower, FlowerTile, Hand, HandTile, Suit, SuitTile, Tile, Wind, WindTile};
 
     type GetIsPungFixture = (Vec<Tile>, bool);
     fn get_is_pung_fixtures() -> Vec<GetIsPungFixture> {
@@ -296,7 +296,7 @@ mod test {
         }
     }
 
-    type GetPossibleMeldsFixture = (Vec<HandTile>, Deck, PlayerDiff, Vec<Meld>);
+    type GetPossibleMeldsFixture = (Hand, Deck, PlayerDiff, Vec<Meld>);
     fn get_possible_melds_fixtures() -> Vec<GetPossibleMeldsFixture> {
         fn get_hand_tile(id: TileId) -> HandTile {
             HandTile {
@@ -316,12 +316,12 @@ mod test {
             )
         }
         vec![(
-            vec![
+            Hand(vec![
                 get_hand_tile(0),
                 get_hand_tile(1),
                 get_hand_tile(2),
                 get_hand_tile(3),
-            ],
+            ]),
             Deck(HashMap::from_iter(vec![
                 get_tile(0),
                 get_tile(1),

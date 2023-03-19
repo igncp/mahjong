@@ -2,7 +2,8 @@
 members = [
     "tui_client",
     "mahjong_core",
-    "service"
+    "service",
+    "service_contracts"
 ]
 
 [profile.release]

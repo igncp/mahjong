@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use crate::{
-    Deck, HandTile, Hands, Player, PlayerId, Round, SetId, SuitTile, Tile, TileClaimed, TileId,
+    Deck, Hand, HandTile, Hands, Player, PlayerId, Round, SetId, SuitTile, Tile, TileClaimed,
+    TileId,
 };
 
 pub type PlayerDiff = Option<i32>;
@@ -157,7 +158,7 @@ pub fn get_is_kong(opts: &SetCheckOpts) -> bool {
 }
 
 pub struct GetBoardTilePlayerDiff<'a> {
-    pub hand: &'a Vec<HandTile>,
+    pub hand: &'a Hand,
     pub players: &'a Vec<Player>,
     pub round: &'a Round,
     pub player_id: &'a PlayerId,
@@ -169,7 +170,7 @@ pub fn get_board_tile_player_diff(opts: &GetBoardTilePlayerDiff) -> PlayerDiff {
     if let Some(tile_claimed) = tile_claimed {
         tile_claimed.by?;
 
-        if !opts.hand.iter().any(|h| h.id == tile_claimed.id) {
+        if !opts.hand.0.iter().any(|h| h.id == tile_claimed.id) {
             return None;
         }
 
@@ -250,12 +251,13 @@ pub struct GetPossibleMelds<'a> {
     pub board_tile_player_diff: PlayerDiff,
     pub claimed_tile: Option<TileId>,
     pub deck: &'a Deck,
-    pub hand: &'a Vec<HandTile>,
+    pub hand: &'a Hand,
 }
 
 pub fn get_possible_melds(opts: &GetPossibleMelds) -> Vec<Meld> {
     let hand_filtered: Vec<HandTile> = opts
         .hand
+        .0
         .iter()
         .filter(|h| h.set_id.is_none())
         .cloned()
@@ -345,6 +347,7 @@ pub fn break_meld(opts: &mut BreakMeldOpts) -> bool {
 
     let mut meld_tiles = hand
         .unwrap()
+        .0
         .iter()
         .filter(|h| h.set_id == opts.set_id)
         .cloned()

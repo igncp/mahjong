@@ -1,11 +1,12 @@
 ## Doing
 
-- Port core cod from the TS project (currently in pungs)
 - Setup a full game via CLI in "admin" mode
-- Start playing game via TUI in "admin" mode
+- Start playing game via TUI in "client" mode
 
 ## Backlog
 
+- Create a queue of actions per game
+- Authentication for users and admins
 - Connect a DB (start with NoSQL)
 - Docker Compose setup for releases
 - Visualize a game in "player" mode

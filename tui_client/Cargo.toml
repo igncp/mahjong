@@ -6,8 +6,11 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.1.8", features = ["cargo"] }
 crossterm = "0.26.1"
+futures-util = "0.3.27"
 mahjong_core = { path = "../mahjong_core" }
+service_contracts = { path = "../service_contracts" }
 reqwest = { version = "0.11.14", features = ["json"] }
 serde_json = "1.0.94"
 tokio = { version = "1.26.0", features = ["full"] }
+tokio-tungstenite = "0.18.0"
 tui = "0.19.0"

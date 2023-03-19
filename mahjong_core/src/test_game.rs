@@ -3,38 +3,32 @@ mod test {
     use std::collections::HashMap;
 
     use crate::{
-        game::{
-            discard_tile_to_board, draw_tile_from_wall, DiscardTileToBoardOpts,
-            DrawTileFromWallOpts,
-        },
-        Game, HandTile, Round, RoundTileClaimed,
+        game::{discard_tile_to_board, DiscardTileToBoardOpts},
+        Game, Hand, HandTile, Round, RoundTileClaimed,
     };
 
     #[test]
     fn test_draw_tile_from_wall_moves_tile() {
         let draw_wall = vec![3, 4, 5];
         let mut hands = HashMap::new();
-        hands.insert("playerA".to_string(), vec![HandTile::from_id(1)]);
-        hands.insert("playerB".to_string(), vec![HandTile::from_id(2)]);
-        let round = Round::default();
-        let mut opts = DrawTileFromWallOpts {
-            draw_wall,
-            hands,
-            round,
-            player_id: "playerA".to_string(),
-        };
-        let drawn_tile = draw_tile_from_wall(&mut opts);
+        let mut game = Game::default();
+        game.table.draw_wall = draw_wall;
+        hands.insert(game.players[0].id.clone(), Hand(vec![HandTile::from_id(1)]));
+        hands.insert(game.players[1].id.clone(), Hand(vec![HandTile::from_id(2)]));
+        game.table.hands = hands;
 
-        assert_eq!(opts.draw_wall, vec![3, 4]);
+        let drawn_tile = game.draw_tile_from_wall();
+
+        assert_eq!(game.table.draw_wall, vec![3, 4]);
         assert_eq!(drawn_tile, Some(5));
-        assert_eq!(opts.round.wall_tile_drawn, Some(5));
-        assert_eq!(opts.hands, {
+        assert_eq!(game.round.wall_tile_drawn, Some(5));
+        assert_eq!(game.table.hands, {
             let mut hands = HashMap::new();
             hands.insert(
-                "playerA".to_string(),
-                vec![HandTile::from_id(1), HandTile::from_id(5)],
+                game.players[0].id.clone(),
+                Hand(vec![HandTile::from_id(1), HandTile::from_id(5)]),
             );
-            hands.insert("playerB".to_string(), vec![HandTile::from_id(2)]);
+            hands.insert(game.players[1].id.clone(), Hand(vec![HandTile::from_id(2)]));
             hands
         });
     }
@@ -42,25 +36,21 @@ mod test {
     #[test]
     fn test_draw_tile_from_wall_returns_null() {
         let draw_wall = vec![];
+        let mut game = Game::default();
         let mut hands = HashMap::new();
-        hands.insert("playerA".to_string(), vec![HandTile::from_id(1)]);
-        hands.insert("playerB".to_string(), vec![HandTile::from_id(2)]);
-        let round = Round::default();
-        let mut opts = DrawTileFromWallOpts {
-            draw_wall,
-            hands,
-            round,
-            player_id: "playerA".to_string(),
-        };
-        let drawn_tile = draw_tile_from_wall(&mut opts);
+        hands.insert(game.players[0].id.clone(), Hand(vec![HandTile::from_id(1)]));
+        hands.insert(game.players[1].id.clone(), Hand(vec![HandTile::from_id(2)]));
+        game.table.draw_wall = draw_wall;
+        game.table.hands = hands;
+        let drawn_tile = game.draw_tile_from_wall();
 
-        assert_eq!(opts.draw_wall, vec![]);
+        assert_eq!(game.table.draw_wall, vec![]);
         assert_eq!(drawn_tile, None);
-        assert_eq!(opts.round.wall_tile_drawn, None);
-        assert_eq!(opts.hands, {
+        assert_eq!(game.round.wall_tile_drawn, None);
+        assert_eq!(game.table.hands, {
             let mut hands = HashMap::new();
-            hands.insert("playerA".to_string(), vec![HandTile::from_id(1)]);
-            hands.insert("playerB".to_string(), vec![HandTile::from_id(2)]);
+            hands.insert(game.players[0].id.clone(), Hand(vec![HandTile::from_id(1)]));
+            hands.insert(game.players[1].id.clone(), Hand(vec![HandTile::from_id(2)]));
             hands
         });
     }
@@ -75,8 +65,8 @@ mod test {
             for i in 1..15 {
                 player_a_tiles.push(HandTile::from_id(i));
             }
-            hands.insert("playerA".to_string(), player_a_tiles);
-            hands.insert("playerB".to_string(), vec![HandTile::from_id(15)]);
+            hands.insert("playerA".to_string(), Hand(player_a_tiles));
+            hands.insert("playerB".to_string(), Hand(vec![HandTile::from_id(15)]));
             hands
         };
 
@@ -98,8 +88,8 @@ mod test {
                     player_a_tiles.push(HandTile::from_id(i));
                 }
             }
-            hands.insert("playerA".to_string(), player_a_tiles);
-            hands.insert("playerB".to_string(), vec![HandTile::from_id(15)]);
+            hands.insert("playerA".to_string(), Hand(player_a_tiles));
+            hands.insert("playerB".to_string(), Hand(vec![HandTile::from_id(15)]));
             hands
         });
         assert_eq!(discarded_tile, Some(2));
@@ -130,7 +120,7 @@ mod test {
 
         for player in game.players.iter() {
             let hand = game.table.hands.get(&player.id).unwrap();
-            assert_eq!(hand.len(), 13);
+            assert_eq!(hand.0.len(), 13);
             assert_eq!(game.score.get(&player.id), Some(&0));
         }
 

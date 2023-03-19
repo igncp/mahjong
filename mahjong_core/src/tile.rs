@@ -58,4 +58,35 @@ impl Tile {
             },
         }
     }
+
+    pub fn cmp_custom(&self, other: &Self) -> std::cmp::Ordering {
+        match self {
+            Tile::Suit(tile_a) => match other {
+                Tile::Suit(tile_b) => {
+                    if tile_a.suit != tile_b.suit {
+                        return tile_a.suit.cmp(&tile_b.suit);
+                    }
+
+                    return tile_a.value.cmp(&tile_b.value);
+                }
+                _ => std::cmp::Ordering::Less,
+            },
+            Tile::Dragon(tile_a) => match other {
+                Tile::Dragon(tile_b) => tile_a.value.cmp(&tile_b.value),
+                _ => std::cmp::Ordering::Greater,
+            },
+            Tile::Wind(tile_a) => match other {
+                Tile::Wind(tile_b) => tile_a.value.cmp(&tile_b.value),
+                _ => std::cmp::Ordering::Greater,
+            },
+            Tile::Season(tile_a) => match other {
+                Tile::Season(tile_b) => tile_a.value.cmp(&tile_b.value),
+                _ => std::cmp::Ordering::Greater,
+            },
+            Tile::Flower(tile_a) => match other {
+                Tile::Flower(tile_b) => tile_a.value.cmp(&tile_b.value),
+                _ => std::cmp::Ordering::Greater,
+            },
+        }
+    }
 }

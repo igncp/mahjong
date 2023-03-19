@@ -1,7 +1,13 @@
+use crate::socket_server::{ClientMessage, MahjongWebsocketServer};
+use crate::socket_session::MahjongWebsocketSession;
 use crate::{common::Storage, game_wrapper::create_game};
-use actix_web::{get, post, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix::prelude::*;
+use actix_web::{get, post, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web_actors::ws;
 use serde::Deserialize;
+use service_contracts::{AdminGetGamesResponse, AdminPostDrawTileResponse, SocketMessage};
 use std::sync::Arc;
+use std::time::Instant;
 
 type StorageData = web::Data<Arc<Box<dyn Storage>>>;
 
@@ -10,28 +16,21 @@ async fn get_health() -> impl Responder {
     HttpResponse::Ok().body("OK")
 }
 
-#[derive(Debug, Deserialize)]
-pub struct AdminGameGetQuery {
-    id: String,
-}
-
 #[get("/v1/admin/game")]
-async fn admin_game_get(storage: StorageData, req: HttpRequest) -> impl Responder {
-    let params = web::Query::<AdminGameGetQuery>::from_query(req.query_string());
-    if params.is_err() {
-        return HttpResponse::BadRequest().body("Invalid query params");
-    }
-    let game_id = params.unwrap().id.clone();
-    let game = storage.get_game(&game_id).await;
+async fn admin_get_games(storage: StorageData) -> impl Responder {
+    let games_ids = storage.get_games_ids().await;
 
-    match game {
-        Ok(game) => HttpResponse::Ok().json(game),
-        Err(_) => HttpResponse::InternalServerError().body("Error loading game"),
+    match games_ids {
+        Ok(games_ids) => {
+            let response: AdminGetGamesResponse = games_ids;
+            HttpResponse::Ok().json(response)
+        }
+        Err(_) => HttpResponse::InternalServerError().body("Error creating game"),
     }
 }
 
 #[post("/v1/admin/game")]
-async fn admin_game_post(storage: StorageData) -> impl Responder {
+async fn admin_post_game(storage: StorageData) -> impl Responder {
     let game = create_game();
     let save_result = storage.save_game(&game).await;
 
@@ -41,7 +40,118 @@ async fn admin_game_post(storage: StorageData) -> impl Responder {
     }
 }
 
-pub struct MahjongServer {}
+#[get("/v1/admin/game/{game_id}")]
+async fn admin_get_game_by_id(storage: StorageData, game_id: web::Path<String>) -> impl Responder {
+    let game = storage.get_game(&game_id.to_string()).await;
+
+    match game {
+        Ok(game) => HttpResponse::Ok().json(game),
+        Err(_) => HttpResponse::InternalServerError().body("Error loading game"),
+    }
+}
+
+#[post("/v1/admin/game/{game_id}/sort-hands")]
+async fn admin_post_game_sort_hands(
+    storage: StorageData,
+    game_id: web::Path<String>,
+    srv: web::Data<Addr<MahjongWebsocketServer>>,
+) -> impl Responder {
+    let game = storage.get_game(&game_id.to_string()).await;
+
+    if game.is_err() {
+        return HttpResponse::InternalServerError().body("Error loading game");
+    }
+
+    let game_content = game.unwrap();
+
+    if game_content.is_none() {
+        return HttpResponse::BadRequest().body("No game found");
+    }
+
+    let mut game = game_content.unwrap();
+
+    for player in game.players.iter() {
+        let hand = game.table.hands.get_mut(&player.id).unwrap();
+        hand.sort_default(&game.deck);
+    }
+
+    let save_result = storage.save_game(&game).await;
+
+    srv.do_send(ClientMessage {
+        id: rand::random(),
+        msg: SocketMessage::GameUpdate(game.clone()),
+        room: game_id.to_string(),
+    });
+
+    match save_result {
+        Ok(_) => HttpResponse::Ok().json(game.table.hands),
+        Err(_) => HttpResponse::InternalServerError().body("Error sorting hands"),
+    }
+}
+
+#[post("/v1/admin/game/{game_id}/draw-tile")]
+async fn admin_post_game_draw_tile(
+    storage: StorageData,
+    game_id: web::Path<String>,
+) -> impl Responder {
+    let game = storage.get_game(&game_id.to_string()).await;
+    if game.is_err() {
+        return HttpResponse::InternalServerError().body("Error loading game");
+    }
+    let game_content = game.unwrap();
+    if game_content.is_none() {
+        return HttpResponse::BadRequest().body("No game found");
+    }
+    let mut game = game_content.unwrap();
+
+    game.draw_tile_from_wall();
+
+    let save_result = storage.save_game(&game).await;
+    let current_player_id = game.get_current_player().id.clone();
+    let hand = game.table.hands.get(&current_player_id).unwrap();
+
+    match save_result {
+        Ok(_) => {
+            let response: AdminPostDrawTileResponse = hand.clone();
+            HttpResponse::Ok().json(response)
+        }
+        Err(_) => HttpResponse::InternalServerError().body("Error sorting hands"),
+    }
+}
+
+#[derive(Deserialize)]
+struct WebSocketQuery {
+    game_id: String,
+}
+
+#[get("/v1/ws")]
+async fn get_ws(
+    req: HttpRequest,
+    stream: web::Payload,
+    srv: web::Data<Addr<MahjongWebsocketServer>>,
+) -> Result<impl Responder, Error> {
+    let params = web::Query::<WebSocketQuery>::from_query(req.query_string());
+
+    if params.is_err() {
+        return Ok(HttpResponse::BadRequest().body("Invalid query parameters"));
+    }
+
+    let game_id = params.unwrap().game_id.clone();
+
+    ws::start(
+        MahjongWebsocketSession {
+            id: rand::random(),
+            hb: Instant::now(),
+            room: game_id,
+            name: None,
+            addr: srv.get_ref().clone(),
+        },
+        &req,
+        stream,
+    )
+}
+
+pub struct MahjongServer;
 
 impl MahjongServer {
     pub async fn start(storage: Box<dyn Storage>) -> std::io::Result<()> {
@@ -50,14 +160,20 @@ impl MahjongServer {
 
         println!("Starting the Mahjong HTTP server on port http://{address}:{port}");
         let storage_arc = Arc::new(storage);
+        let server = MahjongWebsocketServer::new().start();
 
         HttpServer::new(move || {
             let storage_data: StorageData = web::Data::new(storage_arc.clone());
             App::new()
+                .app_data(web::Data::new(server.clone()))
                 .app_data(storage_data)
                 .service(get_health)
-                .service(admin_game_post)
-                .service(admin_game_get)
+                .service(admin_get_games)
+                .service(admin_post_game)
+                .service(admin_get_game_by_id)
+                .service(admin_post_game_sort_hands)
+                .service(admin_post_game_draw_tile)
+                .service(get_ws)
         })
         .bind((address, port))?
         .run()

@@ -5,6 +5,8 @@ mod common;
 mod file_storage;
 mod game_wrapper;
 mod http_server;
+mod socket_server;
+mod socket_session;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

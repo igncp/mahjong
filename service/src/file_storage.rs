@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use mahjong_core::Game;
+use mahjong_core::{Game, GameId};
 use serde::{Deserialize, Serialize};
 
 use crate::common::Storage;
@@ -15,12 +15,15 @@ struct FileContent {
 impl Storage for FileStorage {
     async fn save_game(&self, game: &Game) -> Result<(), String> {
         let mut file_content = self.get_file();
-        let game = (*game).clone();
         if file_content.games.is_none() {
             file_content.games = Some(vec![]);
         }
         let games = file_content.games.as_mut().unwrap();
-        games.push(game);
+        let mut games: Vec<Game> = games.iter().filter(|g| g.id != game.id).cloned().collect();
+
+        games.insert(0, game.clone());
+
+        file_content.games = Some(games);
 
         self.save_file(&file_content);
 
@@ -37,6 +40,18 @@ impl Storage for FileStorage {
             .find(|game| game.id == id);
 
         Ok(game)
+    }
+
+    async fn get_games_ids(&self) -> Result<Vec<GameId>, String> {
+        let file_content = self.get_file();
+        let games_ids = file_content
+            .games
+            .unwrap()
+            .iter()
+            .map(|game| game.id.clone())
+            .collect();
+
+        Ok(games_ids)
     }
 }
 
