@@ -67,7 +67,7 @@ impl Tile {
                         return tile_a.suit.cmp(&tile_b.suit);
                     }
 
-                    return tile_a.value.cmp(&tile_b.value);
+                    tile_a.value.cmp(&tile_b.value)
                 }
                 _ => std::cmp::Ordering::Less,
             },
