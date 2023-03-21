@@ -1,7 +1,9 @@
 use std::collections::HashSet;
 
 use mahjong_core::{Game, GameId, Hand, PlayerId, TileId};
-use service_contracts::{AdminPostDiscardTileResponse, AdminPostDrawTileResponse, SocketMessage};
+use service_contracts::{
+    AdminPostDiscardTileResponse, AdminPostDrawTileResponse, GameSummary, SocketMessage,
+};
 
 use crate::service_http_client::ServiceHTTPClient;
 
@@ -12,11 +14,13 @@ pub enum Mode {
 }
 
 pub struct App {
-    service_client: ServiceHTTPClient,
-    pub mode: Option<Mode>,
-    pub waiting: bool,
     pub game: Option<Game>,
+    pub game_summary: Option<GameSummary>,
     pub games_ids: Option<Vec<GameId>>,
+    pub mode: Option<Mode>,
+    pub user_id: Option<PlayerId>,
+    pub waiting: bool,
+    service_client: ServiceHTTPClient,
 }
 
 #[derive(Debug, Clone)]
@@ -35,9 +39,11 @@ impl App {
 
         App {
             game: None,
+            game_summary: None,
             games_ids: None,
             mode: None,
             service_client: mahjong_client,
+            user_id: None,
             waiting: false,
         }
     }
@@ -67,6 +73,31 @@ impl App {
         }
     }
 
+    pub async fn user_load_game(
+        &mut self,
+        game_id: &str,
+        player_id: &PlayerId,
+    ) -> Result<(), String> {
+        self.waiting = true;
+
+        let game_summary = self.service_client.user_load_game(game_id, player_id).await;
+        self.waiting = false;
+        if game_summary.is_err() {
+            return Err("Failed to load game".to_string());
+        }
+
+        self.game_summary = Some(game_summary.unwrap());
+
+        // TODO
+        let websocket = self.service_client.connect_to_websocket(game_id).await;
+        if websocket.is_err() {
+            println!("Error: {}", websocket.err().unwrap());
+            std::process::exit(1);
+        }
+
+        Ok(())
+    }
+
     pub async fn admin_load_game(&mut self, game_id: &str) -> Result<(), String> {
         self.waiting = true;
 
@@ -87,9 +118,16 @@ impl App {
         Ok(())
     }
 
-    pub async fn admin_get_games(&mut self) {
+    pub async fn get_games(&mut self) {
         self.waiting = true;
-        let games = self.service_client.admin_get_games().await;
+        let games = self
+            .service_client
+            .get_games(if self.mode == Some(Mode::User) {
+                Some(self.user_id.as_ref().unwrap())
+            } else {
+                None
+            })
+            .await;
         self.waiting = false;
         if games.is_err() {
             println!("Error: {}", games.err().unwrap());
@@ -98,20 +136,21 @@ impl App {
         self.games_ids = Some(games.unwrap());
     }
 
-    pub async fn admin_sort_hands(&mut self) {
+    pub async fn admin_sort_hands(&mut self) -> bool {
         let game = self.game.as_mut().unwrap();
         self.waiting = true;
         let sorted_hands = self.service_client.admin_sort_hands(&game.id).await;
         self.waiting = false;
 
         if sorted_hands.is_err() {
-            println!("Error: {}", sorted_hands.err().unwrap());
-            std::process::exit(1);
+            return false;
         }
 
         let sorted_hands = sorted_hands.unwrap();
 
         game.table.hands = sorted_hands;
+
+        true
     }
 
     pub async fn wait_for_message(&mut self) -> Result<AppEvent, String> {
@@ -134,21 +173,22 @@ impl App {
         Ok(AppEvent(message))
     }
 
-    pub async fn admin_draw_tile(&mut self) {
+    pub async fn admin_draw_tile(&mut self) -> bool {
         self.waiting = true;
         let game = self.game.as_mut().unwrap();
         let result = self.service_client.admin_draw_tile(&game.id).await;
         self.waiting = false;
 
         if result.is_err() {
-            println!("Error: {}", result.err().unwrap());
-            std::process::exit(1);
+            return false;
         }
 
         let hand: AdminPostDrawTileResponse = result.unwrap();
         let current_player = game.get_current_player();
 
         game.table.hands.insert(current_player.id.clone(), hand);
+
+        true
     }
 
     pub async fn admin_create_meld(
@@ -192,7 +232,7 @@ impl App {
         self.game = Some(game);
     }
 
-    pub async fn admin_move_player(&mut self) {
+    pub async fn admin_move_player(&mut self) -> bool {
         self.waiting = true;
         let game = self.game.as_mut().unwrap();
         let result = self.service_client.admin_move_player(&game.id).await;
@@ -201,7 +241,44 @@ impl App {
         // Ignore the error case
         if let Ok(game) = result {
             self.game = Some(game);
+            return true;
         }
+
+        false
+    }
+
+    // This can potentially be moved to the backend
+    pub async fn admin_move_player_combined(&mut self) {
+        let moved = self.admin_move_player().await;
+
+        if !moved {
+            return;
+        }
+
+        let drawn = self.admin_draw_tile().await;
+        if !drawn {
+            return;
+        };
+
+        self.admin_sort_hands().await;
+    }
+
+    pub async fn admin_claim_tile(&mut self, player_id: &PlayerId) -> bool {
+        self.waiting = true;
+        let game = self.game.as_mut().unwrap();
+        let result = self
+            .service_client
+            .admin_claim_tile(&game.id, player_id)
+            .await;
+        self.waiting = false;
+
+        if result.is_err() {
+            return false;
+        }
+
+        self.game = Some(result.unwrap());
+
+        true
     }
 
     // To be removed

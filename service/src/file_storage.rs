@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use mahjong_core::{Game, GameId};
+use mahjong_core::{Game, GameId, PlayerId};
 use serde::{Deserialize, Serialize};
 
 use crate::common::Storage;
@@ -42,19 +42,26 @@ impl Storage for FileStorage {
         Ok(game)
     }
 
-    async fn get_games_ids(&self) -> Result<Vec<GameId>, String> {
+    async fn get_games_ids(&self, player_id: &Option<PlayerId>) -> Result<Vec<GameId>, String> {
         let file_content = self.get_file();
-        let games_ids = file_content.games;
+        let games = file_content.games;
 
-        if games_ids.is_none() {
+        if games.is_none() {
             return Ok(vec![]);
         }
 
-        let games_ids = games_ids
-            .unwrap()
-            .iter()
-            .map(|game| game.id.clone())
-            .collect();
+        let mut games = games.unwrap();
+
+        if player_id.is_some() {
+            let player_id = player_id.as_ref().unwrap();
+            games = games
+                .iter()
+                .cloned()
+                .filter(|game| game.table.hands.get(player_id).is_some())
+                .collect();
+        }
+
+        let games_ids = games.iter().map(|game| game.id.clone()).collect();
 
         Ok(games_ids)
     }

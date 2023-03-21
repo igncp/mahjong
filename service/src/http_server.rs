@@ -1,13 +1,14 @@
 use crate::common::Storage;
-use crate::game_wrapper;
+use crate::game_wrapper::GameWrapper;
 use crate::socket_server::MahjongWebsocketServer;
 use crate::socket_session::MahjongWebsocketSession;
 use actix::prelude::*;
 use actix_web::{get, post, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web_actors::ws;
-use serde::Deserialize;
 use service_contracts::{
-    AdminGetGamesResponse, AdminPostCreateMeldRequest, AdminPostDiscardTileRequest,
+    AdminGetGamesResponse, AdminPostClaimTileRequest, AdminPostCreateMeldRequest,
+    AdminPostDiscardTileRequest, UserGetGamesQuery, UserGetGamesResponse, UserLoadGameQuery,
+    WebSocketQuery,
 };
 use std::sync::Arc;
 use std::time::Instant;
@@ -22,7 +23,7 @@ async fn get_health() -> impl Responder {
 
 #[get("/v1/admin/game")]
 async fn admin_get_games(storage: StorageData) -> impl Responder {
-    let games_ids = storage.get_games_ids().await;
+    let games_ids = storage.get_games_ids(&None).await;
 
     match games_ids {
         Ok(games_ids) => {
@@ -33,9 +34,27 @@ async fn admin_get_games(storage: StorageData) -> impl Responder {
     }
 }
 
+#[get("/v1/user/game")]
+async fn user_get_games(storage: StorageData, req: HttpRequest) -> impl Responder {
+    let params = web::Query::<UserGetGamesQuery>::from_query(req.query_string());
+    if params.is_err() {
+        return HttpResponse::BadRequest().body("Invalid player id");
+    }
+    let player_id = params.unwrap().player_id.clone();
+    let games_ids = storage.get_games_ids(&Some(player_id)).await;
+
+    match games_ids {
+        Ok(games_ids) => {
+            let response: UserGetGamesResponse = games_ids;
+            HttpResponse::Ok().json(response)
+        }
+        Err(_) => HttpResponse::InternalServerError().body("Error creating game"),
+    }
+}
+
 #[post("/v1/admin/game")]
 async fn admin_post_game(storage: StorageData, srv: SocketServer) -> impl Responder {
-    let game_wrapper = game_wrapper::GameWrapper::from_new_game(storage, srv).await;
+    let game_wrapper = GameWrapper::from_new_game(storage, srv).await;
 
     game_wrapper.handle_new_game().await
 }
@@ -50,13 +69,35 @@ async fn admin_get_game_by_id(storage: StorageData, game_id: web::Path<String>) 
     }
 }
 
+#[get("/v1/user/game/{game_id}")]
+async fn user_get_game_load(
+    storage: StorageData,
+    game_id: web::Path<String>,
+    req: HttpRequest,
+    srv: SocketServer,
+) -> impl Responder {
+    let params = web::Query::<UserLoadGameQuery>::from_query(req.query_string());
+
+    let player_id = match params {
+        Ok(params) => params.player_id.clone(),
+        Err(_) => return HttpResponse::BadRequest().body("Invalid player id"),
+    };
+
+    let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
+
+    match game_wrapper {
+        Ok(game_wrapper) => game_wrapper.user_load_game(&player_id),
+        Err(err) => err,
+    }
+}
+
 #[post("/v1/admin/game/{game_id}/sort-hands")]
 async fn admin_post_game_sort_hands(
     storage: StorageData,
     game_id: web::Path<String>,
     srv: SocketServer,
 ) -> impl Responder {
-    let game_wrapper = game_wrapper::GameWrapper::from_storage(storage, &game_id, srv).await;
+    let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
 
     match game_wrapper {
         Ok(mut game_wrapper) => game_wrapper.handle_sort_hands().await,
@@ -70,7 +111,7 @@ async fn admin_post_game_draw_tile(
     game_id: web::Path<String>,
     srv: SocketServer,
 ) -> impl Responder {
-    let game_wrapper = game_wrapper::GameWrapper::from_storage(storage, &game_id, srv).await;
+    let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
 
     match game_wrapper {
         Ok(mut game_wrapper) => game_wrapper.handle_draw_tile().await,
@@ -84,7 +125,7 @@ async fn admin_post_game_move_player(
     game_id: web::Path<String>,
     srv: SocketServer,
 ) -> impl Responder {
-    let game_wrapper = game_wrapper::GameWrapper::from_storage(storage, &game_id, srv).await;
+    let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
 
     match game_wrapper {
         Ok(mut game_wrapper) => game_wrapper.handle_move_player().await,
@@ -99,7 +140,7 @@ async fn admin_post_game_create_meld(
     game_id: web::Path<String>,
     srv: SocketServer,
 ) -> impl Responder {
-    let game_wrapper = game_wrapper::GameWrapper::from_storage(storage, &game_id, srv).await;
+    let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
 
     match game_wrapper {
         Ok(mut game_wrapper) => game_wrapper.handle_create_meld(&body).await,
@@ -114,7 +155,7 @@ async fn admin_post_game_discard_tile(
     game_id: web::Path<String>,
     srv: SocketServer,
 ) -> impl Responder {
-    let game_wrapper = game_wrapper::GameWrapper::from_storage(storage, &game_id, srv).await;
+    let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
 
     match game_wrapper {
         Ok(mut game_wrapper) => game_wrapper.handle_discard_tile(&body.tile_id).await,
@@ -122,9 +163,19 @@ async fn admin_post_game_discard_tile(
     }
 }
 
-#[derive(Deserialize)]
-struct WebSocketQuery {
-    game_id: String,
+#[post("/v1/admin/game/{game_id}/claim-tile")]
+async fn admin_post_game_claim_tile(
+    storage: StorageData,
+    body: web::Json<AdminPostClaimTileRequest>,
+    game_id: web::Path<String>,
+    srv: SocketServer,
+) -> impl Responder {
+    let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
+
+    match game_wrapper {
+        Ok(mut game_wrapper) => game_wrapper.handle_claim_tile(&body.player_id).await,
+        Err(err) => err,
+    }
 }
 
 #[get("/v1/ws")]
@@ -179,6 +230,9 @@ impl MahjongServer {
                 .service(admin_post_game_create_meld)
                 .service(admin_post_game_discard_tile)
                 .service(admin_post_game_move_player)
+                .service(admin_post_game_claim_tile)
+                .service(user_get_game_load)
+                .service(user_get_games)
                 .service(get_ws)
         })
         .bind((address, port))?

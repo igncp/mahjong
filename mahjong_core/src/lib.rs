@@ -109,7 +109,8 @@ pub struct Table {
     pub hands: Hands,
 }
 
-pub type Score = HashMap<PlayerId, u32>;
+pub type ScoreItem = u32;
+pub type Score = HashMap<PlayerId, ScoreItem>;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct RoundTileClaimed {
@@ -122,9 +123,9 @@ pub type TileClaimed = Option<RoundTileClaimed>;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Round {
-    dealer_player_index: usize,
-    player_index: usize,
+    pub dealer_player_index: usize,
+    pub player_index: usize,
     tile_claimed: TileClaimed,
     wall_tile_drawn: Option<TileId>,
-    wind: Wind,
+    pub wind: Wind,
 }

@@ -1,8 +1,9 @@
 use actix_web::{web, HttpResponse};
-use mahjong_core::{Game, Player, TileId};
+use mahjong_core::{Game, Player, PlayerId, TileId};
 use service_contracts::{
-    AdminPostCreateMeldRequest, AdminPostCreateMeldResponse, AdminPostDiscardTileResponse,
-    AdminPostDrawTileResponse, AdminPostMovePlayerResponse, SocketMessage,
+    AdminPostClaimTileResponse, AdminPostCreateMeldRequest, AdminPostCreateMeldResponse,
+    AdminPostDiscardTileResponse, AdminPostDrawTileResponse, AdminPostMovePlayerResponse,
+    GameSummary, SocketMessage,
 };
 use uuid::Uuid;
 
@@ -62,7 +63,7 @@ impl GameWrapper {
         });
     }
 
-    async fn save_and_return<A>(&self, data: A, err_msg: String) -> HttpResponse
+    async fn save_and_return<A>(&self, data: A, err_msg: &'static str) -> HttpResponse
     where
         A: serde::Serialize,
     {
@@ -76,8 +77,15 @@ impl GameWrapper {
     }
 
     pub async fn handle_new_game(&self) -> HttpResponse {
-        self.save_and_return(&self.game.table.hands, "Error creating game".to_string())
+        self.save_and_return(&self.game.table.hands, "Error creating game")
             .await
+    }
+
+    pub fn user_load_game(&self, player_id: &PlayerId) -> HttpResponse {
+        match GameSummary::from_game(&self.game, player_id) {
+            Some(summary) => HttpResponse::Ok().json(summary),
+            None => HttpResponse::InternalServerError().body("Error loading game"),
+        }
     }
 
     pub async fn handle_sort_hands(&mut self) -> HttpResponse {
@@ -86,7 +94,7 @@ impl GameWrapper {
             hand.sort_default(&self.game.deck);
         }
 
-        self.save_and_return(&self.game.table.hands, "Error sorting hands".to_string())
+        self.save_and_return(&self.game.table.hands, "Error sorting hands")
             .await
     }
 
@@ -98,7 +106,7 @@ impl GameWrapper {
 
         let response: AdminPostDrawTileResponse = hand.clone();
 
-        self.save_and_return(&response, "Error when drawing tile".to_string())
+        self.save_and_return(&response, "Error when drawing tile")
             .await
     }
 
@@ -107,7 +115,7 @@ impl GameWrapper {
 
         let response: AdminPostDiscardTileResponse = self.game.clone();
 
-        self.save_and_return(&response, "Error when discarding the tile".to_string())
+        self.save_and_return(&response, "Error when discarding the tile")
             .await
     }
 
@@ -118,7 +126,7 @@ impl GameWrapper {
         let hand = self.game.table.hands.get(&current_player_id).unwrap();
         let response: AdminPostCreateMeldResponse = hand.clone();
 
-        self.save_and_return(&response, "Error when creating meld".to_string())
+        self.save_and_return(&response, "Error when creating meld")
             .await
     }
 
@@ -128,10 +136,21 @@ impl GameWrapper {
         if success {
             let response: AdminPostMovePlayerResponse = self.game.clone();
 
-            self.save_and_return(&response, "Error moving player".to_string())
-                .await
+            self.save_and_return(&response, "Error moving player").await
         } else {
             HttpResponse::BadRequest().body("Error when moving player")
+        }
+    }
+
+    pub async fn handle_claim_tile(&mut self, player_id: &PlayerId) -> HttpResponse {
+        let success = self.game.claim_tile(player_id);
+
+        if success {
+            let response: AdminPostClaimTileResponse = self.game.clone();
+
+            self.save_and_return(&response, "Error claiming tile").await
+        } else {
+            HttpResponse::BadRequest().body("Error claiming tile")
         }
     }
 }

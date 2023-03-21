@@ -1,4 +1,7 @@
-use mahjong_core::{Dragon, Flower, Game, Season, Suit, Tile, Wind};
+use mahjong_core::{
+    Board, Deck, Dragon, Flower, Game, Hand, Player, Score, Season, Suit, Tile, Wind,
+};
+use service_contracts::GameSummary;
 
 fn format_to_emoji(tile: &Tile) -> String {
     match tile {
@@ -47,12 +50,11 @@ pub fn get_draw_wall(game: &Game) -> String {
         .join(" ")
 }
 
-pub fn get_board(game: &Game) -> String {
-    game.table
-        .board
+pub fn get_board(board: &Board, deck: &Deck) -> String {
+    board
         .iter()
         .map(|tile_id| {
-            let tile = game.deck.0.get(tile_id).unwrap();
+            let tile = deck.0.get(tile_id).unwrap();
             let tile_str = format_to_emoji(tile);
 
             format!("[{}]", tile_str)
@@ -61,7 +63,94 @@ pub fn get_board(game: &Game) -> String {
         .join(" ")
 }
 
-pub fn get_hand_str(game: &Game) -> Vec<String> {
+pub fn get_user_hand_str(game: &GameSummary) -> Vec<String> {
+    let mut lines = vec![];
+
+    lines.push("".to_string());
+    lines.push(format!("- Hand: {}", game.hand.0.len()));
+
+    format_hand(&game.hand, &game.deck)
+        .iter()
+        .for_each(|line| lines.push(line.to_string()));
+
+    lines
+}
+
+pub fn format_hand(hand: &Hand, deck: &Deck) -> Vec<String> {
+    let mut lines = vec![];
+
+    let line = hand
+        .0
+        .iter()
+        .filter(|tile| tile.set_id.is_none())
+        .enumerate()
+        .map(|(idx, hand_tile)| {
+            let tile = deck.0.get(&hand_tile.id).unwrap();
+            let tile_str = format_to_emoji(tile);
+            let idx_formatted = format!("{:0>2}", idx);
+            format!("[{idx_formatted}]({tile_str})",)
+        })
+        .collect::<Vec<String>>()
+        .join("  ");
+
+    lines.push(line);
+
+    let melds = hand.get_melds();
+
+    melds.melds.iter().for_each(|(_, tiles)| {
+        let mut full_tiles = tiles
+            .iter()
+            .map(|tile| deck.0.get(&tile.id).unwrap())
+            .collect::<Vec<&Tile>>();
+        let is_concealed = tiles.iter().any(|tile| tile.concealed);
+        full_tiles.sort_by(|a, b| a.cmp_custom(b));
+        let meld_str = full_tiles
+            .iter()
+            .map(|tile| format!("({})", format_to_emoji(tile)))
+            .collect::<Vec<String>>()
+            .join(" ");
+
+        lines.push(format!(
+            "- Meld {}: {}",
+            {
+                if is_concealed {
+                    "🔒"
+                } else {
+                    "👁"
+                }
+            },
+            meld_str
+        ));
+    });
+
+    lines
+}
+
+pub fn format_player(
+    player: &Player,
+    current_player: &Player,
+    hand: Option<&Hand>,
+    score: &Score,
+) -> String {
+    format!(
+        "{}: {}{} [{}] <{}>",
+        player.name,
+        if hand.is_some() {
+            hand.unwrap().0.len().to_string()
+        } else {
+            "?".to_string()
+        },
+        if player.id == current_player.id {
+            " *"
+        } else {
+            ""
+        },
+        player.id,
+        score.get(&player.id).unwrap()
+    )
+}
+
+pub fn get_admin_hands_str(game: &Game) -> Vec<String> {
     let mut lines = vec![];
     let current_player = game.get_current_player();
     let mut possible_melds = game.get_possible_melds_by_discard();
@@ -70,59 +159,15 @@ pub fn get_hand_str(game: &Game) -> Vec<String> {
         let hand = game.table.hands.get(&player.id).unwrap();
 
         lines.push("".to_string());
-        lines.push(format!(
-            "{}: {}{}",
-            player.name,
-            hand.0.len(),
-            if player.id == current_player.id {
-                " *"
-            } else {
-                ""
-            }
+        lines.push(format_player(
+            player,
+            current_player,
+            Some(hand),
+            &game.score,
         ));
 
-        let line = hand
-            .0
-            .iter()
-            .filter(|tile| tile.set_id.is_none())
-            .enumerate()
-            .map(|(idx, hand_tile)| {
-                let tile = game.deck.0.get(&hand_tile.id).unwrap();
-                let tile_str = format_to_emoji(tile);
-                let idx_formatted = format!("{:0>2}", idx);
-                format!("[{idx_formatted}]({tile_str})",)
-            })
-            .collect::<Vec<String>>()
-            .join("  ");
-
-        lines.push(line.clone());
-
-        let melds = hand.get_melds();
-
-        melds.melds.iter().for_each(|(_, tiles)| {
-            let mut full_tiles = tiles
-                .iter()
-                .map(|tile| game.deck.0.get(&tile.id).unwrap())
-                .collect::<Vec<&Tile>>();
-            let is_concealed = tiles.iter().any(|tile| tile.concealed);
-            full_tiles.sort_by(|a, b| a.cmp_custom(b));
-            let meld_str = full_tiles
-                .iter()
-                .map(|tile| format!("({})", format_to_emoji(tile)))
-                .collect::<Vec<String>>()
-                .join(" ");
-
-            lines.push(format!(
-                "- Meld {}: {}",
-                {
-                    if is_concealed {
-                        "🔒"
-                    } else {
-                        "👁"
-                    }
-                },
-                meld_str
-            ));
+        format_hand(hand, &game.deck).iter().for_each(|line| {
+            lines.push(line.to_string());
         });
 
         possible_melds.iter_mut().for_each(|meld| {

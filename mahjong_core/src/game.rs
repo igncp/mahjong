@@ -8,8 +8,7 @@ use crate::{
         get_is_chow, get_is_kong, get_is_pair, get_is_pung, get_possible_melds,
         get_tile_claimed_id_for_user, GetPossibleMelds, PlayerDiff, PossibleMeld, SetCheckOpts,
     },
-    Board, Deck, Hand, HandTile, Hands, Player, PlayerId, Round, RoundTileClaimed, Score, Table,
-    TileId,
+    Deck, Hand, HandTile, Player, PlayerId, Round, RoundTileClaimed, Score, Table, TileId,
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -63,46 +62,6 @@ impl Default for Game {
             table,
         }
     }
-}
-
-pub struct ClaimTile {
-    board: Board,
-    hands: Hands,
-    player_id: PlayerId,
-    players: Vec<Player>,
-    round: Round,
-}
-
-pub fn claim_tile(opts: &mut ClaimTile) -> bool {
-    let player_hand = opts.hands.get_mut(&opts.player_id);
-    if player_hand.is_none() {
-        return false;
-    }
-    let player_hand = player_hand.unwrap();
-
-    if player_hand.0.len() != 13 || opts.round.tile_claimed.is_none() || opts.board.is_empty() {
-        return false;
-    }
-
-    let tile = opts.board.pop().unwrap();
-
-    let mut tile_claimed = opts.round.tile_claimed.clone().unwrap();
-    tile_claimed.by = Some(opts.player_id.clone());
-
-    opts.round.tile_claimed = Some(tile_claimed);
-    opts.round.player_index = opts
-        .players
-        .iter()
-        .position(|p| p.id == opts.player_id)
-        .unwrap();
-
-    player_hand.0.push(HandTile {
-        concealed: true,
-        id: tile,
-        set_id: None,
-    });
-
-    true
 }
 
 impl Game {
@@ -445,5 +404,40 @@ impl Game {
         }
 
         None
+    }
+
+    pub fn claim_tile(&mut self, player_id: &PlayerId) -> bool {
+        let player_hand = self.table.hands.get_mut(player_id);
+        if player_hand.is_none() {
+            return false;
+        }
+        let player_hand = player_hand.unwrap();
+
+        if player_hand.0.len() != 13
+            || self.round.tile_claimed.is_none()
+            || self.table.board.is_empty()
+        {
+            return false;
+        }
+
+        let tile = self.table.board.pop().unwrap();
+
+        let mut tile_claimed = self.round.tile_claimed.clone().unwrap();
+        tile_claimed.by = Some(player_id.clone());
+
+        self.round.tile_claimed = Some(tile_claimed);
+        self.round.player_index = self
+            .players
+            .iter()
+            .position(|p| p.id == *player_id)
+            .unwrap();
+
+        player_hand.0.push(HandTile {
+            concealed: true,
+            id: tile,
+            set_id: None,
+        });
+
+        true
     }
 }

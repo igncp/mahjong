@@ -1,3 +1,5 @@
+use crate::base::{App, AppEvent, Mode};
+use crate::view::draw_view;
 use crossterm::event::{
     self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyModifiers,
 };
@@ -10,9 +12,6 @@ use std::collections::HashSet;
 use std::io;
 use std::time::Duration;
 use tui::{backend::CrosstermBackend, Terminal};
-
-use crate::base::{App, AppEvent, Mode};
-use crate::view::draw_view;
 
 const PAGE_UP_DOWN_SCROLL: u16 = 20;
 
@@ -106,11 +105,6 @@ impl UI {
         None
     }
 
-    async fn get_games(&mut self, app: &mut App) {
-        app.admin_get_games().await;
-        self.state.display_games = true;
-    }
-
     async fn wait_for_message_event(&mut self, app: &mut App) -> Option<AppEvent> {
         let response = app.wait_for_message().await;
 
@@ -178,6 +172,20 @@ impl UI {
         Some((player_id, tiles))
     }
 
+    fn extract_claim_tile_args(&self, app: &App) -> Option<PlayerId> {
+        let args = self.state.input.split_whitespace().collect::<Vec<&str>>();
+        if args.len() < 2 {
+            return None;
+        }
+        let player_index = args[1].parse::<usize>();
+        if player_index.is_err() || player_index.clone().unwrap() > 3 {
+            return None;
+        }
+        let game = &app.game.clone().unwrap();
+        let player_id = game.players.clone()[player_index.unwrap()].id.clone();
+        Some(player_id)
+    }
+
     fn extract_discard_tile_args(&mut self, app: &App) -> Option<TileId> {
         let args = self.state.input.split_whitespace().collect::<Vec<&str>>();
         if args.len() < 2 {
@@ -208,15 +216,13 @@ impl UI {
     }
 
     pub async fn run(&mut self, app: &mut App) {
-        if app.mode == Some(Mode::User) {
-            println!("'user' mode is not yet supported");
-            std::process::exit(1);
-        }
-
         self.prepare();
 
-        if app.game.is_some() {
+        if (app.mode == Some(Mode::Admin) && app.game.is_some())
+            || (app.mode == Some(Mode::User) && app.game_summary.is_some())
+        {
             self.state.screen = UIScreen::Game;
+            self.state.display_hand = true;
         }
 
         loop {
@@ -289,11 +295,19 @@ impl UI {
                                             self.create_game(app).await;
                                         }
                                         "gg" => {
-                                            self.get_games(app).await;
+                                            app.get_games().await;
+                                            self.state.display_games = true;
                                         }
                                         _ => {}
                                     },
                                     UIScreen::Game => match input_fragment {
+                                        "claim" => {
+                                            let parsed_input = self.extract_claim_tile_args(app);
+                                            if let Some(player_id) = parsed_input {
+                                                app.admin_claim_tile(&player_id).await;
+                                            }
+                                            self.state.display_hand = true;
+                                        }
                                         "cm" => {
                                             let parsed_input = self.extract_create_meld_args(app);
                                             if let Some((player_id, tiles)) = parsed_input {
@@ -312,8 +326,8 @@ impl UI {
                                             let parsed_input = self.extract_discard_tile_args(app);
                                             if let Some(tile_id) = parsed_input {
                                                 app.admin_discard_tile(&tile_id).await;
-                                                self.state.display_hand = true;
                                             }
+                                            self.state.display_hand = true;
                                         }
                                         "draw" => {
                                             app.admin_draw_tile().await;
@@ -323,6 +337,10 @@ impl UI {
                                             self.state.display_hand = true;
                                         }
                                         "n" => {
+                                            app.admin_move_player_combined().await;
+                                            self.state.display_hand = true;
+                                        }
+                                        "next" => {
                                             app.admin_move_player().await;
                                             self.state.display_hand = true;
                                         }

@@ -12,13 +12,16 @@ pub fn get_help_text(app: &App, ui_state: &UIState) -> String {
             help_list.push("- di <tile_index>: [Admin] discard tile for the player with 14 tiles");
             help_list.push("- draw: [Admin] draw a tile for the player from the tiles wall");
             help_list.push("- hd: [Admin] show hands");
-            help_list.push("- n: [Admin] move to next player");
+            help_list.push("- n: [Admin] move to next player, draw and sort");
+            help_list.push("- next: [Admin] move to next player");
             help_list.push("- pmd: [Admin] get possible melds by discard");
             help_list.push("- sh: [Admin] sort hands");
         }
     } else if app.mode == Some(Mode::Admin) {
         help_list.push("ss: [Admin] start a game");
         help_list.push("gg: [Admin] get games");
+    } else {
+        help_list.push("gg: Get games for the user");
     }
 
     help_list.join("\n")
