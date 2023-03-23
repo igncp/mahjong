@@ -323,9 +323,16 @@ impl UI {
                                             }
                                         }
                                         "di" => {
-                                            let parsed_input = self.extract_discard_tile_args(app);
-                                            if let Some(tile_id) = parsed_input {
-                                                app.admin_discard_tile(&tile_id).await;
+                                            if app.is_current_player() {
+                                                let parsed_input =
+                                                    self.extract_discard_tile_args(app);
+                                                if let Some(tile_id) = parsed_input {
+                                                    if app.mode == Some(Mode::Admin) {
+                                                        app.admin_discard_tile(&tile_id).await;
+                                                    } else {
+                                                        app.user_discard_tile(&tile_id).await;
+                                                    }
+                                                }
                                             }
                                             self.state.display_hand = true;
                                         }

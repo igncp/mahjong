@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use mahjong_core::{Game, GameId, Hand, PlayerId, TileId};
 use service_contracts::{
     AdminPostDiscardTileResponse, AdminPostDrawTileResponse, GameSummary, SocketMessage,
+    UserPostDiscardTileResponse,
 };
 
 use crate::service_http_client::ServiceHTTPClient;
@@ -48,6 +49,18 @@ impl App {
         }
     }
 
+    pub fn is_current_player(&self) -> bool {
+        if self.mode == Some(Mode::Admin) {
+            return true;
+        }
+
+        let game_summary = self.game_summary.as_ref().unwrap();
+        let player_id = game_summary.player_id.clone();
+        let current_player = &game_summary.players[game_summary.round.player_index];
+
+        player_id == current_player.id
+    }
+
     pub async fn admin_start_game(&mut self) {
         self.waiting = true;
         let game = self.service_client.admin_create_game().await;
@@ -64,7 +77,7 @@ impl App {
 
         let websocket = self
             .service_client
-            .connect_to_websocket(&game.id.clone())
+            .connect_to_websocket(&game.id.clone(), None)
             .await;
 
         if websocket.is_err() {
@@ -88,8 +101,10 @@ impl App {
 
         self.game_summary = Some(game_summary.unwrap());
 
-        // TODO
-        let websocket = self.service_client.connect_to_websocket(game_id).await;
+        let websocket = self
+            .service_client
+            .connect_to_websocket(game_id, Some(player_id.clone()))
+            .await;
         if websocket.is_err() {
             println!("Error: {}", websocket.err().unwrap());
             std::process::exit(1);
@@ -109,7 +124,10 @@ impl App {
 
         self.game = Some(game.unwrap());
 
-        let websocket = self.service_client.connect_to_websocket(game_id).await;
+        let websocket = self
+            .service_client
+            .connect_to_websocket(game_id, None)
+            .await;
         if websocket.is_err() {
             println!("Error: {}", websocket.err().unwrap());
             std::process::exit(1);
@@ -165,6 +183,10 @@ impl App {
             SocketMessage::ListRooms => "list".to_string(),
             SocketMessage::GameUpdate(new_game) => {
                 self.game = Some(new_game);
+                "update".to_string()
+            }
+            SocketMessage::GameSummaryUpdate(new_game) => {
+                self.game_summary = Some(new_game);
                 "update".to_string()
             }
             _ => "other".to_string(),
@@ -230,6 +252,24 @@ impl App {
 
         let game: AdminPostDiscardTileResponse = result.unwrap();
         self.game = Some(game);
+    }
+
+    pub async fn user_discard_tile(&mut self, tile_id: &TileId) {
+        self.waiting = true;
+        let game_summary = self.game_summary.as_mut().unwrap();
+        let result = self
+            .service_client
+            .user_discard_tile(&game_summary.id, tile_id)
+            .await;
+        self.waiting = false;
+
+        if result.is_err() {
+            println!("Error: {}", result.err().unwrap());
+            std::process::exit(1);
+        }
+
+        let game_summary: UserPostDiscardTileResponse = result.unwrap();
+        self.game_summary = Some(game_summary);
     }
 
     pub async fn admin_move_player(&mut self) -> bool {

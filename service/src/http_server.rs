@@ -8,7 +8,7 @@ use actix_web_actors::ws;
 use service_contracts::{
     AdminGetGamesResponse, AdminPostClaimTileRequest, AdminPostCreateMeldRequest,
     AdminPostDiscardTileRequest, UserGetGamesQuery, UserGetGamesResponse, UserLoadGameQuery,
-    WebSocketQuery,
+    UserPostDiscardTileRequest, WebSocketQuery,
 };
 use std::sync::Arc;
 use std::time::Instant;
@@ -148,6 +148,21 @@ async fn admin_post_game_create_meld(
     }
 }
 
+#[post("/v1/user/game/{game_id}/discard-tile")]
+async fn user_post_game_discard_tile(
+    storage: StorageData,
+    body: web::Json<UserPostDiscardTileRequest>,
+    game_id: web::Path<String>,
+    srv: SocketServer,
+) -> impl Responder {
+    let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
+
+    match game_wrapper {
+        Ok(mut game_wrapper) => game_wrapper.handle_discard_tile(false, &body.tile_id).await,
+        Err(err) => err,
+    }
+}
+
 #[post("/v1/admin/game/{game_id}/discard-tile")]
 async fn admin_post_game_discard_tile(
     storage: StorageData,
@@ -158,7 +173,7 @@ async fn admin_post_game_discard_tile(
     let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
 
     match game_wrapper {
-        Ok(mut game_wrapper) => game_wrapper.handle_discard_tile(&body.tile_id).await,
+        Ok(mut game_wrapper) => game_wrapper.handle_discard_tile(true, &body.tile_id).await,
         Err(err) => err,
     }
 }
@@ -190,15 +205,17 @@ async fn get_ws(
         return Ok(HttpResponse::BadRequest().body("Invalid query parameters"));
     }
 
-    let game_id = params.unwrap().game_id.clone();
+    let params = params.unwrap();
+    let game_id = params.game_id.clone();
+    let player_id = params.player_id.clone();
 
     ws::start(
         MahjongWebsocketSession {
-            id: rand::random(),
-            hb: Instant::now(),
-            room: game_id,
-            name: None,
             addr: srv.get_ref().clone(),
+            hb: Instant::now(),
+            id: rand::random(),
+            name: None,
+            room: MahjongWebsocketSession::get_room_id(&game_id, player_id.as_ref()),
         },
         &req,
         stream,
@@ -219,21 +236,22 @@ impl MahjongServer {
         HttpServer::new(move || {
             let storage_data: StorageData = web::Data::new(storage_arc.clone());
             App::new()
-                .app_data(web::Data::new(server.clone()))
                 .app_data(storage_data)
-                .service(get_health)
+                .app_data(web::Data::new(server.clone()))
+                .service(admin_get_game_by_id)
                 .service(admin_get_games)
                 .service(admin_post_game)
-                .service(admin_get_game_by_id)
-                .service(admin_post_game_sort_hands)
-                .service(admin_post_game_draw_tile)
+                .service(admin_post_game_claim_tile)
                 .service(admin_post_game_create_meld)
                 .service(admin_post_game_discard_tile)
+                .service(admin_post_game_draw_tile)
                 .service(admin_post_game_move_player)
-                .service(admin_post_game_claim_tile)
+                .service(admin_post_game_sort_hands)
+                .service(get_health)
+                .service(get_ws)
                 .service(user_get_game_load)
                 .service(user_get_games)
-                .service(get_ws)
+                .service(user_post_game_discard_tile)
         })
         .bind((address, port))?
         .run()

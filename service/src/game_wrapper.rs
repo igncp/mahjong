@@ -3,13 +3,14 @@ use mahjong_core::{Game, Player, PlayerId, TileId};
 use service_contracts::{
     AdminPostClaimTileResponse, AdminPostCreateMeldRequest, AdminPostCreateMeldResponse,
     AdminPostDiscardTileResponse, AdminPostDrawTileResponse, AdminPostMovePlayerResponse,
-    GameSummary, SocketMessage,
+    GameSummary, SocketMessage, UserPostDiscardTileResponse,
 };
 use uuid::Uuid;
 
 use crate::{
     http_server::{SocketServer, StorageData},
     socket_server::ClientMessage,
+    socket_session::MahjongWebsocketSession,
 };
 
 pub struct GameWrapper {
@@ -59,8 +60,18 @@ impl GameWrapper {
         self.socket_server.do_send(ClientMessage {
             id: rand::random(),
             msg: SocketMessage::GameUpdate(self.game.clone()),
-            room: self.game.id.to_string(),
+            room: MahjongWebsocketSession::get_room_id(&self.game.id, None),
         });
+
+        for player in self.game.players.iter() {
+            let game_summary = GameSummary::from_game(&self.game, &player.id).unwrap();
+
+            self.socket_server.do_send(ClientMessage {
+                id: rand::random(),
+                msg: SocketMessage::GameSummaryUpdate(game_summary),
+                room: MahjongWebsocketSession::get_room_id(&self.game.id, Some(&player.id)),
+            });
+        }
     }
 
     async fn save_and_return<A>(&self, data: A, err_msg: &'static str) -> HttpResponse
@@ -110,13 +121,22 @@ impl GameWrapper {
             .await
     }
 
-    pub async fn handle_discard_tile(&mut self, tile_id: &TileId) -> HttpResponse {
+    pub async fn handle_discard_tile(&mut self, is_admin: bool, tile_id: &TileId) -> HttpResponse {
         self.game.discard_tile_to_board(tile_id);
+        let game = self.game.clone();
 
-        let response: AdminPostDiscardTileResponse = self.game.clone();
+        if is_admin {
+            let response: AdminPostDiscardTileResponse = game;
+            self.save_and_return(&response, "Error when discarding the tile")
+                .await
+        } else {
+            let player_id = self.game.get_current_player().id.clone();
+            let response: UserPostDiscardTileResponse =
+                GameSummary::from_game(&game, &player_id).unwrap();
 
-        self.save_and_return(&response, "Error when discarding the tile")
-            .await
+            self.save_and_return(&response, "Error when discarding the tile")
+                .await
+        }
     }
 
     pub async fn handle_create_meld(&mut self, body: &AdminPostCreateMeldRequest) -> HttpResponse {

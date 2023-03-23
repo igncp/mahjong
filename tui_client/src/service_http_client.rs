@@ -10,7 +10,8 @@ use service_contracts::{
     AdminGetGamesResponse, AdminPostClaimTileRequest, AdminPostClaimTileResponse,
     AdminPostCreateMeldRequest, AdminPostCreateMeldResponse, AdminPostDiscardTileRequest,
     AdminPostDiscardTileResponse, AdminPostDrawTileResponse, AdminPostMovePlayerResponse,
-    SocketMessage, UserGetGamesQuery, UserGetLoadGameResponse, UserLoadGameQuery, WebSocketQuery,
+    SocketMessage, UserGetGamesQuery, UserGetLoadGameResponse, UserLoadGameQuery,
+    UserPostDiscardTileRequest, UserPostDiscardTileResponse, WebSocketQuery,
 };
 use tokio::net::TcpStream;
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
@@ -50,9 +51,14 @@ impl ServiceHTTPClient {
         }
     }
 
-    pub async fn connect_to_websocket(&mut self, game_id: &str) -> Result<(), String> {
+    pub async fn connect_to_websocket(
+        &mut self,
+        game_id: &str,
+        player_id: Option<PlayerId>,
+    ) -> Result<(), String> {
         let query = WebSocketQuery {
             game_id: game_id.to_string(),
+            player_id,
         };
         let url = format!(
             "ws://{}/v1/ws?{}",
@@ -279,6 +285,26 @@ impl ServiceHTTPClient {
         let validation = validate_response(&result);
         if validation.is_ok() {
             let hand = result.unwrap().json::<AdminPostDiscardTileResponse>().await;
+            if hand.is_err() {
+                return Err("Tile could not be discarded".to_string());
+            }
+            Ok(hand.unwrap())
+        } else {
+            Err(validation.err().unwrap())
+        }
+    }
+
+    pub async fn user_discard_tile(
+        &self,
+        game_id: &GameId,
+        tile_id: &TileId,
+    ) -> Result<UserPostDiscardTileResponse, String> {
+        let url = format!("{}/v1/user/game/{game_id}/discard-tile", self.url);
+        let request_body = UserPostDiscardTileRequest { tile_id: *tile_id };
+        let result = self.client.post(url).json(&request_body).send().await;
+        let validation = validate_response(&result);
+        if validation.is_ok() {
+            let hand = result.unwrap().json::<UserPostDiscardTileResponse>().await;
             if hand.is_err() {
                 return Err("Tile could not be discarded".to_string());
             }

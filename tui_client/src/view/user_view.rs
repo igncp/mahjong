@@ -1,4 +1,4 @@
-use super::formatter::{format_player, get_board, get_user_hand_str};
+use super::formatter::{format_hand, format_player, get_board, get_user_hand_str};
 use super::help::get_help_text;
 use crate::base::App;
 use crate::ui::{UIScreen, UIState};
@@ -106,31 +106,40 @@ pub fn draw_user_view<B: Backend>(f: &mut Frame<B>, app: &App, ui_state: &mut UI
                 let mut secondary_strs = vec![
                     format!(
                         "- Player: {}",
-                        // TODO: Here in future it should know the number of tiles another player
-                        // has
-                        format_player(player, current_player, Some(&game.hand), &game.score)
+                        format_player(player, current_player, Some(&game.hand), &game.score, None)
                     ),
                     "- Other players:".to_string(),
                 ];
 
                 for player in game.players.iter() {
                     if player.id != game.player_id {
+                        let player_hand = game.other_hands.get(&player.id).unwrap();
                         secondary_strs.push(format!(
                             "-   {}",
-                            format_player(player, current_player, None, &game.score)
+                            format_player(
+                                player,
+                                current_player,
+                                None,
+                                &game.score,
+                                Some(player_hand.tiles)
+                            )
                         ));
+                        format_hand(&player_hand.visible, &game.deck)
+                            .iter()
+                            .for_each(|s| {
+                                secondary_strs.push(s.clone());
+                            });
+                        secondary_strs.push("".to_string());
                     }
                 }
 
                 if ui_state.display_hand {
-                    // TODO: Display other player visible melds
                     get_user_hand_str(game)
                         .iter()
                         .for_each(|s| secondary_strs.push(s.to_string()));
                 }
 
                 vec![
-                    "".to_string(),
                     format!("- Draw wall tiles left: {}", game.draw_wall_count),
                     "".to_string(),
                     "- Board:".to_string(),

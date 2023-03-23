@@ -66,8 +66,7 @@ pub fn get_board(board: &Board, deck: &Deck) -> String {
 pub fn get_user_hand_str(game: &GameSummary) -> Vec<String> {
     let mut lines = vec![];
 
-    lines.push("".to_string());
-    lines.push(format!("- Hand: {}", game.hand.0.len()));
+    lines.push("- Hand:".to_string());
 
     format_hand(&game.hand, &game.deck)
         .iter()
@@ -93,7 +92,10 @@ pub fn format_hand(hand: &Hand, deck: &Deck) -> Vec<String> {
         .collect::<Vec<String>>()
         .join("  ");
 
-    lines.push(line);
+    // This can be empty when printing other players
+    if !line.is_empty() {
+        lines.push(line);
+    }
 
     let melds = hand.get_melds();
 
@@ -131,12 +133,15 @@ pub fn format_player(
     current_player: &Player,
     hand: Option<&Hand>,
     score: &Score,
+    player_tiles: Option<usize>,
 ) -> String {
     format!(
         "{}: {}{} [{}] <{}>",
         player.name,
         if hand.is_some() {
             hand.unwrap().0.len().to_string()
+        } else if player_tiles.is_some() {
+            player_tiles.unwrap().to_string()
         } else {
             "?".to_string()
         },
@@ -164,6 +169,7 @@ pub fn get_admin_hands_str(game: &Game) -> Vec<String> {
             current_player,
             Some(hand),
             &game.score,
+            None,
         ));
 
         format_hand(hand, &game.deck).iter().for_each(|line| {

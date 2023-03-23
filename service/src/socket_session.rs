@@ -2,6 +2,7 @@ use std::time::{Duration, Instant};
 
 use actix::prelude::*;
 use actix_web_actors::ws;
+use mahjong_core::{GameId, PlayerId};
 use service_contracts::SocketMessage;
 
 use crate::socket_server::{
@@ -13,14 +14,21 @@ const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Debug)]
 pub struct MahjongWebsocketSession {
-    pub id: usize,
-    pub hb: Instant,
-    pub room: String,
-    pub name: Option<String>,
     pub addr: Addr<MahjongWebsocketServer>,
+    pub hb: Instant,
+    pub id: usize,
+    pub name: Option<String>,
+    pub room: String,
 }
 
 impl MahjongWebsocketSession {
+    pub fn get_room_id(game_id: &GameId, player_id: Option<&PlayerId>) -> String {
+        if player_id.is_none() {
+            return game_id.to_string();
+        }
+
+        format!("{}__{}", game_id, player_id.unwrap())
+    }
     fn hb(&self, ctx: &mut ws::WebsocketContext<Self>) {
         ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
             if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
@@ -101,9 +109,8 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MahjongWebsocketS
                     return;
                 }
 
-                match message.unwrap() {
-                    SocketMessage::ListRooms => self
-                        .addr
+                if let Ok(SocketMessage::ListRooms) = message {
+                    self.addr
                         .send(ListRooms)
                         .into_actor(self)
                         .then(|res, _, ctx| {
@@ -117,9 +124,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MahjongWebsocketS
                             }
                             fut::ready(())
                         })
-                        .wait(ctx),
-                    SocketMessage::GameUpdate(_game) => {}
-                    _ => {}
+                        .wait(ctx)
                 }
             }
             ws::Message::Close(reason) => {

@@ -9,6 +9,7 @@ mod game_summary;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SocketMessage {
     GameUpdate(Game),
+    GameSummaryUpdate(GameSummary),
     ListRooms,
     Name(String),
     PlayerLeft,
@@ -17,7 +18,8 @@ pub enum SocketMessage {
 
 #[derive(Serialize, Deserialize)]
 pub struct WebSocketQuery {
-    pub game_id: String,
+    pub game_id: GameId,
+    pub player_id: Option<PlayerId>,
 }
 
 pub type AdminGetGamesResponse = Vec<GameId>;
@@ -43,6 +45,9 @@ pub struct AdminPostDiscardTileRequest {
     pub tile_id: TileId,
 }
 pub type AdminPostDiscardTileResponse = Game;
+
+pub type UserPostDiscardTileRequest = AdminPostDiscardTileRequest;
+pub type UserPostDiscardTileResponse = GameSummary;
 
 pub type AdminPostMovePlayerResponse = Game;
 
