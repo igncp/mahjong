@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-
 pub use deck::Deck;
 pub use game::{Game, GameId, GamePhase};
 pub use hand::{Hand, HandTile, SetId};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 pub use tile::{Tile, TileId};
 
+pub mod ai;
 pub mod deck;
 pub mod game;
 pub mod hand;
@@ -19,12 +19,6 @@ mod test_round;
 pub mod tile;
 
 pub type PlayerId = String;
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Player {
-    pub name: String,
-    pub id: PlayerId,
-}
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Suit {

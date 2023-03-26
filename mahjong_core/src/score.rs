@@ -1,7 +1,16 @@
 use crate::{Game, PlayerId};
 
 impl Game {
-    pub fn calculate_hand_score(&mut self, _winner_player: PlayerId) {
+    pub fn calculate_hand_score(&mut self, winner_player: &PlayerId) {
+        let score = &mut self.score;
+        let current_player_score = score.get(winner_player);
+        if current_player_score.is_none() {
+            return;
+        }
+
+        let current_player_score = current_player_score.unwrap();
+
+        score.insert(winner_player.clone(), current_player_score + 1);
         //   const handMelds = getHandMelds({
         //     hand,
         //   });

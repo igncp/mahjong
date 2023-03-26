@@ -1,17 +1,19 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, env};
 
 use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
-use mahjong_core::{Game, GameId, Hands, PlayerId, TileId};
+use mahjong_core::{GameId, Hands, PlayerId, TileId};
 use reqwest::Error;
 use service_contracts::{
-    AdminGetGamesResponse, AdminPostClaimTileRequest, AdminPostClaimTileResponse,
-    AdminPostCreateMeldRequest, AdminPostCreateMeldResponse, AdminPostDiscardTileRequest,
-    AdminPostDiscardTileResponse, AdminPostDrawTileResponse, AdminPostMovePlayerResponse,
-    SocketMessage, UserGetGamesQuery, UserGetLoadGameResponse, UserLoadGameQuery,
-    UserPostDiscardTileRequest, UserPostDiscardTileResponse, WebSocketQuery,
+    AdminGetGamesResponse, AdminPostAIContinueResponse, AdminPostClaimTileRequest,
+    AdminPostClaimTileResponse, AdminPostCreateMeldRequest, AdminPostCreateMeldResponse,
+    AdminPostDiscardTileRequest, AdminPostDiscardTileResponse, AdminPostDrawTileResponse,
+    AdminPostMovePlayerResponse, AdminPostSayMahjongRequest, AdminPostSayMahjongResponse,
+    AdminPostSwapDrawTilesRequest, AdminPostSwapDrawTilesResponse, ServiceGame, SocketMessage,
+    UserGetGamesQuery, UserGetLoadGameResponse, UserLoadGameQuery, UserPostDiscardTileRequest,
+    UserPostDiscardTileResponse, WebSocketQuery,
 };
 use tokio::net::TcpStream;
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
@@ -41,7 +43,7 @@ fn validate_response(response: &Result<reqwest::Response, Error>) -> Result<(), 
 impl ServiceHTTPClient {
     pub fn new() -> ServiceHTTPClient {
         let client = reqwest::Client::new();
-        let domain = "localhost:3000".to_string();
+        let domain = env::var("MAHJONG_SERVICE_DOMAIN").unwrap_or("localhost:3000".to_string());
         ServiceHTTPClient {
             client,
             domain: domain.clone(),
@@ -132,13 +134,13 @@ impl ServiceHTTPClient {
         }
     }
 
-    pub async fn admin_create_game(&self) -> Result<Game, String> {
+    pub async fn admin_create_game(&self) -> Result<ServiceGame, String> {
         let url = format!("{}/v1/admin/game", self.url);
         let result = self.client.post(url).send().await;
         let validation = validate_response(&result);
 
         if validation.is_ok() {
-            let game = result.unwrap().json::<Game>().await;
+            let game = result.unwrap().json::<ServiceGame>().await;
             if game.is_err() {
                 return Err("Game not found".to_string());
             }
@@ -148,13 +150,64 @@ impl ServiceHTTPClient {
         }
     }
 
-    pub async fn admin_load_game(&self, game_id: &str) -> Result<Game, String> {
+    pub async fn admin_swap_wall_tiles(
+        &self,
+        game_id: &GameId,
+        tile_id_a: TileId,
+        tile_id_b: TileId,
+    ) -> Result<AdminPostSwapDrawTilesResponse, String> {
+        let url = format!(
+            "{}/v1/admin/game/{}/draw-wall-swap-tiles",
+            self.url, game_id
+        );
+        let request = AdminPostSwapDrawTilesRequest {
+            tile_id_a,
+            tile_id_b,
+        };
+        let result = self.client.post(url).json(&request).send().await;
+        let validation = validate_response(&result);
+
+        if validation.is_ok() {
+            let game = result.unwrap().json::<ServiceGame>().await;
+            if game.is_err() {
+                return Err("Game not found".to_string());
+            }
+            Ok(game.unwrap())
+        } else {
+            Err(validation.err().unwrap())
+        }
+    }
+
+    pub async fn admin_load_game(&self, game_id: &str) -> Result<ServiceGame, String> {
         let url = format!("{}/v1/admin/game/{game_id}", self.url);
         let result = self.client.get(url).send().await;
         let validation = validate_response(&result);
 
         if validation.is_ok() {
-            let game = result.unwrap().json::<Game>().await;
+            let game = result.unwrap().json::<ServiceGame>().await;
+            if game.is_err() {
+                return Err("Game not found".to_string());
+            }
+            Ok(game.unwrap())
+        } else {
+            Err(validation.err().unwrap())
+        }
+    }
+
+    pub async fn admin_say_mahjong(
+        &self,
+        game_id: &GameId,
+        player_id: &PlayerId,
+    ) -> Result<AdminPostSayMahjongResponse, String> {
+        let url = format!("{}/v1/admin/game/{game_id}/say-mahjong", self.url);
+        let request_body = AdminPostSayMahjongRequest {
+            player_id: player_id.clone(),
+        };
+        let result = self.client.post(url).json(&request_body).send().await;
+        let validation = validate_response(&result);
+
+        if validation.is_ok() {
+            let game = result.unwrap().json::<AdminPostSayMahjongResponse>().await;
             if game.is_err() {
                 return Err("Game not found".to_string());
             }
@@ -267,6 +320,24 @@ impl ServiceHTTPClient {
             let hand = result.unwrap().json::<AdminPostCreateMeldResponse>().await;
             if hand.is_err() {
                 return Err("Meld could not be created".to_string());
+            }
+            Ok(hand.unwrap())
+        } else {
+            Err(validation.err().unwrap())
+        }
+    }
+
+    pub async fn admin_ai_continue(
+        &self,
+        game_id: &GameId,
+    ) -> Result<AdminPostAIContinueResponse, String> {
+        let url = format!("{}/v1/admin/game/{game_id}/ai-continue", self.url);
+        let result = self.client.post(url).send().await;
+        let validation = validate_response(&result);
+        if validation.is_ok() {
+            let hand = result.unwrap().json::<AdminPostAIContinueResponse>().await;
+            if hand.is_err() {
+                return Err("Tile could not be discarded".to_string());
             }
             Ok(hand.unwrap())
         } else {

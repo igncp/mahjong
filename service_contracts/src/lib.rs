@@ -1,15 +1,76 @@
 pub use crate::game_summary::GameSummary;
 use mahjong_core::{Game, GameId, Hand, PlayerId, TileId};
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 mod game_summary;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServicePlayer {
+    pub id: PlayerId,
+    pub name: String,
+    pub is_ai: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServicePlayerSummary {
+    pub id: PlayerId,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServiceGame {
+    pub game: Game,
+    pub players: HashMap<PlayerId, ServicePlayer>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServiceGameSummary {
+    pub game_summary: GameSummary,
+    pub players: HashMap<PlayerId, ServicePlayerSummary>,
+}
+
+impl ServiceGame {
+    pub fn get_ai_players(&self) -> HashSet<PlayerId> {
+        self.players
+            .iter()
+            .filter(|(_, player)| player.is_ai)
+            .map(|(id, _)| id.clone())
+            .collect::<HashSet<PlayerId>>()
+    }
+}
+
+impl ServiceGameSummary {
+    pub fn from_service_game(game: &ServiceGame, player_id: &PlayerId) -> Option<Self> {
+        let game_summary = GameSummary::from_game(&game.game, player_id);
+
+        game_summary?;
+
+        Some(ServiceGameSummary {
+            game_summary: GameSummary::from_game(&game.game, player_id).unwrap(),
+            players: game
+                .players
+                .clone()
+                .into_iter()
+                .map(|(id, player)| {
+                    (
+                        id,
+                        ServicePlayerSummary {
+                            id: player.id,
+                            name: player.name,
+                        },
+                    )
+                })
+                .collect(),
+        })
+    }
+}
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SocketMessage {
-    GameUpdate(Game),
-    GameSummaryUpdate(GameSummary),
+    GameUpdate(ServiceGame),
+    GameSummaryUpdate(ServiceGameSummary),
     ListRooms,
     Name(String),
     PlayerLeft,
@@ -44,21 +105,40 @@ pub type AdminPostCreateMeldResponse = Hand;
 pub struct AdminPostDiscardTileRequest {
     pub tile_id: TileId,
 }
-pub type AdminPostDiscardTileResponse = Game;
+pub type AdminPostDiscardTileResponse = ServiceGame;
 
 pub type UserPostDiscardTileRequest = AdminPostDiscardTileRequest;
-pub type UserPostDiscardTileResponse = GameSummary;
+pub type UserPostDiscardTileResponse = ServiceGameSummary;
 
-pub type AdminPostMovePlayerResponse = Game;
+pub type AdminPostMovePlayerResponse = ServiceGame;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdminPostClaimTileRequest {
     pub player_id: PlayerId,
 }
-pub type AdminPostClaimTileResponse = Game;
+pub type AdminPostClaimTileResponse = ServiceGame;
 
 #[derive(Deserialize, Serialize)]
 pub struct UserLoadGameQuery {
     pub player_id: String,
 }
-pub type UserGetLoadGameResponse = GameSummary;
+pub type UserGetLoadGameResponse = ServiceGameSummary;
+
+#[derive(Deserialize, Serialize)]
+pub struct AdminPostSwapDrawTilesRequest {
+    pub tile_id_a: TileId,
+    pub tile_id_b: TileId,
+}
+pub type AdminPostSwapDrawTilesResponse = ServiceGame;
+
+#[derive(Deserialize, Serialize)]
+pub struct AdminPostSayMahjongRequest {
+    pub player_id: PlayerId,
+}
+pub type AdminPostSayMahjongResponse = ServiceGame;
+
+#[derive(Deserialize, Serialize)]
+pub struct AdminPostAIContinueResponse {
+    pub service_game: ServiceGame,
+    pub changed: bool,
+}

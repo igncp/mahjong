@@ -1,4 +1,4 @@
-use mahjong_core::{Deck, Game, GameId, GamePhase, Hand, Player, PlayerId, Score, TileId, Wind};
+use mahjong_core::{Deck, Game, GameId, GamePhase, Hand, PlayerId, Score, TileId, Wind};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -24,7 +24,7 @@ pub struct GameSummary {
     pub id: GameId,
     pub phase: GamePhase,
     pub player_id: PlayerId,
-    pub players: Vec<Player>,
+    pub players: Vec<PlayerId>,
     pub other_hands: HashMap<PlayerId, OtherPlayerHand>,
     pub round: RoundSummary,
     pub score: Score,
@@ -77,7 +77,7 @@ impl GameSummary {
         })
     }
 
-    pub fn get_current_player(&self) -> &Player {
+    pub fn get_current_player(&self) -> &PlayerId {
         &self.players[self.round.player_index]
     }
 }

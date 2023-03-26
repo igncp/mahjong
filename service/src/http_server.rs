@@ -3,12 +3,14 @@ use crate::game_wrapper::GameWrapper;
 use crate::socket_server::MahjongWebsocketServer;
 use crate::socket_session::MahjongWebsocketSession;
 use actix::prelude::*;
+use actix_cors::Cors;
 use actix_web::{get, post, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web_actors::ws;
 use service_contracts::{
     AdminGetGamesResponse, AdminPostClaimTileRequest, AdminPostCreateMeldRequest,
-    AdminPostDiscardTileRequest, UserGetGamesQuery, UserGetGamesResponse, UserLoadGameQuery,
-    UserPostDiscardTileRequest, WebSocketQuery,
+    AdminPostDiscardTileRequest, AdminPostSayMahjongRequest, AdminPostSwapDrawTilesRequest,
+    UserGetGamesQuery, UserGetGamesResponse, UserLoadGameQuery, UserPostDiscardTileRequest,
+    WebSocketQuery,
 };
 use std::sync::Arc;
 use std::time::Instant;
@@ -193,6 +195,54 @@ async fn admin_post_game_claim_tile(
     }
 }
 
+#[post("/v1/admin/game/{game_id}/draw-wall-swap-tiles")]
+async fn admin_post_game_swap_tiles(
+    storage: StorageData,
+    body: web::Json<AdminPostSwapDrawTilesRequest>,
+    game_id: web::Path<String>,
+    srv: SocketServer,
+) -> impl Responder {
+    let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
+
+    match game_wrapper {
+        Ok(mut game_wrapper) => {
+            game_wrapper
+                .handle_draw_wall_swap_tiles(&body.tile_id_a, &body.tile_id_b)
+                .await
+        }
+        Err(err) => err,
+    }
+}
+
+#[post("/v1/admin/game/{game_id}/ai-continue")]
+async fn admin_post_game_ai_continue(
+    storage: StorageData,
+    game_id: web::Path<String>,
+    srv: SocketServer,
+) -> impl Responder {
+    let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
+
+    match game_wrapper {
+        Ok(mut game_wrapper) => game_wrapper.handle_admin_ai_continue().await,
+        Err(err) => err,
+    }
+}
+
+#[post("/v1/admin/game/{game_id}/say-mahjong")]
+async fn admin_post_game_say_mahjong(
+    storage: StorageData,
+    body: web::Json<AdminPostSayMahjongRequest>,
+    game_id: web::Path<String>,
+    srv: SocketServer,
+) -> impl Responder {
+    let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
+
+    match game_wrapper {
+        Ok(mut game_wrapper) => game_wrapper.handle_say_mahjong(&body.player_id).await,
+        Err(err) => err,
+    }
+}
+
 #[get("/v1/ws")]
 async fn get_ws(
     req: HttpRequest,
@@ -231,22 +281,28 @@ impl MahjongServer {
 
         println!("Starting the Mahjong HTTP server on port http://{address}:{port}");
         let storage_arc = Arc::new(storage);
-        let server = MahjongWebsocketServer::new().start();
+        let socket_server = MahjongWebsocketServer::new().start();
 
         HttpServer::new(move || {
             let storage_data: StorageData = web::Data::new(storage_arc.clone());
+            let cors = Cors::permissive();
+
             App::new()
+                .wrap(cors)
                 .app_data(storage_data)
-                .app_data(web::Data::new(server.clone()))
+                .app_data(web::Data::new(socket_server.clone()))
                 .service(admin_get_game_by_id)
                 .service(admin_get_games)
                 .service(admin_post_game)
+                .service(admin_post_game_ai_continue)
                 .service(admin_post_game_claim_tile)
                 .service(admin_post_game_create_meld)
                 .service(admin_post_game_discard_tile)
                 .service(admin_post_game_draw_tile)
                 .service(admin_post_game_move_player)
+                .service(admin_post_game_say_mahjong)
                 .service(admin_post_game_sort_hands)
+                .service(admin_post_game_swap_tiles)
                 .service(get_health)
                 .service(get_ws)
                 .service(user_get_game_load)

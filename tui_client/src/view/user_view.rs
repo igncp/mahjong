@@ -68,15 +68,15 @@ pub fn draw_user_view<B: Backend>(f: &mut Frame<B>, app: &App, ui_state: &mut UI
             }
         }
         UIScreen::Game => {
-            let game = app.game_summary.as_ref().unwrap();
+            let game = app.service_game_summary.as_ref().unwrap();
 
             let paragraph_text = vec![
                 Spans::from(format!("- Input: {}", ui_state.input)),
                 Spans::from(format!(
                     "- Game ID: {} (user) {}",
-                    game.id, ui_state.messages_count
+                    game.game_summary.id, ui_state.messages_count
                 )),
-                Spans::from(format!("- Phase: {:?}", game.phase)),
+                Spans::from(format!("- Phase: {:?}", game.game_summary.phase)),
             ];
 
             let paragraph = Paragraph::new(paragraph_text)
@@ -97,34 +97,45 @@ pub fn draw_user_view<B: Backend>(f: &mut Frame<B>, app: &App, ui_state: &mut UI
                 f.render_widget(paragraph, chunks[1]);
             } else {
                 let player = game
+                    .game_summary
                     .players
                     .iter()
-                    .find(|p| p.id == game.player_id)
+                    .find(|p| *p == &game.game_summary.player_id)
                     .unwrap();
 
-                let current_player = game.players.get(game.round.player_index).unwrap();
+                let current_player = game
+                    .game_summary
+                    .players
+                    .get(game.game_summary.round.player_index)
+                    .unwrap();
                 let mut secondary_strs = vec![
                     format!(
                         "- Player: {}",
-                        format_player(player, current_player, Some(&game.hand), &game.score, None)
+                        format_player(
+                            player,
+                            current_player,
+                            Some(&game.game_summary.hand),
+                            &game.game_summary.score,
+                            None
+                        )
                     ),
                     "- Other players:".to_string(),
                 ];
 
-                for player in game.players.iter() {
-                    if player.id != game.player_id {
-                        let player_hand = game.other_hands.get(&player.id).unwrap();
+                for player in game.game_summary.players.iter() {
+                    if *player != game.game_summary.player_id {
+                        let player_hand = game.game_summary.other_hands.get(player).unwrap();
                         secondary_strs.push(format!(
                             "-   {}",
                             format_player(
                                 player,
                                 current_player,
                                 None,
-                                &game.score,
+                                &game.game_summary.score,
                                 Some(player_hand.tiles)
                             )
                         ));
-                        format_hand(&player_hand.visible, &game.deck)
+                        format_hand(&player_hand.visible, &game.game_summary.deck)
                             .iter()
                             .for_each(|s| {
                                 secondary_strs.push(s.clone());
@@ -134,16 +145,19 @@ pub fn draw_user_view<B: Backend>(f: &mut Frame<B>, app: &App, ui_state: &mut UI
                 }
 
                 if ui_state.display_hand {
-                    get_user_hand_str(game)
+                    get_user_hand_str(&game.game_summary)
                         .iter()
                         .for_each(|s| secondary_strs.push(s.to_string()));
                 }
 
                 vec![
-                    format!("- Draw wall tiles left: {}", game.draw_wall_count),
+                    format!(
+                        "- Draw wall tiles left: {}",
+                        game.game_summary.draw_wall_count
+                    ),
                     "".to_string(),
                     "- Board:".to_string(),
-                    get_board(&game.board, &game.deck),
+                    get_board(&game.game_summary.board, &game.game_summary.deck),
                 ]
                 .iter()
                 .for_each(|s| secondary_strs.push(s.clone()));

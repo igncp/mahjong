@@ -1,0 +1,11 @@
+FROM debian:bullseye-slim
+USER root
+RUN apt-get update && apt-get install -y libssl-dev
+RUN useradd -m -s /bin/bash rust && mkdir -p /app && chown -R rust:rust /app
+
+USER rust
+WORKDIR /app
+
+COPY --chown=rust:rust ./dist/mahjong_service .
+
+CMD ./mahjong_service

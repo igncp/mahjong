@@ -68,18 +68,17 @@ pub fn draw_admin_view<B: Backend>(f: &mut Frame<B>, app: &App, ui_state: &mut U
             }
         }
         UIScreen::Game => {
-            let game = app.game.as_ref().unwrap();
-            let current_player = game.get_current_player();
-            let draw_wall_str = get_draw_wall(game);
-            let board_str = get_board(&game.table.board, &game.deck);
+            let service_game = app.service_game.as_ref().unwrap();
+            let draw_wall_str = get_draw_wall(&service_game.game, ui_state.display_draw_wall_index);
+            let board_str = get_board(&service_game.game.table.board, &service_game.game.deck);
 
             let paragraph_text = vec![
                 Spans::from(format!("- Input: {}", ui_state.input)),
                 Spans::from(format!(
                     "- Game ID: {} (admin) {}",
-                    game.id, ui_state.messages_count
+                    service_game.game.id, ui_state.messages_count
                 )),
-                Spans::from(format!("- Phase: {:?}", game.phase)),
+                Spans::from(format!("- Phase: {:?}", service_game.game.phase)),
             ];
 
             let paragraph = Paragraph::new(paragraph_text)
@@ -99,17 +98,19 @@ pub fn draw_admin_view<B: Backend>(f: &mut Frame<B>, app: &App, ui_state: &mut U
 
                 f.render_widget(paragraph, chunks[1]);
             } else {
+                let dealer = service_game.game.get_dealer();
                 let mut secondary_strs = vec![
-                    format!("- Current player: {}", current_player.name),
-                    format!("- Draw wall ({}):", game.table.draw_wall.len(),),
+                    format!("- Dealer: {}", dealer.unwrap()),
+                    format!("- Round wind: {:?}", service_game.game.round.wind),
+                    format!("- Draw wall ({}):", service_game.game.table.draw_wall.len(),),
                     draw_wall_str,
                     "".to_string(),
-                    format!("- Board ({}):", game.table.board.len(),),
+                    format!("- Board ({}):", service_game.game.table.board.len(),),
                     board_str,
                 ];
 
                 if ui_state.display_hand {
-                    get_admin_hands_str(game)
+                    get_admin_hands_str(service_game)
                         .iter()
                         .for_each(|s| secondary_strs.push(s.to_string()));
                 }

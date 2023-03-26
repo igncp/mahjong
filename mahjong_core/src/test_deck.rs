@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod test {
-    use crate::{Deck, Player};
+    use crate::Deck;
 
     #[test]
     fn test_deck_total_count() {
@@ -14,10 +14,7 @@ mod test {
         let deck = Deck::default();
         let mut players = vec![];
         for num in 0..4 {
-            let player = Player {
-                id: num.to_string(),
-                name: format!("Player {num}"),
-            };
+            let player = num.to_string();
             players.push(player);
         }
         let table = deck.create_table(&players);

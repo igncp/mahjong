@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::{
-    Dragon, DragonTile, Flower, FlowerTile, Hand, HandTile, Hands, Player, Season, SeasonTile,
+    Dragon, DragonTile, Flower, FlowerTile, Hand, HandTile, Hands, PlayerId, Season, SeasonTile,
     Suit, SuitTile, Table, Tile, TileId, Wind, WindTile,
 };
 
@@ -89,7 +89,7 @@ impl Default for Deck {
 }
 
 impl Deck {
-    pub fn create_table(&self, players: &[Player]) -> Table {
+    pub fn create_table(&self, players: &[PlayerId]) -> Table {
         let Deck(deck_content) = self;
         let mut draw_wall = deck_content.keys().cloned().collect::<Vec<TileId>>();
 
@@ -109,7 +109,7 @@ impl Deck {
 
                     hand.0.push(tile);
                 }
-                (player.id.clone(), hand)
+                (player.clone(), hand)
             })
             .collect::<Hands>();
 

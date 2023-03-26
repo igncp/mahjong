@@ -6,9 +6,12 @@
 ## Backlog
 
 - Create a queue of actions per game
+  - Implement the game version to avoid parallel actions
 - Authentication for users and admins
-- Connect a DB (start with NoSQL)
-- Docker Compose setup for releases
-- Visualize a game in "player" mode
+- Improve scoring logic
+- Connect a DB
 - Research approach to reuse types with TS
 - Consider moving `deck` outside of `Game` and having multiple deck types
+- Websockets reconnection (for deployments)
+- Game hall state where it waits for other real players to join
+- Start the web client in github pages

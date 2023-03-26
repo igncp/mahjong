@@ -10,8 +10,8 @@ mod test {
         let mut hands = HashMap::new();
         let mut game = Game::default();
         game.table.draw_wall = draw_wall;
-        hands.insert(game.players[0].id.clone(), Hand(vec![HandTile::from_id(1)]));
-        hands.insert(game.players[1].id.clone(), Hand(vec![HandTile::from_id(2)]));
+        hands.insert(game.players[0].clone(), Hand(vec![HandTile::from_id(1)]));
+        hands.insert(game.players[1].clone(), Hand(vec![HandTile::from_id(2)]));
         game.table.hands = hands;
 
         let drawn_tile = game.draw_tile_from_wall();
@@ -22,10 +22,10 @@ mod test {
         assert_eq!(game.table.hands, {
             let mut hands = HashMap::new();
             hands.insert(
-                game.players[0].id.clone(),
+                game.players[0].clone(),
                 Hand(vec![HandTile::from_id(1), HandTile::from_id(5)]),
             );
-            hands.insert(game.players[1].id.clone(), Hand(vec![HandTile::from_id(2)]));
+            hands.insert(game.players[1].clone(), Hand(vec![HandTile::from_id(2)]));
             hands
         });
     }
@@ -35,8 +35,8 @@ mod test {
         let draw_wall = vec![];
         let mut game = Game::default();
         let mut hands = HashMap::new();
-        hands.insert(game.players[0].id.clone(), Hand(vec![HandTile::from_id(1)]));
-        hands.insert(game.players[1].id.clone(), Hand(vec![HandTile::from_id(2)]));
+        hands.insert(game.players[0].clone(), Hand(vec![HandTile::from_id(1)]));
+        hands.insert(game.players[1].clone(), Hand(vec![HandTile::from_id(2)]));
         game.table.draw_wall = draw_wall;
         game.table.hands = hands;
         let drawn_tile = game.draw_tile_from_wall();
@@ -46,8 +46,8 @@ mod test {
         assert_eq!(game.round.wall_tile_drawn, None);
         assert_eq!(game.table.hands, {
             let mut hands = HashMap::new();
-            hands.insert(game.players[0].id.clone(), Hand(vec![HandTile::from_id(1)]));
-            hands.insert(game.players[1].id.clone(), Hand(vec![HandTile::from_id(2)]));
+            hands.insert(game.players[0].clone(), Hand(vec![HandTile::from_id(1)]));
+            hands.insert(game.players[1].clone(), Hand(vec![HandTile::from_id(2)]));
             hands
         });
     }
@@ -62,11 +62,8 @@ mod test {
             for i in 1..15 {
                 player_a_tiles.push(HandTile::from_id(i));
             }
-            hands.insert(game.players[0].id.clone(), Hand(player_a_tiles));
-            hands.insert(
-                game.players[1].id.clone(),
-                Hand(vec![HandTile::from_id(15)]),
-            );
+            hands.insert(game.players[0].clone(), Hand(player_a_tiles));
+            hands.insert(game.players[1].clone(), Hand(vec![HandTile::from_id(15)]));
             hands
         };
 
@@ -81,11 +78,8 @@ mod test {
                     player_a_tiles.push(HandTile::from_id(i));
                 }
             }
-            hands.insert(game.players[0].id.clone(), Hand(player_a_tiles));
-            hands.insert(
-                game.players[1].id.clone(),
-                Hand(vec![HandTile::from_id(15)]),
-            );
+            hands.insert(game.players[0].clone(), Hand(player_a_tiles));
+            hands.insert(game.players[1].clone(), Hand(vec![HandTile::from_id(15)]));
             hands
         });
         assert!(discarded_tile);
@@ -93,7 +87,7 @@ mod test {
             game.round.tile_claimed,
             Some(RoundTileClaimed {
                 by: None,
-                from: game.players[0].id.clone(),
+                from: game.players[0].clone(),
                 id: 2,
             })
         );
@@ -104,7 +98,7 @@ mod test {
         let mut game = Game::default();
         game.round.player_index = 2;
         let player = game.get_current_player();
-        assert_eq!(player.name, "Player 2");
+        assert_eq!(player, game.players[2]);
     }
 
     #[test]
@@ -115,9 +109,9 @@ mod test {
         assert_eq!(game.deck.0.keys().len(), 144);
 
         for player in game.players.iter() {
-            let hand = game.table.hands.get(&player.id).unwrap();
+            let hand = game.table.hands.get(player).unwrap();
             assert_eq!(hand.0.len(), 13);
-            assert_eq!(game.score.get(&player.id), Some(&0));
+            assert_eq!(game.score.get(player), Some(&0));
         }
 
         assert_eq!(game.table.draw_wall.len(), 144 - 4 * 13);

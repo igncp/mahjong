@@ -1,10 +1,12 @@
 use actix_web::{web, HttpResponse};
-use mahjong_core::{Game, Player, PlayerId, TileId};
+use mahjong_core::{ai::StandardAI, Game, PlayerId, TileId};
 use service_contracts::{
-    AdminPostClaimTileResponse, AdminPostCreateMeldRequest, AdminPostCreateMeldResponse,
-    AdminPostDiscardTileResponse, AdminPostDrawTileResponse, AdminPostMovePlayerResponse,
-    GameSummary, SocketMessage, UserPostDiscardTileResponse,
+    AdminPostAIContinueResponse, AdminPostClaimTileResponse, AdminPostCreateMeldRequest,
+    AdminPostCreateMeldResponse, AdminPostDiscardTileResponse, AdminPostDrawTileResponse,
+    AdminPostMovePlayerResponse, AdminPostSayMahjongResponse, AdminPostSwapDrawTilesResponse,
+    ServiceGame, ServiceGameSummary, ServicePlayer, SocketMessage, UserPostDiscardTileResponse,
 };
+use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::{
@@ -14,7 +16,7 @@ use crate::{
 };
 
 pub struct GameWrapper {
-    game: Game,
+    service_game: ServiceGame,
     socket_server: SocketServer,
     storage: StorageData,
 }
@@ -37,39 +39,55 @@ impl GameWrapper {
             return Err(HttpResponse::BadRequest().body("No game found"));
         }
 
-        let game = game_content.unwrap();
+        let service_game = game_content.unwrap();
 
         Ok(Self {
             storage,
-            game,
+            service_game,
             socket_server,
         })
     }
 
     pub async fn from_new_game(storage: StorageData, socket_server: SocketServer) -> Self {
-        let game = create_game();
+        let service_game = create_game();
 
         Self {
             storage,
-            game,
+            service_game,
             socket_server,
         }
+    }
+
+    pub async fn handle_say_mahjong(&mut self, player_id: &PlayerId) -> HttpResponse {
+        let success = self.service_game.game.say_mahjong(player_id);
+
+        if !success {
+            return HttpResponse::BadRequest().body("Error saying mahjong");
+        }
+
+        let response: &AdminPostSayMahjongResponse = &self.service_game;
+
+        self.save_and_return(response, "Error saying mahjong").await
     }
 
     fn sync_game(&self) {
         self.socket_server.do_send(ClientMessage {
             id: rand::random(),
-            msg: SocketMessage::GameUpdate(self.game.clone()),
-            room: MahjongWebsocketSession::get_room_id(&self.game.id, None),
+            msg: SocketMessage::GameUpdate(self.service_game.clone()),
+            room: MahjongWebsocketSession::get_room_id(&self.service_game.game.id, None),
         });
 
-        for player in self.game.players.iter() {
-            let game_summary = GameSummary::from_game(&self.game, &player.id).unwrap();
+        for player in self.service_game.game.players.iter() {
+            let game_summary =
+                ServiceGameSummary::from_service_game(&self.service_game, player).unwrap();
 
             self.socket_server.do_send(ClientMessage {
                 id: rand::random(),
                 msg: SocketMessage::GameSummaryUpdate(game_summary),
-                room: MahjongWebsocketSession::get_room_id(&self.game.id, Some(&player.id)),
+                room: MahjongWebsocketSession::get_room_id(
+                    &self.service_game.game.id,
+                    Some(player),
+                ),
             });
         }
     }
@@ -78,7 +96,7 @@ impl GameWrapper {
     where
         A: serde::Serialize,
     {
-        let save_result = self.storage.save_game(&self.game).await;
+        let save_result = self.storage.save_game(&self.service_game).await;
         self.sync_game();
 
         match save_result {
@@ -88,32 +106,38 @@ impl GameWrapper {
     }
 
     pub async fn handle_new_game(&self) -> HttpResponse {
-        self.save_and_return(&self.game.table.hands, "Error creating game")
+        self.save_and_return(&self.service_game, "Error creating game")
             .await
     }
 
     pub fn user_load_game(&self, player_id: &PlayerId) -> HttpResponse {
-        match GameSummary::from_game(&self.game, player_id) {
+        match ServiceGameSummary::from_service_game(&self.service_game, player_id) {
             Some(summary) => HttpResponse::Ok().json(summary),
             None => HttpResponse::InternalServerError().body("Error loading game"),
         }
     }
 
     pub async fn handle_sort_hands(&mut self) -> HttpResponse {
-        for player in self.game.players.iter() {
-            let hand = self.game.table.hands.get_mut(&player.id).unwrap();
-            hand.sort_default(&self.game.deck);
+        for player in self.service_game.game.players.iter() {
+            let hand = self.service_game.game.table.hands.get_mut(player).unwrap();
+            hand.sort_default(&self.service_game.game.deck);
         }
 
-        self.save_and_return(&self.game.table.hands, "Error sorting hands")
+        self.save_and_return(&self.service_game.game.table.hands, "Error sorting hands")
             .await
     }
 
     pub async fn handle_draw_tile(&mut self) -> HttpResponse {
-        self.game.draw_tile_from_wall();
+        self.service_game.game.draw_tile_from_wall();
 
-        let current_player_id = self.game.get_current_player().id.clone();
-        let hand = self.game.table.hands.get(&current_player_id).unwrap();
+        let current_player_id = self.service_game.game.get_current_player().clone();
+        let hand = self
+            .service_game
+            .game
+            .table
+            .hands
+            .get(&current_player_id)
+            .unwrap();
 
         let response: AdminPostDrawTileResponse = hand.clone();
 
@@ -121,18 +145,62 @@ impl GameWrapper {
             .await
     }
 
+    pub async fn handle_draw_wall_swap_tiles(
+        &mut self,
+        tile_id_a: &TileId,
+        tile_id_b: &TileId,
+    ) -> HttpResponse {
+        let swapped = self
+            .service_game
+            .game
+            .draw_wall_swap_tiles(tile_id_a, tile_id_b);
+
+        if !swapped {
+            return HttpResponse::BadRequest().body("Error when swapping tiles");
+        }
+
+        let response: AdminPostSwapDrawTilesResponse = self.service_game.clone();
+
+        self.save_and_return(&response, "Error when swapping tiles")
+            .await
+    }
+
+    pub async fn handle_admin_ai_continue(&mut self) -> HttpResponse {
+        let ai_players = self.service_game.get_ai_players();
+
+        let mut standard_ai = StandardAI::new(&mut self.service_game.game, &ai_players);
+        let mut global_changed = false;
+
+        loop {
+            let changed = standard_ai.play_action();
+            if !global_changed {
+                global_changed = changed;
+            }
+            if !changed {
+                break;
+            }
+        }
+
+        let response: AdminPostAIContinueResponse = AdminPostAIContinueResponse {
+            service_game: self.service_game.to_owned(),
+            changed: global_changed,
+        };
+
+        self.save_and_return(response, "Error with AI action").await
+    }
+
     pub async fn handle_discard_tile(&mut self, is_admin: bool, tile_id: &TileId) -> HttpResponse {
-        self.game.discard_tile_to_board(tile_id);
-        let game = self.game.clone();
+        self.service_game.game.discard_tile_to_board(tile_id);
+        let game = self.service_game.clone();
 
         if is_admin {
             let response: AdminPostDiscardTileResponse = game;
             self.save_and_return(&response, "Error when discarding the tile")
                 .await
         } else {
-            let player_id = self.game.get_current_player().id.clone();
+            let player_id = self.service_game.game.get_current_player().clone();
             let response: UserPostDiscardTileResponse =
-                GameSummary::from_game(&game, &player_id).unwrap();
+                ServiceGameSummary::from_service_game(&game, &player_id).unwrap();
 
             self.save_and_return(&response, "Error when discarding the tile")
                 .await
@@ -140,10 +208,18 @@ impl GameWrapper {
     }
 
     pub async fn handle_create_meld(&mut self, body: &AdminPostCreateMeldRequest) -> HttpResponse {
-        self.game.create_meld(&body.player_id, &body.tiles);
+        self.service_game
+            .game
+            .create_meld(&body.player_id, &body.tiles);
 
-        let current_player_id = self.game.get_current_player().id.clone();
-        let hand = self.game.table.hands.get(&current_player_id).unwrap();
+        let current_player_id = self.service_game.game.get_current_player().clone();
+        let hand = self
+            .service_game
+            .game
+            .table
+            .hands
+            .get(&current_player_id)
+            .unwrap();
         let response: AdminPostCreateMeldResponse = hand.clone();
 
         self.save_and_return(&response, "Error when creating meld")
@@ -151,39 +227,40 @@ impl GameWrapper {
     }
 
     pub async fn handle_move_player(&mut self) -> HttpResponse {
-        let success = self.game.round.next(&self.game.table.hands);
+        let success = self
+            .service_game
+            .game
+            .round
+            .next(&self.service_game.game.table.hands);
 
         if success {
-            let response: AdminPostMovePlayerResponse = self.game.clone();
+            let response: &AdminPostMovePlayerResponse = &self.service_game;
 
-            self.save_and_return(&response, "Error moving player").await
+            self.save_and_return(response, "Error moving player").await
         } else {
             HttpResponse::BadRequest().body("Error when moving player")
         }
     }
 
     pub async fn handle_claim_tile(&mut self, player_id: &PlayerId) -> HttpResponse {
-        let success = self.game.claim_tile(player_id);
+        let success = self.service_game.game.claim_tile(player_id);
 
         if success {
-            let response: AdminPostClaimTileResponse = self.game.clone();
+            let response: &AdminPostClaimTileResponse = &self.service_game;
 
-            self.save_and_return(&response, "Error claiming tile").await
+            self.save_and_return(response, "Error claiming tile").await
         } else {
             HttpResponse::BadRequest().body("Error claiming tile")
         }
     }
 }
 
-fn create_game() -> Game {
-    let mut players: Vec<Player> = vec![];
-    for index in 0..4 {
-        let player = Player {
-            id: Uuid::new_v4().to_string(),
-            name: format!("Custom Player {index}"),
-        };
+fn create_game() -> ServiceGame {
+    let mut players: Vec<PlayerId> = vec![];
+    for _ in 0..4 {
+        let id = Uuid::new_v4().to_string();
 
-        players.push(player);
+        players.push(id);
     }
 
     let mut game = Game {
@@ -193,6 +270,16 @@ fn create_game() -> Game {
     };
 
     game.set_players(&players);
+    let mut players = HashMap::<String, ServicePlayer>::new();
 
-    game
+    for (index, player) in game.players.iter().enumerate() {
+        let service_player = ServicePlayer {
+            id: player.clone(),
+            is_ai: index != 0,
+            name: format!("Player {}", index),
+        };
+        players.insert(player.clone(), service_player);
+    }
+
+    ServiceGame { game, players }
 }

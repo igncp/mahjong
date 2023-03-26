@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  server:
+    image: igncp/mahjong_service
+    environment:
+      MAHJONG_STORAGE_FILE: /app/data/mahjong.json
+    volumes:
+      - ./data:/app/data
+    ports:
+      - 3000:3000
