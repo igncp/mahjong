@@ -47,6 +47,9 @@ fn docker(current_dir: &str) {
     let service_cmd = vec!["rm -rf dist && mkdir -p dist"].join(" ");
     run_bash_cmd(&service_cmd, current_dir);
 
+    let service_cmd = vec!["whoami && id -u && ls -lah dist && chmod -R 777 dist"].join(" ");
+    run_bash_cmd(&service_cmd, current_dir);
+
     let service_cmd = vec![
         "docker run",
         "--rm",
