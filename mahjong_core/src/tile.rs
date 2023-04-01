@@ -1,6 +1,5 @@
-use serde::{Deserialize, Serialize};
-
 use crate::{DragonTile, FlowerTile, SeasonTile, SuitTile, WindTile};
+use serde::{Deserialize, Serialize};
 
 pub type TileId = u32;
 

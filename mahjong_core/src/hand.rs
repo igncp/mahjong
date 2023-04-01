@@ -1,7 +1,6 @@
-use std::collections::HashMap;
-
 use crate::{Deck, TileId};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 pub type SetId = Option<String>;
 

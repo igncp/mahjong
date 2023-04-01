@@ -1,10 +1,11 @@
 [workspace]
 members = [
-    "tui_client",
     "mahjong_core",
+    "scripts",
     "service",
     "service_contracts",
-    "scripts"
+    "tui_client",
+    "web_lib"
 ]
 
 [profile.release]

@@ -78,7 +78,7 @@ impl FileStorage {
     pub fn new_dyn() -> Box<dyn Storage> {
         let file_path =
             std::env::var("MAHJONG_STORAGE_FILE").unwrap_or("./mahjong.json".to_string());
-        println!("file_path {:?}", file_path);
+
         let file_storage = FileStorage { file_path };
 
         Box::new(file_storage)

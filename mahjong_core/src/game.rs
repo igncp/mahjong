@@ -368,6 +368,30 @@ impl Game {
         false
     }
 
+    pub fn break_meld(&mut self, player_id: &PlayerId, set_id: &String) -> bool {
+        let hand = self.table.hands.get(player_id);
+
+        if hand.is_none() {
+            return false;
+        }
+
+        let mut hand = hand.unwrap().clone();
+
+        for hand_tile in hand.0.iter_mut() {
+            if hand_tile.set_id.is_some() && hand_tile.set_id.clone().unwrap() == *set_id {
+                if !hand_tile.concealed {
+                    return false;
+                }
+
+                hand_tile.set_id = None;
+            }
+        }
+
+        self.table.hands.insert(player_id.clone(), hand);
+
+        true
+    }
+
     pub fn get_board_tile_player_diff(
         &self,
         round: Option<&Round>,

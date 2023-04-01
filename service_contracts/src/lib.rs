@@ -1,5 +1,5 @@
 pub use crate::game_summary::GameSummary;
-use mahjong_core::{Game, GameId, Hand, PlayerId, TileId};
+use mahjong_core::{Game, GameId, Hand, Hands, PlayerId, TileId};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -102,6 +102,13 @@ pub struct AdminPostCreateMeldRequest {
 pub type AdminPostCreateMeldResponse = Hand;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdminPostBreakMeldRequest {
+    pub player_id: String,
+    pub set_id: String,
+}
+pub type AdminPostBreakMeldResponse = Hand;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdminPostDiscardTileRequest {
     pub tile_id: TileId,
 }
@@ -110,7 +117,11 @@ pub type AdminPostDiscardTileResponse = ServiceGame;
 pub type UserPostDiscardTileRequest = AdminPostDiscardTileRequest;
 pub type UserPostDiscardTileResponse = ServiceGameSummary;
 
+pub type AdminPostMovePlayerRequest = ();
 pub type AdminPostMovePlayerResponse = ServiceGame;
+
+pub type AdminPostSortHandsRequest = ();
+pub type AdminPostSortHandsResponse = Hands;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdminPostClaimTileRequest {

@@ -17,6 +17,7 @@ mod test_game;
 mod test_meld;
 mod test_round;
 pub mod tile;
+pub mod ui;
 
 pub type PlayerId = String;
 

@@ -1,6 +1,6 @@
 # 麻雀 - Mahjong
 
-![Checks](https://github.com/igncp/mahjong/actions/workflows/checks.yml/badge.svg) ![Deploy](https://github.com/igncp/mahjong/actions/workflows/deploy.yml/badge.svg)
+![Checks](https://github.com/igncp/mahjong/actions/workflows/checks.yml/badge.svg) ![Deploy](https://github.com/igncp/mahjong/actions/workflows/deploy.yml/badge.svg) ![Web](https://github.com/igncp/mahjong/actions/workflows/web.yml/badge.svg)
 
 Proof of concept project to practice Rust programming. The idea is to include
 these subpackages:

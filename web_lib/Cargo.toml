@@ -1,0 +1,20 @@
+[package]
+name = "web_lib"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+wasm-bindgen = { version = "0.2.84", features = ["serde-serialize", "serde", "serde_json"] }
+mahjong_core = { path = "../mahjong_core" }
+service_contracts = { path = "../service_contracts" }
+web-sys = { version= "0.3.61", features = ["console"] }
+serde_json = "1.0.95"
+serde-wasm-bindgen = "0.5.0"
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false

@@ -6,11 +6,12 @@ use actix::prelude::*;
 use actix_cors::Cors;
 use actix_web::{get, post, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web_actors::ws;
+use mahjong_core::GameId;
 use service_contracts::{
-    AdminGetGamesResponse, AdminPostClaimTileRequest, AdminPostCreateMeldRequest,
-    AdminPostDiscardTileRequest, AdminPostSayMahjongRequest, AdminPostSwapDrawTilesRequest,
-    UserGetGamesQuery, UserGetGamesResponse, UserLoadGameQuery, UserPostDiscardTileRequest,
-    WebSocketQuery,
+    AdminGetGamesResponse, AdminPostBreakMeldRequest, AdminPostClaimTileRequest,
+    AdminPostCreateMeldRequest, AdminPostDiscardTileRequest, AdminPostSayMahjongRequest,
+    AdminPostSwapDrawTilesRequest, UserGetGamesQuery, UserGetGamesResponse, UserLoadGameQuery,
+    UserPostDiscardTileRequest, WebSocketQuery,
 };
 use std::sync::Arc;
 use std::time::Instant;
@@ -110,7 +111,7 @@ async fn admin_post_game_sort_hands(
 #[post("/v1/admin/game/{game_id}/draw-tile")]
 async fn admin_post_game_draw_tile(
     storage: StorageData,
-    game_id: web::Path<String>,
+    game_id: web::Path<GameId>,
     srv: SocketServer,
 ) -> impl Responder {
     let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
@@ -131,6 +132,21 @@ async fn admin_post_game_move_player(
 
     match game_wrapper {
         Ok(mut game_wrapper) => game_wrapper.handle_move_player().await,
+        Err(err) => err,
+    }
+}
+
+#[post("/v1/admin/game/{game_id}/break-meld")]
+async fn admin_post_game_break_meld(
+    storage: StorageData,
+    body: web::Json<AdminPostBreakMeldRequest>,
+    game_id: web::Path<String>,
+    srv: SocketServer,
+) -> impl Responder {
+    let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
+
+    match game_wrapper {
+        Ok(mut game_wrapper) => game_wrapper.handle_break_meld(&body).await,
         Err(err) => err,
     }
 }
@@ -295,6 +311,7 @@ impl MahjongServer {
                 .service(admin_get_games)
                 .service(admin_post_game)
                 .service(admin_post_game_ai_continue)
+                .service(admin_post_game_break_meld)
                 .service(admin_post_game_claim_tile)
                 .service(admin_post_game_create_meld)
                 .service(admin_post_game_discard_tile)

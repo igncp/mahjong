@@ -1,4 +1,5 @@
-use crate::{Deck, Hand, HandTile, Hands, PlayerId, SetId, SuitTile, Tile, TileClaimed, TileId};
+use crate::{Deck, Hand, HandTile, PlayerId, SetId, SuitTile, Tile, TileClaimed, TileId};
+use serde::{Deserialize, Serialize};
 
 pub type PlayerDiff = Option<i32>;
 
@@ -258,42 +259,7 @@ pub fn get_is_pair(hand: &Vec<&Tile>) -> bool {
     hand[0].is_same_content(hand[1])
 }
 
-pub struct BreakMeldOpts {
-    hands: Hands,
-    player_id: PlayerId,
-    set_id: SetId,
-}
-
-pub fn break_meld(opts: &mut BreakMeldOpts) -> bool {
-    let hand = opts.hands.get(&opts.player_id);
-
-    if hand.is_none() {
-        return false;
-    }
-
-    let mut meld_tiles = hand
-        .unwrap()
-        .0
-        .iter()
-        .filter(|h| h.set_id == opts.set_id)
-        .cloned()
-        .collect::<Vec<HandTile>>();
-
-    if meld_tiles.is_empty() {
-        return false;
-    }
-
-    if meld_tiles.iter().any(|t| !t.concealed) {
-        return false;
-    }
-
-    meld_tiles.iter_mut().for_each(|t| {
-        t.set_id = None;
-    });
-
-    true
-}
-
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct PossibleMeld {
     pub player_id: PlayerId,
     pub tiles: Vec<TileId>,

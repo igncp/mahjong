@@ -11,9 +11,9 @@ use service_contracts::{
     AdminPostClaimTileResponse, AdminPostCreateMeldRequest, AdminPostCreateMeldResponse,
     AdminPostDiscardTileRequest, AdminPostDiscardTileResponse, AdminPostDrawTileResponse,
     AdminPostMovePlayerResponse, AdminPostSayMahjongRequest, AdminPostSayMahjongResponse,
-    AdminPostSwapDrawTilesRequest, AdminPostSwapDrawTilesResponse, ServiceGame, SocketMessage,
-    UserGetGamesQuery, UserGetLoadGameResponse, UserLoadGameQuery, UserPostDiscardTileRequest,
-    UserPostDiscardTileResponse, WebSocketQuery,
+    AdminPostSortHandsResponse, AdminPostSwapDrawTilesRequest, AdminPostSwapDrawTilesResponse,
+    ServiceGame, SocketMessage, UserGetGamesQuery, UserGetLoadGameResponse, UserLoadGameQuery,
+    UserPostDiscardTileRequest, UserPostDiscardTileResponse, WebSocketQuery,
 };
 use tokio::net::TcpStream;
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
@@ -244,7 +244,10 @@ impl ServiceHTTPClient {
         }
     }
 
-    pub async fn admin_sort_hands(&self, game_id: &str) -> Result<Hands, String> {
+    pub async fn admin_sort_hands(
+        &self,
+        game_id: &str,
+    ) -> Result<AdminPostSortHandsResponse, String> {
         let url = format!("{}/v1/admin/game/{game_id}/sort-hands", self.url);
         let result = self.client.post(url).send().await;
         let validation = validate_response(&result);

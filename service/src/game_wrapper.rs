@@ -1,10 +1,11 @@
 use actix_web::{web, HttpResponse};
 use mahjong_core::{ai::StandardAI, Game, PlayerId, TileId};
 use service_contracts::{
-    AdminPostAIContinueResponse, AdminPostClaimTileResponse, AdminPostCreateMeldRequest,
-    AdminPostCreateMeldResponse, AdminPostDiscardTileResponse, AdminPostDrawTileResponse,
-    AdminPostMovePlayerResponse, AdminPostSayMahjongResponse, AdminPostSwapDrawTilesResponse,
-    ServiceGame, ServiceGameSummary, ServicePlayer, SocketMessage, UserPostDiscardTileResponse,
+    AdminPostAIContinueResponse, AdminPostBreakMeldRequest, AdminPostBreakMeldResponse,
+    AdminPostClaimTileResponse, AdminPostCreateMeldRequest, AdminPostCreateMeldResponse,
+    AdminPostDiscardTileResponse, AdminPostDrawTileResponse, AdminPostMovePlayerResponse,
+    AdminPostSayMahjongResponse, AdminPostSwapDrawTilesResponse, ServiceGame, ServiceGameSummary,
+    ServicePlayer, SocketMessage, UserPostDiscardTileResponse,
 };
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -205,6 +206,25 @@ impl GameWrapper {
             self.save_and_return(&response, "Error when discarding the tile")
                 .await
         }
+    }
+
+    pub async fn handle_break_meld(&mut self, body: &AdminPostBreakMeldRequest) -> HttpResponse {
+        self.service_game
+            .game
+            .break_meld(&body.player_id, &body.set_id);
+
+        let current_player_id = self.service_game.game.get_current_player().clone();
+        let hand = self
+            .service_game
+            .game
+            .table
+            .hands
+            .get(&current_player_id)
+            .unwrap();
+        let response: AdminPostBreakMeldResponse = hand.clone();
+
+        self.save_and_return(&response, "Error when breaking meld")
+            .await
     }
 
     pub async fn handle_create_meld(&mut self, body: &AdminPostCreateMeldRequest) -> HttpResponse {

@@ -47,6 +47,7 @@ fn docker(current_dir: &str) {
     let service_cmd = vec!["rm -rf dist && mkdir -p dist"].join(" ");
     run_bash_cmd(&service_cmd, current_dir);
 
+    // TODO: Should revisit this
     let service_cmd = vec!["whoami && id -u && ls -lah dist && chmod -R 777 dist"].join(" ");
     run_bash_cmd(&service_cmd, current_dir);
 
@@ -73,11 +74,23 @@ fn docker(current_dir: &str) {
     run_bash_cmd(&service_cmd, current_dir);
 }
 
+fn web(current_dir: &str) {
+    let service_cmd = vec!["cd web_lib", "bash ./scripts/pack.sh"].join(";");
+    run_bash_cmd(&service_cmd, current_dir);
+
+    let service_cmd = vec!["cd web_client", "npm i"].join(";");
+    run_bash_cmd(&service_cmd, current_dir);
+
+    let service_cmd = vec!["cd web_client", "npm run build"].join(";");
+    run_bash_cmd(&service_cmd, current_dir);
+}
+
 fn main() {
     let mut cmd = Command::new("scripts")
         .about("Run various scripts")
         .subcommand(Command::new("check").about("Run all checks"))
-        .subcommand(Command::new("docker").about("Build docker images"));
+        .subcommand(Command::new("docker").about("Build docker images"))
+        .subcommand(Command::new("web").about("Build the web client"));
 
     let current_dir_path = env::current_dir().unwrap();
     let current_dir = current_dir_path
@@ -90,6 +103,7 @@ fn main() {
     match cmd.clone().get_matches().subcommand() {
         Some(("check", _)) => check(current_dir),
         Some(("docker", _)) => docker(current_dir),
+        Some(("web", _)) => web(current_dir),
         _ => {
             cmd.print_long_help().unwrap();
             std::process::exit(1);
