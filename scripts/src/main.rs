@@ -30,6 +30,7 @@ fn check(current_dir: &str) {
     run_bash_cmd("cargo test", current_dir);
     run_bash_cmd("cargo clippy -- -D warnings", current_dir);
     run_bash_cmd("cargo fmt --all -- --check", current_dir);
+    run_bash_cmd("cd web_lib && bash ./scripts/pack.sh", current_dir);
     run_bash_cmd("cd web_client && npm i && npm run build", current_dir);
 }
 

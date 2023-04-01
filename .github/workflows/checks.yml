@@ -16,5 +16,8 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 18
-      - uses: actions-rs/cargo@v1
-      - run: cargo run --bin scripts -- check
+      - name: Install wasm-pack
+        run: |
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Run checks
+        run: cargo run --bin scripts -- check
