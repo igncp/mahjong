@@ -8,10 +8,10 @@ use actix_web::{get, post, web, App, Error, HttpRequest, HttpResponse, HttpServe
 use actix_web_actors::ws;
 use mahjong_core::GameId;
 use service_contracts::{
-    AdminGetGamesResponse, AdminPostBreakMeldRequest, AdminPostClaimTileRequest,
-    AdminPostCreateMeldRequest, AdminPostDiscardTileRequest, AdminPostSayMahjongRequest,
-    AdminPostSwapDrawTilesRequest, UserGetGamesQuery, UserGetGamesResponse, UserLoadGameQuery,
-    UserPostDiscardTileRequest, WebSocketQuery,
+    AdminGetGamesResponse, AdminPostAIContinueRequest, AdminPostBreakMeldRequest,
+    AdminPostClaimTileRequest, AdminPostCreateMeldRequest, AdminPostDiscardTileRequest,
+    AdminPostSayMahjongRequest, AdminPostSwapDrawTilesRequest, UserGetGamesQuery,
+    UserGetGamesResponse, UserLoadGameQuery, UserPostDiscardTileRequest, WebSocketQuery,
 };
 use std::sync::Arc;
 use std::time::Instant;
@@ -234,12 +234,13 @@ async fn admin_post_game_swap_tiles(
 async fn admin_post_game_ai_continue(
     storage: StorageData,
     game_id: web::Path<String>,
+    body: web::Json<AdminPostAIContinueRequest>,
     srv: SocketServer,
 ) -> impl Responder {
     let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
 
     match game_wrapper {
-        Ok(mut game_wrapper) => game_wrapper.handle_admin_ai_continue().await,
+        Ok(mut game_wrapper) => game_wrapper.handle_admin_ai_continue(&body).await,
         Err(err) => err,
     }
 }

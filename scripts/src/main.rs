@@ -31,7 +31,14 @@ fn check(current_dir: &str) {
     run_bash_cmd("cargo clippy -- -D warnings", current_dir);
     run_bash_cmd("cargo fmt --all -- --check", current_dir);
     run_bash_cmd("cd web_lib && bash ./scripts/pack.sh", current_dir);
-    run_bash_cmd("cd web_client && npm i && npm run build", current_dir);
+    run_bash_cmd(
+        "cd web_client && npm i && npm run lint && npm run build",
+        current_dir,
+    );
+}
+
+fn fix(current_dir: &str) {
+    run_bash_cmd("cd web_client && npm run lint:fix", current_dir);
 }
 
 fn docker(current_dir: &str) {
@@ -90,6 +97,7 @@ fn main() {
     let mut cmd = Command::new("scripts")
         .about("Run various scripts")
         .subcommand(Command::new("check").about("Run all checks"))
+        .subcommand(Command::new("fix").about("Run linters in fix mode"))
         .subcommand(Command::new("docker").about("Build docker images"))
         .subcommand(Command::new("web").about("Build the web client"));
 
@@ -105,6 +113,7 @@ fn main() {
         Some(("check", _)) => check(current_dir),
         Some(("docker", _)) => docker(current_dir),
         Some(("web", _)) => web(current_dir),
+        Some(("fix", _)) => fix(current_dir),
         _ => {
             cmd.print_long_help().unwrap();
             std::process::exit(1);

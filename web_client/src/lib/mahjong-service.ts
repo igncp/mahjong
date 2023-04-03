@@ -60,9 +60,17 @@ export type ServiceGame = {
 
 export type TAdminPostBreakMeldRequest = {
   player_id: PlayerId;
-  set_id: String;
+  set_id: string;
 };
 export type TAdminPostBreakMeldResponse = Hand;
+
+export type TAdminPostAIContinueRequest = {
+  draw?: boolean;
+};
+export type TAdminPostAIContinueResponse = {
+  changed: boolean;
+  service_game: ServiceGame;
+};
 
 export type TAdminPostCreateMeldRequest = {
   player_id: PlayerId;
@@ -100,6 +108,10 @@ export type PossibleMeld = {
   discard_tile: unknown;
   player_id: PlayerId;
   tiles: TileId[];
+};
+
+export type TSocketMessage = {
+  GameUpdate: ServiceGame;
 };
 
 export class ModelServiceGame {

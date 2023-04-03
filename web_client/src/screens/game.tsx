@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from "react";
+
 import Header from "src/containers/common/header";
 import { HttpClient } from "src/lib/http-client";
 import {
@@ -19,12 +20,31 @@ const Game = ({ gameId, gameType }: IProps) => {
   );
 
   useEffect(() => {
+    // TODO: Improve this with rxjs
+    let disconnectSocket = () => {};
+
     (async () => {
       const httpClient = HttpClient.singleton();
-      const game = await httpClient.adminGetGame(gameId);
+      const [game, disconnect] = await Promise.all([
+        httpClient.adminGetGame(gameId),
+        httpClient.connectToSocket({
+          gameId,
+          onMessage: (data) => {
+            if (data.GameUpdate) {
+              setServiceGame(data.GameUpdate);
+            }
+          },
+        }),
+      ]);
 
       setServiceGame(game);
+
+      disconnectSocket = disconnect;
     })();
+
+    return () => {
+      disconnectSocket();
+    };
   }, [gameId, gameType]);
 
   if (!serviceGame) return null;
@@ -88,15 +108,13 @@ const Game = ({ gameId, gameType }: IProps) => {
           style={{
             display: "inline-flex",
             flexDirection: "row",
-            gap: "10px",
             flexWrap: "wrap",
+            gap: "10px",
           }}
         >
-          {serviceGame.game.table.board.map((tileId) => {
-            return (
-              <span key={tileId}>{serviceGameM.getTileString(tileId)}</span>
-            );
-          })}
+          {serviceGame.game.table.board.map((tileId) => (
+            <span key={tileId}>{serviceGameM.getTileString(tileId)}</span>
+          ))}
         </span>
       </p>
       {serviceGame.game.players.map((playerId) => {
@@ -108,6 +126,7 @@ const Game = ({ gameId, gameType }: IProps) => {
         const playerPossibleMelds = possibleMelds.filter(
           (p) => p.player_id === player.id
         );
+
         const setsIds = hand.reduce((acc, tile) => {
           if (tile.set_id) {
             acc.add(tile.set_id);
@@ -123,30 +142,28 @@ const Game = ({ gameId, gameType }: IProps) => {
             </p>
             <ul>
               <li>
-                {handWithoutMelds.map((handTile) => {
-                  return (
-                    <span
-                      key={handTile.id}
-                      style={{
-                        cursor: canDiscardTile ? "pointer" : "default",
-                        color: canDiscardTile ? "black" : "gray",
-                      }}
-                      onClick={async () => {
-                        if (canDiscardTile) {
-                          const newGame =
-                            await HttpClient.singleton().adminDiscardTile(
-                              gameId,
-                              { tile_id: handTile.id }
-                            );
+                {handWithoutMelds.map((handTile) => (
+                  <span
+                    key={handTile.id}
+                    style={{
+                      color: canDiscardTile ? "black" : "gray",
+                      cursor: canDiscardTile ? "pointer" : "default",
+                    }}
+                    onClick={async () => {
+                      if (canDiscardTile) {
+                        const newGame =
+                          await HttpClient.singleton().adminDiscardTile(
+                            gameId,
+                            { tile_id: handTile.id }
+                          );
 
-                          setServiceGame(newGame);
-                        }
-                      }}
-                    >
-                      {serviceGameM.getTileString(handTile.id)}
-                    </span>
-                  );
-                })}
+                        setServiceGame(newGame);
+                      }
+                    }}
+                  >
+                    {serviceGameM.getTileString(handTile.id)}
+                  </span>
+                ))}
               </li>
               {Array.from(setsIds).map((setId) => {
                 const setTiles = hand.filter((tile) => tile.set_id === setId);
@@ -155,13 +172,11 @@ const Game = ({ gameId, gameType }: IProps) => {
                 return (
                   <li key={setId}>
                     Meld:{` ${isConcealed ? "concealed" : "open"} `}
-                    {setTiles.map((tile) => {
-                      return (
-                        <span key={tile.id}>
-                          {serviceGameM.getTileString(tile.id)}
-                        </span>
-                      );
-                    })}
+                    {setTiles.map((tile) => (
+                      <span key={tile.id}>
+                        {serviceGameM.getTileString(tile.id)}
+                      </span>
+                    ))}
                     {isConcealed && (
                       <Button
                         onClick={async () => {
@@ -185,34 +200,32 @@ const Game = ({ gameId, gameType }: IProps) => {
                 );
               })}
 
-              {playerPossibleMelds.map((playerPossibleMeld, idx) => {
-                return (
-                  <li key={idx}>
-                    Possible meld:{" "}
-                    {playerPossibleMeld.tiles.map((tileId) => {
-                      return (
-                        <span key={tileId}>
-                          {serviceGameM.getTileString(tileId)}
-                        </span>
+              {playerPossibleMelds.map((playerPossibleMeld, idx) => (
+                <li key={idx}>
+                  Possible meld:{" "}
+                  {playerPossibleMeld.tiles.map((tileId) => (
+                    <span key={tileId}>
+                      {serviceGameM.getTileString(tileId)}
+                    </span>
+                  ))}
+                  <Button
+                    onClick={async () => {
+                      const hand = await HttpClient.singleton().adminCreateMeld(
+                        gameId,
+                        {
+                          player_id: player.id,
+                          tiles: playerPossibleMeld.tiles,
+                        }
                       );
-                    })}
-                    <Button
-                      onClick={async () => {
-                        const hand =
-                          await HttpClient.singleton().adminCreateMeld(gameId, {
-                            player_id: player.id,
-                            tiles: playerPossibleMeld.tiles,
-                          });
 
-                        serviceGame.game.table.hands[player.id] = hand;
-                        setServiceGame({ ...serviceGame });
-                      }}
-                    >
-                      Create meld
-                    </Button>
-                  </li>
-                );
-              })}
+                      serviceGame.game.table.hands[player.id] = hand;
+                      setServiceGame({ ...serviceGame });
+                    }}
+                  >
+                    Create meld
+                  </Button>
+                </li>
+              ))}
             </ul>
           </Fragment>
         );
@@ -253,6 +266,33 @@ const Game = ({ gameId, gameType }: IProps) => {
             }}
           >
             Sort hands
+          </Button>
+        </li>
+        <li>
+          <Button
+            onClick={async () => {
+              const newGame = await HttpClient.singleton().adminAIContinue(
+                gameId
+              );
+
+              setServiceGame(newGame.service_game);
+            }}
+          >
+            Run AI
+          </Button>
+          <Button
+            onClick={async () => {
+              const newGame = await HttpClient.singleton().adminAIContinue(
+                gameId,
+                {
+                  draw: false,
+                }
+              );
+
+              setServiceGame(newGame.service_game);
+            }}
+          >
+            Run AI without draw
           </Button>
         </li>
       </ul>

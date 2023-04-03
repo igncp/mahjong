@@ -3,6 +3,8 @@ import {
   GameId,
   TAdminGetGameResponse,
   TAdminGetGamesResponse,
+  TAdminPostAIContinueRequest,
+  TAdminPostAIContinueResponse,
   TAdminPostBreakMeldRequest,
   TAdminPostBreakMeldResponse,
   TAdminPostCreateMeldRequest,
@@ -15,11 +17,16 @@ import {
   TAdminPostMovePlayerResponse,
   TAdminPostNewGameResponse,
   TAdminPostSortHandsResponse,
+  TSocketMessage,
 } from "./mahjong-service";
 
 export class HttpClient {
-  private baseUrl: string;
   private static instance: HttpClient;
+  private baseUrl: string;
+
+  private constructor() {
+    this.baseUrl = env.SERVICE_URL;
+  }
 
   public static singleton() {
     if (!HttpClient.instance) {
@@ -29,22 +36,39 @@ export class HttpClient {
     return HttpClient.instance;
   }
 
-  private constructor() {
-    this.baseUrl = env.SERVICE_URL;
-  }
+  public async connectToSocket({
+    gameId,
+    onMessage,
+  }: {
+    gameId: GameId;
+    onMessage: (message: TSocketMessage) => void;
+  }) {
+    const socket = new WebSocket(
+      `${this.baseUrl.replace("http", "ws")}/v1/ws?game_id=${gameId}`
+    );
 
-  private async fetchJson<T>(url: string, opts?: RequestInit): Promise<T> {
-    return await fetch(`${this.baseUrl}${url}`, {
-      ...opts,
-      headers: {
-        "Content-Type": "application/json",
-        ...opts?.headers,
-      },
-    }).then((r) => r.json());
+    socket.onmessage = (event) => {
+      const data: TSocketMessage = JSON.parse(event.data);
+      onMessage(data);
+    };
+
+    return () => {
+      socket.close();
+    };
   }
 
   public async getHealth(): Promise<void> {
     return await fetch(`${this.baseUrl}/health`).then(() => undefined);
+  }
+
+  public async adminAIContinue(
+    gameId: GameId,
+    opts: TAdminPostAIContinueRequest = {}
+  ): Promise<TAdminPostAIContinueResponse> {
+    return await this.fetchJson(`/v1/admin/game/${gameId}/ai-continue`, {
+      body: JSON.stringify(opts),
+      method: "POST",
+    });
   }
 
   public async adminBreakMeld(
@@ -124,5 +148,15 @@ export class HttpClient {
     return await this.fetchJson(`/v1/admin/game/${gameId}/sort-hands`, {
       method: "POST",
     });
+  }
+
+  private async fetchJson<T>(url: string, opts?: RequestInit): Promise<T> {
+    return await fetch(`${this.baseUrl}${url}`, {
+      ...opts,
+      headers: {
+        "Content-Type": "application/json",
+        ...opts?.headers,
+      },
+    }).then((r) => r.json());
   }
 }

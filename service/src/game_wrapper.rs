@@ -1,11 +1,11 @@
 use actix_web::{web, HttpResponse};
 use mahjong_core::{ai::StandardAI, Game, PlayerId, TileId};
 use service_contracts::{
-    AdminPostAIContinueResponse, AdminPostBreakMeldRequest, AdminPostBreakMeldResponse,
-    AdminPostClaimTileResponse, AdminPostCreateMeldRequest, AdminPostCreateMeldResponse,
-    AdminPostDiscardTileResponse, AdminPostDrawTileResponse, AdminPostMovePlayerResponse,
-    AdminPostSayMahjongResponse, AdminPostSwapDrawTilesResponse, ServiceGame, ServiceGameSummary,
-    ServicePlayer, SocketMessage, UserPostDiscardTileResponse,
+    AdminPostAIContinueRequest, AdminPostAIContinueResponse, AdminPostBreakMeldRequest,
+    AdminPostBreakMeldResponse, AdminPostClaimTileResponse, AdminPostCreateMeldRequest,
+    AdminPostCreateMeldResponse, AdminPostDiscardTileResponse, AdminPostDrawTileResponse,
+    AdminPostMovePlayerResponse, AdminPostSayMahjongResponse, AdminPostSwapDrawTilesResponse,
+    ServiceGame, ServiceGameSummary, ServicePlayer, SocketMessage, UserPostDiscardTileResponse,
 };
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -166,10 +166,17 @@ impl GameWrapper {
             .await
     }
 
-    pub async fn handle_admin_ai_continue(&mut self) -> HttpResponse {
+    pub async fn handle_admin_ai_continue(
+        &mut self,
+        body: &AdminPostAIContinueRequest,
+    ) -> HttpResponse {
         let ai_players = self.service_game.get_ai_players();
 
         let mut standard_ai = StandardAI::new(&mut self.service_game.game, &ai_players);
+        if body.draw.is_some() {
+            standard_ai.draw = body.draw.unwrap();
+        }
+
         let mut global_changed = false;
 
         loop {
@@ -209,18 +216,23 @@ impl GameWrapper {
     }
 
     pub async fn handle_break_meld(&mut self, body: &AdminPostBreakMeldRequest) -> HttpResponse {
-        self.service_game
+        let result = self
+            .service_game
             .game
             .break_meld(&body.player_id, &body.set_id);
 
-        let current_player_id = self.service_game.game.get_current_player().clone();
+        if !result {
+            return HttpResponse::BadRequest().body("Error when breaking meld");
+        }
+
         let hand = self
             .service_game
             .game
             .table
             .hands
-            .get(&current_player_id)
+            .get(&body.player_id)
             .unwrap();
+
         let response: AdminPostBreakMeldResponse = hand.clone();
 
         self.save_and_return(&response, "Error when breaking meld")
@@ -228,17 +240,21 @@ impl GameWrapper {
     }
 
     pub async fn handle_create_meld(&mut self, body: &AdminPostCreateMeldRequest) -> HttpResponse {
-        self.service_game
+        let result = self
+            .service_game
             .game
             .create_meld(&body.player_id, &body.tiles);
 
-        let current_player_id = self.service_game.game.get_current_player().clone();
+        if !result {
+            return HttpResponse::BadRequest().body("Error when creating meld");
+        }
+
         let hand = self
             .service_game
             .game
             .table
             .hands
-            .get(&current_player_id)
+            .get(&body.player_id)
             .unwrap();
         let response: AdminPostCreateMeldResponse = hand.clone();
 

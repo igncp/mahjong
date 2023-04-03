@@ -6,12 +6,10 @@ interface IProps {
   text: string;
 }
 
-const Header = ({ linkPath, text }: IProps) => {
-  return (
-    <h1>
-      <Link href={linkPath}>{text}</Link>
-    </h1>
-  );
-};
+const Header = ({ linkPath, text }: IProps) => (
+  <h1>
+    <Link href={linkPath}>{text}</Link>
+  </h1>
+);
 
 export default Header;

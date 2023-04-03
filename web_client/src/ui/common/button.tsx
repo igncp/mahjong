@@ -5,12 +5,10 @@ type TProps = {
   onClick?: () => void;
 };
 
-const Button = ({ children, onClick }: TProps) => {
-  return (
-    <button onClick={onClick} style={{ cursor: "pointer" }}>
-      {children}
-    </button>
-  );
-};
+const Button = ({ children, onClick }: TProps) => (
+  <button onClick={onClick} style={{ cursor: "pointer" }}>
+    {children}
+  </button>
+);
 
 export default Button;

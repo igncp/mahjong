@@ -7,13 +7,14 @@ use futures_util::{
 use mahjong_core::{GameId, Hands, PlayerId, TileId};
 use reqwest::Error;
 use service_contracts::{
-    AdminGetGamesResponse, AdminPostAIContinueResponse, AdminPostClaimTileRequest,
-    AdminPostClaimTileResponse, AdminPostCreateMeldRequest, AdminPostCreateMeldResponse,
-    AdminPostDiscardTileRequest, AdminPostDiscardTileResponse, AdminPostDrawTileResponse,
-    AdminPostMovePlayerResponse, AdminPostSayMahjongRequest, AdminPostSayMahjongResponse,
-    AdminPostSortHandsResponse, AdminPostSwapDrawTilesRequest, AdminPostSwapDrawTilesResponse,
-    ServiceGame, SocketMessage, UserGetGamesQuery, UserGetLoadGameResponse, UserLoadGameQuery,
-    UserPostDiscardTileRequest, UserPostDiscardTileResponse, WebSocketQuery,
+    AdminGetGamesResponse, AdminPostAIContinueRequest, AdminPostAIContinueResponse,
+    AdminPostClaimTileRequest, AdminPostClaimTileResponse, AdminPostCreateMeldRequest,
+    AdminPostCreateMeldResponse, AdminPostDiscardTileRequest, AdminPostDiscardTileResponse,
+    AdminPostDrawTileResponse, AdminPostMovePlayerResponse, AdminPostSayMahjongRequest,
+    AdminPostSayMahjongResponse, AdminPostSortHandsResponse, AdminPostSwapDrawTilesRequest,
+    AdminPostSwapDrawTilesResponse, ServiceGame, SocketMessage, UserGetGamesQuery,
+    UserGetLoadGameResponse, UserLoadGameQuery, UserPostDiscardTileRequest,
+    UserPostDiscardTileResponse, WebSocketQuery,
 };
 use tokio::net::TcpStream;
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
@@ -335,7 +336,8 @@ impl ServiceHTTPClient {
         game_id: &GameId,
     ) -> Result<AdminPostAIContinueResponse, String> {
         let url = format!("{}/v1/admin/game/{game_id}/ai-continue", self.url);
-        let result = self.client.post(url).send().await;
+        let body = AdminPostAIContinueRequest { draw: None };
+        let result = self.client.post(url).json(&body).send().await;
         let validation = validate_response(&result);
         if validation.is_ok() {
             let hand = result.unwrap().json::<AdminPostAIContinueResponse>().await;

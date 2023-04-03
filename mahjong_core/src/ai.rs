@@ -7,11 +7,16 @@ use std::collections::HashSet;
 pub struct StandardAI<'a> {
     game: &'a mut Game,
     ai_players: &'a HashSet<PlayerId>,
+    pub draw: bool,
 }
 
 impl<'a> StandardAI<'a> {
     pub fn new(game: &'a mut Game, ai_players: &'a HashSet<PlayerId>) -> Self {
-        Self { game, ai_players }
+        Self {
+            ai_players,
+            draw: true,
+            game,
+        }
     }
 
     pub fn play_action(&mut self) -> bool {
@@ -41,9 +46,9 @@ impl<'a> StandardAI<'a> {
             let is_tile_claimed = self.game.round.tile_claimed.is_some();
 
             if !is_tile_claimed {
-                let tile_draw = self.game.draw_tile_from_wall();
+                let tile_drawn = self.game.draw_tile_from_wall();
 
-                if tile_draw.is_some() {
+                if tile_drawn.is_some() {
                     return true;
                 }
             }
@@ -78,9 +83,13 @@ impl<'a> StandardAI<'a> {
             let is_tile_claimed = self.game.round.tile_claimed.is_some();
 
             if !is_tile_claimed {
-                let tile_draw = self.game.draw_tile_from_wall();
+                if !self.draw {
+                    return false;
+                }
 
-                if tile_draw.is_some() {
+                let tile_drawn = self.game.draw_tile_from_wall();
+
+                if tile_drawn.is_some() {
                     return true;
                 }
             } else {

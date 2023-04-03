@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { MouseEventHandler, useEffect, useState } from "react";
+
+import Header from "src/containers/common/header";
+
 import { HttpClient } from "../lib/http-client";
 import { TAdminGetGamesResponse } from "../lib/mahjong-service";
 import { SiteUrls } from "../lib/site/urls";
-import Header from "src/containers/common/header";
 
 const Index = () => {
   const [page, setPage] = useState<TAdminGetGamesResponse | null>(null);
@@ -21,7 +23,9 @@ const Index = () => {
 
   if (!page) return null;
 
-  const handleNewAdminGame = async (ev: any) => {
+  const handleNewAdminGame: MouseEventHandler<HTMLAnchorElement> = async (
+    ev
+  ) => {
     ev.preventDefault();
     ev.stopPropagation();
 

@@ -149,6 +149,10 @@ pub struct AdminPostSayMahjongRequest {
 pub type AdminPostSayMahjongResponse = ServiceGame;
 
 #[derive(Deserialize, Serialize)]
+pub struct AdminPostAIContinueRequest {
+    pub draw: Option<bool>,
+}
+#[derive(Deserialize, Serialize)]
 pub struct AdminPostAIContinueResponse {
     pub service_game: ServiceGame,
     pub changed: bool,

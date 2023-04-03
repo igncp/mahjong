@@ -2,11 +2,15 @@
   "name": "mahjong-web-client",
   "private": true,
   "scripts": {
+    "lint": "prettier --check 'src/**' 'pages/**' && eslint .",
+    "lint:fix": "prettier --write 'src/**' 'pages/**' && eslint --fix .",
     "dev": "next dev -p 9000",
-    "build": "next build && next export"
+    "build": "rm -rf out .next && next build && next export"
   },
   "dependencies": {
+    "@trivago/prettier-plugin-sort-imports": "^4.1.1",
     "next": "^13.2.4",
+    "prettier": "^2.8.7",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "web_lib": "file:pkg"
@@ -14,6 +18,11 @@
   "devDependencies": {
     "@types/node": "18.15.9",
     "@types/react": "18.0.29",
+    "@typescript-eslint/eslint-plugin": "^5.57.0",
+    "@typescript-eslint/parser": "^5.57.0",
+    "eslint": "^8.37.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-react": "^7.32.2",
     "typescript": "5.0.2"
   }
 }
