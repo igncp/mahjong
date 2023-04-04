@@ -32,6 +32,7 @@ type HandTile = {
 };
 type Hand = HandTile[];
 type Hands = Record<PlayerId, Hand>;
+type Score = Record<PlayerId, number>;
 
 export type Game = {
   deck: Record<TileId, Tile>;
@@ -41,6 +42,7 @@ export type Game = {
   round: {
     player_index: PlayerId;
   };
+  score: Score;
   table: {
     board: TileId[];
     draw_wall: TileId[];
@@ -56,6 +58,15 @@ export type ServicePlayer = {
 export type ServiceGame = {
   game: Game;
   players: Record<PlayerId, ServicePlayer>;
+};
+
+export type GameSummary = {
+  id: GameId;
+  score: Score;
+};
+
+export type ServiceGameSummary = {
+  game_summary: GameSummary;
 };
 
 export type TAdminPostBreakMeldRequest = {
@@ -104,6 +115,11 @@ export type TAdminPostMovePlayerResponse = ServiceGame;
 export type TAdminPostSortHandsRequest = void;
 export type TAdminPostSortHandsResponse = Hands;
 
+export type TAdminPostSayMahjongRequest = {
+  player_id: PlayerId;
+};
+export type TAdminPostSayMahjongResponse = ServiceGame;
+
 export type PossibleMeld = {
   discard_tile: unknown;
   player_id: PlayerId;
@@ -113,6 +129,16 @@ export type PossibleMeld = {
 export type TSocketMessage = {
   GameUpdate: ServiceGame;
 };
+
+export type TUserGetGamesQuery = {
+  player_id: PlayerId;
+};
+export type TUserGetGamesResponse = GameId[];
+
+export type TUserLoadGameQuery = {
+  player_id: PlayerId;
+};
+export type TUserLoadGameResponse = ServiceGameSummary;
 
 export class ModelServiceGame {
   constructor(
@@ -131,6 +157,10 @@ export class ModelServiceGame {
     const tileString = format_tile(tile);
 
     return `[${tileString}]`;
+  }
+
+  getPlayerScore(playerId: PlayerId) {
+    return this.data.game.score[playerId];
   }
 
   getPossibleMelds(): PossibleMeld[] {

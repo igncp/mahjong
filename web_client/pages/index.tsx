@@ -1,16 +1,19 @@
-import dynamic from "next/dynamic";
 import Head from "next/head";
 import { useRouter } from "next/router";
 
-const IndexScreen = dynamic(() => import("../src/screens/index"), {
-  ssr: false,
-});
-const GameScreen = dynamic(() => import("../src/screens/game"), { ssr: false });
+import { SiteUrls } from "src/lib/site/urls";
+import {
+  DashboardAdmin,
+  DashboardPlayer,
+  GameScreen,
+  IndexScreen,
+} from "src/screens/list";
 
 const Home = () => {
   const { asPath } = useRouter();
   const routes = asPath.split("#");
-  const paths = (routes[1] || "").split("/");
+  const mainPath = routes[1] || "";
+  const paths = mainPath.split("/");
 
   return (
     <>
@@ -19,11 +22,16 @@ const Home = () => {
       </Head>
       {(() => {
         switch (true) {
+          case asPath === SiteUrls.dashboardAdmin:
+            return <DashboardAdmin />;
+          case paths[1] === "dashboard" && paths[2] === "player":
+            return <DashboardPlayer userId={paths[3]} />;
           case paths[1] === "game":
             return (
               <GameScreen
                 gameId={paths[2] as string}
                 gameType={paths[3] || ""}
+                userId={paths[4] || ""}
               />
             );
 

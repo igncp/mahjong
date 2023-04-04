@@ -3,12 +3,10 @@ import React from "react";
 type TProps = {
   children: React.ReactNode;
   onClick?: () => void;
-};
+} & React.ButtonHTMLAttributes<HTMLButtonElement>;
 
-const Button = ({ children, onClick }: TProps) => (
-  <button onClick={onClick} style={{ cursor: "pointer" }}>
-    {children}
-  </button>
+const Button = (props: TProps) => (
+  <button style={{ cursor: "pointer" }} {...props} />
 );
 
 export default Button;
