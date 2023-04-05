@@ -1,3 +1,4 @@
+#![deny(clippy::use_self, clippy::shadow_unrelated)]
 use file_storage::FileStorage;
 use http_server::MahjongServer;
 

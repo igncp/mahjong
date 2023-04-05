@@ -3,10 +3,7 @@ mod test {
     use std::collections::HashMap;
 
     use crate::deck::DeckContent;
-    use crate::meld::{
-        get_is_chow, get_is_kong, get_is_pung, get_possible_melds, GetPossibleMelds, Meld,
-        PlayerDiff, SetCheckOpts,
-    };
+    use crate::meld::{get_is_chow, get_is_kong, get_is_pung, Meld, PlayerDiff, SetCheckOpts};
     use crate::tile::TileId;
     use crate::{Deck, Flower, FlowerTile, Hand, HandTile, Suit, SuitTile, Tile, Wind, WindTile};
 
@@ -344,13 +341,7 @@ mod test {
         for (index, (hand, deck, player_diff, expected_meld)) in
             get_possible_melds_fixtures().iter().enumerate()
         {
-            let opts = GetPossibleMelds {
-                hand,
-                deck,
-                board_tile_player_diff: *player_diff,
-                claimed_tile: None,
-            };
-            let possible_melds = get_possible_melds(&opts);
+            let possible_melds = hand.get_possible_melds(*player_diff, None, deck);
             assert_eq!(possible_melds, *expected_meld, "index: {index}");
         }
     }

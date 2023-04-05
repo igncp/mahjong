@@ -1,8 +1,12 @@
-use crate::{Deck, TileId};
+use crate::{
+    meld::{get_is_chow, get_is_kong, get_is_pair, get_is_pung, Meld, PlayerDiff, SetCheckOpts},
+    Deck, TileId,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-pub type SetId = Option<String>;
+pub type SetIdContent = String;
+pub type SetId = Option<SetIdContent>;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct HandTile {
@@ -73,5 +77,80 @@ impl Hand {
             melds,
             tiles_without_meld,
         }
+    }
+
+    pub fn can_say_mahjong(&self, deck: &Deck) -> bool {
+        if self.0.len() != 14 {
+            return false;
+        }
+
+        let tiles_without_meld = self
+            .0
+            .iter()
+            .filter(|t| t.set_id.is_none())
+            .map(|t| deck.0.get(&t.id).unwrap())
+            .collect();
+
+        get_is_pair(&tiles_without_meld)
+    }
+
+    pub fn get_possible_melds(
+        &self,
+        board_tile_player_diff: PlayerDiff,
+        claimed_tile: Option<TileId>,
+        deck: &Deck,
+    ) -> Vec<Meld> {
+        let hand_filtered: Vec<HandTile> = self
+            .0
+            .iter()
+            .filter(|h| h.set_id.is_none())
+            .cloned()
+            .collect();
+        let mut melds: Vec<Meld> = vec![];
+
+        for first_tile_index in 0..hand_filtered.len() {
+            for second_tile_index in first_tile_index + 1..hand_filtered.len() {
+                for third_tile_index in second_tile_index + 1..hand_filtered.len() {
+                    let first_tile = hand_filtered[first_tile_index].id;
+                    let second_tile = hand_filtered[second_tile_index].id;
+                    let third_tile = hand_filtered[third_tile_index].id;
+                    let sub_hand = vec![first_tile, second_tile, third_tile];
+
+                    let opts = SetCheckOpts {
+                        board_tile_player_diff,
+                        claimed_tile,
+                        deck,
+                        sub_hand: &sub_hand,
+                    };
+
+                    if get_is_pung(&opts) || get_is_chow(&opts) {
+                        melds.push(sub_hand.clone());
+                    }
+
+                    for forth_tile in hand_filtered.iter().skip(third_tile_index + 1) {
+                        let mut full_sub_hand = sub_hand.clone();
+                        full_sub_hand.push(forth_tile.id);
+                        let mut opts = opts.clone();
+                        opts.sub_hand = &full_sub_hand;
+
+                        if get_is_kong(&opts) {
+                            melds.push(full_sub_hand.clone());
+                        }
+                    }
+                }
+            }
+        }
+
+        if self.can_say_mahjong(deck) {
+            melds.push(
+                self.0
+                    .iter()
+                    .filter(|t| t.set_id.is_none())
+                    .map(|t| t.id)
+                    .collect(),
+            );
+        }
+
+        melds
     }
 }

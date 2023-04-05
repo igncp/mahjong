@@ -39,7 +39,7 @@ pub struct UIState {
 
 impl UIState {
     pub fn new() -> Self {
-        UIState {
+        Self {
             display_draw_wall_index: false,
             display_games: false,
             display_hand: false,
@@ -64,7 +64,7 @@ impl UI {
         let terminal = Terminal::new(backend).unwrap();
         let state = UIState::new();
 
-        UI { terminal, state }
+        Self { terminal, state }
     }
 
     pub fn prepare(&self) {

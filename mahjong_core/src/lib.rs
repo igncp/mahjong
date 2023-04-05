@@ -1,3 +1,4 @@
+#![deny(clippy::use_self, clippy::shadow_unrelated)]
 pub use deck::Deck;
 pub use game::{Game, GameId, GamePhase};
 pub use hand::{Hand, HandTile, SetId};
@@ -107,7 +108,7 @@ pub struct Table {
 pub type ScoreItem = u32;
 pub type Score = HashMap<PlayerId, ScoreItem>;
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RoundTileClaimed {
     by: Option<PlayerId>,
     from: PlayerId,

@@ -8,6 +8,7 @@ import {
   TAdminGetGameResponse,
 } from "src/lib/mahjong-service";
 import Button from "src/ui/common/button";
+import CopyToClipboard from "src/ui/common/copy-to-clipboard";
 
 interface IProps {
   gameId: string;
@@ -47,14 +48,16 @@ const Game = ({ gameId }: IProps) => {
 
   if (!serviceGame) return null;
 
-  const serviceGameM = new ModelServiceGame(serviceGame, setServiceGame);
+  const serviceGameM = new ModelServiceGame(serviceGame);
   const currentPlayer = serviceGameM.getCurrentPlayer();
   const possibleMelds = serviceGameM.getPossibleMelds();
 
   return (
     <main>
       <Header />
-      <p>Game ID: {gameId}</p>
+      <p>
+        Game ID: <CopyToClipboard text={gameId} />
+      </p>
       <p>Game name: {serviceGame.game.name}</p>
       <p>
         Draw Wall:{" "}
@@ -134,7 +137,7 @@ const Game = ({ gameId }: IProps) => {
             <p>
               {player.name} {player.id === currentPlayer.id ? "*" : ""} (
               {hand.length}) [Score: {serviceGameM.getPlayerScore(player.id)}] (
-              {player.id})
+              <CopyToClipboard text={player.id} />)
             </p>
             <ul>
               <li>
@@ -193,7 +196,6 @@ const Game = ({ gameId }: IProps) => {
                   </li>
                 );
               })}
-
               {playerPossibleMelds.map((playerPossibleMeld, idx) => (
                 <li key={idx}>
                   Possible meld:{" "}

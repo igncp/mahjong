@@ -1,3 +1,4 @@
+#![deny(clippy::use_self)]
 use base::App;
 use cli::parse_args;
 use ui::UI;

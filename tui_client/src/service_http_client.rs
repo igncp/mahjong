@@ -42,10 +42,10 @@ fn validate_response(response: &Result<reqwest::Response, Error>) -> Result<(), 
 }
 
 impl ServiceHTTPClient {
-    pub fn new() -> ServiceHTTPClient {
+    pub fn new() -> Self {
         let client = reqwest::Client::new();
         let domain = env::var("MAHJONG_SERVICE_DOMAIN").unwrap_or("localhost:3000".to_string());
-        ServiceHTTPClient {
+        Self {
             client,
             domain: domain.clone(),
             read_stream: None,

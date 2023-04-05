@@ -1,4 +1,8 @@
-import { format_tile, get_possible_melds } from "pkg";
+import {
+  format_tile,
+  get_possible_melds,
+  get_possible_melds_summary,
+} from "pkg";
 
 // These are maintained manually. An alternative would be to use:
 // https://github.com/Aleph-Alpha/ts-rs or OpenAPI spec but for now it is
@@ -33,9 +37,11 @@ type HandTile = {
 type Hand = HandTile[];
 type Hands = Record<PlayerId, Hand>;
 type Score = Record<PlayerId, number>;
+type Board = TileId[];
+type Deck = Record<TileId, Tile>;
 
 export type Game = {
-  deck: Record<TileId, Tile>;
+  deck: Deck;
   id: GameId;
   name: string;
   players: PlayerId[];
@@ -44,13 +50,17 @@ export type Game = {
   };
   score: Score;
   table: {
-    board: TileId[];
+    board: Board;
     draw_wall: TileId[];
     hands: Hands;
   };
 };
 
 export type ServicePlayer = {
+  id: string;
+  name: string;
+};
+export type ServicePlayerSummary = {
   id: string;
   name: string;
 };
@@ -61,12 +71,22 @@ export type ServiceGame = {
 };
 
 export type GameSummary = {
+  board: Board;
+  deck: Deck;
+  draw_wall_count: number;
+  hand: Hand;
   id: GameId;
+  players: PlayerId[];
+  player_id: PlayerId;
+  round: {
+    player_index: number;
+  };
   score: Score;
 };
 
 export type ServiceGameSummary = {
   game_summary: GameSummary;
+  players: Record<PlayerId, ServicePlayerSummary>;
 };
 
 export type TAdminPostBreakMeldRequest = {
@@ -128,6 +148,7 @@ export type PossibleMeld = {
 
 export type TSocketMessage = {
   GameUpdate: ServiceGame;
+  GameSummaryUpdate: ServiceGameSummary;
 };
 
 export type TUserGetGamesQuery = {
@@ -140,11 +161,46 @@ export type TUserLoadGameQuery = {
 };
 export type TUserLoadGameResponse = ServiceGameSummary;
 
+export type TUserPostDrawTileRequest = {
+  player_id: PlayerId;
+};
+export type TUserPostDrawTileResponse = ServiceGameSummary;
+
+export type TUserPostDiscardTileRequest = {
+  player_id: PlayerId;
+  tile_id: TileId;
+};
+export type TUserPostDiscardTileResponse = ServiceGameSummary;
+
+export type TUserPostMovePlayerRequest = {
+  player_id: PlayerId;
+};
+export type TUserPostMovePlayerResponse = ServiceGameSummary;
+
+export type TUserPostSortHandRequest = {
+  player_id: PlayerId;
+};
+export type TUserPostSortHandResponse = ServiceGameSummary;
+
+export type TUserPostCreateMeldRequest = {
+  player_id: PlayerId;
+  tiles: TileId[];
+};
+export type TUserPostCreateMeldResponse = ServiceGameSummary;
+
+export type TUserPostBreakMeldRequest = {
+  player_id: PlayerId;
+  set_id: SetId;
+};
+export type TUserPostBreakMeldResponse = ServiceGameSummary;
+
+export type TSocketQuery = {
+  game_id: GameId;
+  player_id?: PlayerId;
+};
+
 export class ModelServiceGame {
-  constructor(
-    public data: ServiceGame,
-    public setGame: (g: ServiceGame) => void
-  ) {}
+  constructor(public data: ServiceGame) {}
 
   getCurrentPlayer() {
     const playerId = this.data.game.players[this.data.game.round.player_index];
@@ -165,6 +221,23 @@ export class ModelServiceGame {
 
   getPossibleMelds(): PossibleMeld[] {
     const possibleMelds = get_possible_melds(JSON.stringify(this.data));
+
+    return possibleMelds;
+  }
+}
+
+export class ModelServiceGameSummary {
+  constructor(public data: ServiceGameSummary) {}
+
+  getTileString(tileId: TileId) {
+    const tile = this.data.game_summary.deck[tileId];
+    const tileString = format_tile(tile);
+
+    return `[${tileString}]`;
+  }
+
+  getPossibleMelds(): PossibleMeld[] {
+    const possibleMelds = get_possible_melds_summary(JSON.stringify(this.data));
 
     return possibleMelds;
   }

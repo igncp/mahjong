@@ -1,5 +1,6 @@
+#![deny(clippy::use_self, clippy::shadow_unrelated)]
 pub use crate::game_summary::GameSummary;
-use mahjong_core::{Game, GameId, Hand, Hands, PlayerId, TileId};
+use mahjong_core::{hand::SetIdContent, Game, GameId, Hand, Hands, PlayerId, TileId};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -46,7 +47,7 @@ impl ServiceGameSummary {
 
         game_summary?;
 
-        Some(ServiceGameSummary {
+        Some(Self {
             game_summary: GameSummary::from_game(&game.game, player_id).unwrap(),
             players: game
                 .players
@@ -104,7 +105,7 @@ pub type AdminPostCreateMeldResponse = Hand;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdminPostBreakMeldRequest {
     pub player_id: String,
-    pub set_id: String,
+    pub set_id: SetIdContent,
 }
 pub type AdminPostBreakMeldResponse = Hand;
 
@@ -116,6 +117,12 @@ pub type AdminPostDiscardTileResponse = ServiceGame;
 
 pub type UserPostDiscardTileRequest = AdminPostDiscardTileRequest;
 pub type UserPostDiscardTileResponse = ServiceGameSummary;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserPostDrawTileRequest {
+    pub player_id: PlayerId,
+}
+pub type UserPostDrawTileResponse = ServiceGameSummary;
 
 pub type AdminPostMovePlayerRequest = ();
 pub type AdminPostMovePlayerResponse = ServiceGame;
@@ -131,9 +138,35 @@ pub type AdminPostClaimTileResponse = ServiceGame;
 
 #[derive(Deserialize, Serialize)]
 pub struct UserLoadGameQuery {
-    pub player_id: String,
+    pub player_id: PlayerId,
 }
 pub type UserGetLoadGameResponse = ServiceGameSummary;
+
+#[derive(Deserialize, Serialize)]
+pub struct UserPostMovePlayerRequest {
+    pub player_id: PlayerId,
+}
+pub type UserPostMovePlayerResponse = ServiceGameSummary;
+
+#[derive(Deserialize, Serialize)]
+pub struct UserPostSortHandRequest {
+    pub player_id: PlayerId,
+}
+pub type UserPostSortHandResponse = ServiceGameSummary;
+
+#[derive(Deserialize, Serialize)]
+pub struct UserPostCreateMeldRequest {
+    pub player_id: PlayerId,
+    pub tiles: HashSet<TileId>,
+}
+pub type UserPostCreateMeldResponse = ServiceGameSummary;
+
+#[derive(Deserialize, Serialize)]
+pub struct UserPostBreakMeldRequest {
+    pub player_id: PlayerId,
+    pub set_id: SetIdContent,
+}
+pub type UserPostBreakMeldResponse = ServiceGameSummary;
 
 #[derive(Deserialize, Serialize)]
 pub struct AdminPostSwapDrawTilesRequest {

@@ -11,7 +11,9 @@ use service_contracts::{
     AdminGetGamesResponse, AdminPostAIContinueRequest, AdminPostBreakMeldRequest,
     AdminPostClaimTileRequest, AdminPostCreateMeldRequest, AdminPostDiscardTileRequest,
     AdminPostSayMahjongRequest, AdminPostSwapDrawTilesRequest, UserGetGamesQuery,
-    UserGetGamesResponse, UserLoadGameQuery, UserPostDiscardTileRequest, WebSocketQuery,
+    UserGetGamesResponse, UserLoadGameQuery, UserPostBreakMeldRequest, UserPostCreateMeldRequest,
+    UserPostDiscardTileRequest, UserPostDrawTileRequest, UserPostMovePlayerRequest,
+    UserPostSortHandRequest, WebSocketQuery,
 };
 use std::sync::Arc;
 use std::time::Instant;
@@ -117,7 +119,7 @@ async fn admin_post_game_draw_tile(
     let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
 
     match game_wrapper {
-        Ok(mut game_wrapper) => game_wrapper.handle_draw_tile().await,
+        Ok(mut game_wrapper) => game_wrapper.handle_admin_draw_tile().await,
         Err(err) => err,
     }
 }
@@ -131,7 +133,7 @@ async fn admin_post_game_move_player(
     let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
 
     match game_wrapper {
-        Ok(mut game_wrapper) => game_wrapper.handle_move_player().await,
+        Ok(mut game_wrapper) => game_wrapper.handle_admin_move_player().await,
         Err(err) => err,
     }
 }
@@ -146,7 +148,7 @@ async fn admin_post_game_break_meld(
     let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
 
     match game_wrapper {
-        Ok(mut game_wrapper) => game_wrapper.handle_break_meld(&body).await,
+        Ok(mut game_wrapper) => game_wrapper.handle_admin_break_meld(&body).await,
         Err(err) => err,
     }
 }
@@ -161,7 +163,7 @@ async fn admin_post_game_create_meld(
     let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
 
     match game_wrapper {
-        Ok(mut game_wrapper) => game_wrapper.handle_create_meld(&body).await,
+        Ok(mut game_wrapper) => game_wrapper.handle_admin_create_meld(&body).await,
         Err(err) => err,
     }
 }
@@ -260,6 +262,81 @@ async fn admin_post_game_say_mahjong(
     }
 }
 
+#[post("/v1/user/game/{game_id}/draw-tile")]
+async fn user_post_game_draw_tile(
+    storage: StorageData,
+    game_id: web::Path<GameId>,
+    body: web::Json<UserPostDrawTileRequest>,
+    srv: SocketServer,
+) -> impl Responder {
+    let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
+
+    match game_wrapper {
+        Ok(mut game_wrapper) => game_wrapper.handle_user_draw_tile(&body.player_id).await,
+        Err(err) => err,
+    }
+}
+
+#[post("/v1/user/game/{game_id}/move-player")]
+async fn user_post_game_move_player(
+    storage: StorageData,
+    game_id: web::Path<GameId>,
+    body: web::Json<UserPostMovePlayerRequest>,
+    srv: SocketServer,
+) -> impl Responder {
+    let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
+
+    match game_wrapper {
+        Ok(mut game_wrapper) => game_wrapper.handle_user_move_player(&body.player_id).await,
+        Err(err) => err,
+    }
+}
+
+#[post("/v1/user/game/{game_id}/sort-hand")]
+async fn user_post_game_sort_hand(
+    storage: StorageData,
+    game_id: web::Path<GameId>,
+    body: web::Json<UserPostSortHandRequest>,
+    srv: SocketServer,
+) -> impl Responder {
+    let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
+
+    match game_wrapper {
+        Ok(mut game_wrapper) => game_wrapper.handle_user_sort_hand(&body.player_id).await,
+        Err(err) => err,
+    }
+}
+
+#[post("/v1/user/game/{game_id}/create-meld")]
+async fn user_post_game_create_meld(
+    storage: StorageData,
+    game_id: web::Path<GameId>,
+    body: web::Json<UserPostCreateMeldRequest>,
+    srv: SocketServer,
+) -> impl Responder {
+    let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
+
+    match game_wrapper {
+        Ok(mut game_wrapper) => game_wrapper.handle_user_create_meld(&body).await,
+        Err(err) => err,
+    }
+}
+
+#[post("/v1/user/game/{game_id}/break-meld")]
+async fn user_post_game_break_meld(
+    storage: StorageData,
+    game_id: web::Path<GameId>,
+    body: web::Json<UserPostBreakMeldRequest>,
+    srv: SocketServer,
+) -> impl Responder {
+    let game_wrapper = GameWrapper::from_storage(storage, &game_id, srv).await;
+
+    match game_wrapper {
+        Ok(mut game_wrapper) => game_wrapper.handle_user_break_meld(&body).await,
+        Err(err) => err,
+    }
+}
+
 #[get("/v1/ws")]
 async fn get_ws(
     req: HttpRequest,
@@ -325,7 +402,12 @@ impl MahjongServer {
                 .service(get_ws)
                 .service(user_get_game_load)
                 .service(user_get_games)
+                .service(user_post_game_break_meld)
+                .service(user_post_game_create_meld)
                 .service(user_post_game_discard_tile)
+                .service(user_post_game_draw_tile)
+                .service(user_post_game_move_player)
+                .service(user_post_game_sort_hand)
         })
         .bind((address, port))?
         .run()

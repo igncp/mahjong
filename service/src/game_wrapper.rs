@@ -5,7 +5,10 @@ use service_contracts::{
     AdminPostBreakMeldResponse, AdminPostClaimTileResponse, AdminPostCreateMeldRequest,
     AdminPostCreateMeldResponse, AdminPostDiscardTileResponse, AdminPostDrawTileResponse,
     AdminPostMovePlayerResponse, AdminPostSayMahjongResponse, AdminPostSwapDrawTilesResponse,
-    ServiceGame, ServiceGameSummary, ServicePlayer, SocketMessage, UserPostDiscardTileResponse,
+    ServiceGame, ServiceGameSummary, ServicePlayer, SocketMessage, UserPostBreakMeldRequest,
+    UserPostBreakMeldResponse, UserPostCreateMeldRequest, UserPostCreateMeldResponse,
+    UserPostDiscardTileResponse, UserPostDrawTileResponse, UserPostMovePlayerResponse,
+    UserPostSortHandResponse,
 };
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -128,7 +131,7 @@ impl GameWrapper {
             .await
     }
 
-    pub async fn handle_draw_tile(&mut self) -> HttpResponse {
+    pub async fn handle_admin_draw_tile(&mut self) -> HttpResponse {
         self.service_game.game.draw_tile_from_wall();
 
         let current_player_id = self.service_game.game.get_current_player().clone();
@@ -141,6 +144,21 @@ impl GameWrapper {
             .unwrap();
 
         let response: AdminPostDrawTileResponse = hand.clone();
+
+        self.save_and_return(&response, "Error when drawing tile")
+            .await
+    }
+
+    pub async fn handle_user_draw_tile(&mut self, player_id: &PlayerId) -> HttpResponse {
+        let current_player = self.service_game.game.get_current_player();
+        if &current_player != player_id {
+            return HttpResponse::BadRequest().body("Not your turn");
+        }
+
+        self.service_game.game.draw_tile_from_wall();
+
+        let response: UserPostDrawTileResponse =
+            ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
 
         self.save_and_return(&response, "Error when drawing tile")
             .await
@@ -197,6 +215,29 @@ impl GameWrapper {
         self.save_and_return(response, "Error with AI action").await
     }
 
+    pub async fn handle_user_move_player(&mut self, player_id: &PlayerId) -> HttpResponse {
+        let current_player = self.service_game.game.get_current_player();
+
+        if &current_player != player_id {
+            return HttpResponse::BadRequest().body("Not your turn");
+        }
+
+        let success = self
+            .service_game
+            .game
+            .round
+            .next(&self.service_game.game.table.hands);
+
+        if success {
+            let response: UserPostMovePlayerResponse =
+                ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
+
+            self.save_and_return(response, "Error moving player").await
+        } else {
+            HttpResponse::BadRequest().body("Error when moving player")
+        }
+    }
+
     pub async fn handle_discard_tile(&mut self, is_admin: bool, tile_id: &TileId) -> HttpResponse {
         self.service_game.game.discard_tile_to_board(tile_id);
         let game = self.service_game.clone();
@@ -215,7 +256,10 @@ impl GameWrapper {
         }
     }
 
-    pub async fn handle_break_meld(&mut self, body: &AdminPostBreakMeldRequest) -> HttpResponse {
+    pub async fn handle_admin_break_meld(
+        &mut self,
+        body: &AdminPostBreakMeldRequest,
+    ) -> HttpResponse {
         let result = self
             .service_game
             .game
@@ -239,7 +283,30 @@ impl GameWrapper {
             .await
     }
 
-    pub async fn handle_create_meld(&mut self, body: &AdminPostCreateMeldRequest) -> HttpResponse {
+    pub async fn handle_user_break_meld(
+        &mut self,
+        body: &UserPostBreakMeldRequest,
+    ) -> HttpResponse {
+        let result = self
+            .service_game
+            .game
+            .break_meld(&body.player_id, &body.set_id);
+
+        if !result {
+            return HttpResponse::BadRequest().body("Error when breaking meld");
+        }
+
+        let response: UserPostBreakMeldResponse =
+            ServiceGameSummary::from_service_game(&self.service_game, &body.player_id).unwrap();
+
+        self.save_and_return(&response, "Error when breaking meld")
+            .await
+    }
+
+    pub async fn handle_admin_create_meld(
+        &mut self,
+        body: &AdminPostCreateMeldRequest,
+    ) -> HttpResponse {
         let result = self
             .service_game
             .game
@@ -262,7 +329,27 @@ impl GameWrapper {
             .await
     }
 
-    pub async fn handle_move_player(&mut self) -> HttpResponse {
+    pub async fn handle_user_create_meld(
+        &mut self,
+        body: &UserPostCreateMeldRequest,
+    ) -> HttpResponse {
+        let result = self
+            .service_game
+            .game
+            .create_meld(&body.player_id, &body.tiles);
+
+        if !result {
+            return HttpResponse::BadRequest().body("Error when creating meld");
+        }
+
+        let response: UserPostCreateMeldResponse =
+            ServiceGameSummary::from_service_game(&self.service_game, &body.player_id).unwrap();
+
+        self.save_and_return(&response, "Error when creating meld")
+            .await
+    }
+
+    pub async fn handle_admin_move_player(&mut self) -> HttpResponse {
         let success = self
             .service_game
             .game
@@ -276,6 +363,23 @@ impl GameWrapper {
         } else {
             HttpResponse::BadRequest().body("Error when moving player")
         }
+    }
+
+    pub async fn handle_user_sort_hand(&mut self, player_id: &PlayerId) -> HttpResponse {
+        let hand = self
+            .service_game
+            .game
+            .table
+            .hands
+            .get_mut(player_id)
+            .unwrap();
+
+        hand.sort_default(&self.service_game.game.deck);
+
+        let response: UserPostSortHandResponse =
+            ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
+
+        self.save_and_return(&response, "Error sorting hand").await
     }
 
     pub async fn handle_claim_tile(&mut self, player_id: &PlayerId) -> HttpResponse {
@@ -306,7 +410,7 @@ fn create_game() -> ServiceGame {
     };
 
     game.set_players(&players);
-    let mut players = HashMap::<String, ServicePlayer>::new();
+    let mut players_set = HashMap::<String, ServicePlayer>::new();
 
     for (index, player) in game.players.iter().enumerate() {
         let service_player = ServicePlayer {
@@ -314,8 +418,11 @@ fn create_game() -> ServiceGame {
             is_ai: index != 0,
             name: format!("Player {}", index),
         };
-        players.insert(player.clone(), service_player);
+        players_set.insert(player.clone(), service_player);
     }
 
-    ServiceGame { game, players }
+    ServiceGame {
+        game,
+        players: players_set,
+    }
 }

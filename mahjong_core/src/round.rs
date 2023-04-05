@@ -3,7 +3,7 @@ use crate::{GamePhase, Hands, Round, Wind, WINDS_ROUND_ORDER};
 impl Default for Round {
     fn default() -> Self {
         // This assumes that the players array is sorted
-        Round {
+        Self {
             dealer_player_index: 0,
             player_index: 0,
             tile_claimed: None,

@@ -38,7 +38,7 @@ impl App {
             std::process::exit(1);
         }
 
-        App {
+        Self {
             service_game: None,
             service_game_summary: None,
             games_ids: None,

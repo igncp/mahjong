@@ -79,7 +79,7 @@ impl FileStorage {
         let file_path =
             std::env::var("MAHJONG_STORAGE_FILE").unwrap_or("./mahjong.json".to_string());
 
-        let file_storage = FileStorage { file_path };
+        let file_storage = Self { file_path };
 
         Box::new(file_storage)
     }

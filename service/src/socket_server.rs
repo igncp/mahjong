@@ -42,10 +42,10 @@ pub struct MahjongWebsocketServer {
 }
 
 impl MahjongWebsocketServer {
-    pub fn new() -> MahjongWebsocketServer {
+    pub fn new() -> Self {
         let rooms = HashMap::new();
 
-        MahjongWebsocketServer {
+        Self {
             sessions: HashMap::new(),
             rooms,
             rng: rand::thread_rng(),
@@ -103,8 +103,8 @@ impl Handler<Disconnect> for MahjongWebsocketServer {
         }
 
         for room in rooms {
-            let msg = SocketMessage::PlayerLeft;
-            self.send_message(&room, &msg, 0);
+            let sent_msg = SocketMessage::PlayerLeft;
+            self.send_message(&room, &sent_msg, 0);
         }
     }
 }

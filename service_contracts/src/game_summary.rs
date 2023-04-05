@@ -1,4 +1,6 @@
-use mahjong_core::{Deck, Game, GameId, GamePhase, Hand, PlayerId, Score, TileId, Wind};
+use mahjong_core::{
+    meld::PossibleMeld, Deck, Game, GameId, GamePhase, Hand, PlayerId, Score, TileId, Wind,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -51,18 +53,25 @@ impl GameSummary {
             .hands
             .iter()
             .filter(|(id, _)| id != &player_id)
-            .map(|(id, hand)| {
+            .map(|(id, other_hand)| {
                 (
                     id.clone(),
                     OtherPlayerHand {
-                        tiles: hand.0.len(),
-                        visible: Hand(hand.0.iter().cloned().filter(|t| !t.concealed).collect()),
+                        tiles: other_hand.0.len(),
+                        visible: Hand(
+                            other_hand
+                                .0
+                                .iter()
+                                .cloned()
+                                .filter(|t| !t.concealed)
+                                .collect(),
+                        ),
                     },
                 )
             })
             .collect();
 
-        Some(GameSummary {
+        Some(Self {
             board,
             deck,
             draw_wall_count,
@@ -79,5 +88,24 @@ impl GameSummary {
 
     pub fn get_current_player(&self) -> &PlayerId {
         &self.players[self.round.player_index]
+    }
+
+    pub fn get_possible_melds(&self) -> Vec<PossibleMeld> {
+        let mut possible_melds: Vec<PossibleMeld> = vec![];
+        let raw_melds = self.hand.get_possible_melds(None, None, &self.deck);
+
+        // TODO: Handle the already discarded tile
+
+        for raw_meld in raw_melds {
+            let possible_meld = PossibleMeld {
+                discard_tile: None,
+                player_id: self.player_id.clone(),
+                tiles: raw_meld.clone(),
+            };
+
+            possible_melds.push(possible_meld);
+        }
+
+        possible_melds
     }
 }

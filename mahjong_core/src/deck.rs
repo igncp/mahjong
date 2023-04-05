@@ -84,13 +84,13 @@ impl Default for Deck {
             deck.insert(id, tile);
         });
 
-        Deck(deck)
+        Self(deck)
     }
 }
 
 impl Deck {
     pub fn create_table(&self, players: &[PlayerId]) -> Table {
-        let Deck(deck_content) = self;
+        let Self(deck_content) = self;
         let mut draw_wall = deck_content.keys().cloned().collect::<Vec<TileId>>();
 
         draw_wall.shuffle(&mut thread_rng());

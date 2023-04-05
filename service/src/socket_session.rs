@@ -30,14 +30,14 @@ impl MahjongWebsocketSession {
         format!("{}__{}", game_id, player_id.unwrap())
     }
     fn hb(&self, ctx: &mut ws::WebsocketContext<Self>) {
-        ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
+        ctx.run_interval(HEARTBEAT_INTERVAL, |act, new_ctx| {
             if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
                 act.addr.do_send(Disconnect { id: act.id });
-                ctx.stop();
+                new_ctx.stop();
                 return;
             }
 
-            ctx.ping(b"");
+            new_ctx.ping(b"");
         });
     }
 }
@@ -57,13 +57,13 @@ impl Actor for MahjongWebsocketSession {
                 addr: addr.recipient(),
             })
             .into_actor(self)
-            .then(|res, act, ctx| {
+            .then(|res, act, new_ctx| {
                 match res {
                     Ok(res) => {
                         act.id = res;
                         println!("{} joined room {}", act.id, act.room);
                     }
-                    _ => ctx.stop(),
+                    _ => new_ctx.stop(),
                 }
                 fut::ready(())
             })
@@ -113,13 +113,13 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MahjongWebsocketS
                     self.addr
                         .send(ListRooms)
                         .into_actor(self)
-                        .then(|res, _, ctx| {
+                        .then(|res, _, new_ctx| {
                             if let Ok(rooms) = res {
                                 for room in rooms {
                                     let room =
                                         serde_json::to_string(&SocketMessage::Name(room)).unwrap();
 
-                                    ctx.text(room);
+                                    new_ctx.text(room);
                                 }
                             }
                             fut::ready(())

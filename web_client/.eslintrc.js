@@ -27,9 +27,12 @@ module.exports = {
     "@typescript-eslint/member-ordering": 2,
     "arrow-body-style": 2,
     "no-else-return": 2,
+    "object-shorthand": 2,
+    "prefer-destructuring": 2,
     "prefer-template": 2,
     "react/jsx-sort-props": 2,
     "sort-keys": [2, "asc", { caseSensitive: false, natural: true }],
+    "spaced-comment": 2,
 
     ...disabledRules,
   },

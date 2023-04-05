@@ -1,7 +1,7 @@
 use crate::{
     meld::{
-        get_is_chow, get_is_kong, get_is_pair, get_is_pung, get_possible_melds,
-        get_tile_claimed_id_for_user, GetPossibleMelds, PlayerDiff, PossibleMeld, SetCheckOpts,
+        get_is_chow, get_is_kong, get_is_pung, get_tile_claimed_id_for_user, PlayerDiff,
+        PossibleMeld, SetCheckOpts,
     },
     Deck, Hand, HandTile, PlayerId, Round, RoundTileClaimed, Score, Table, TileId,
 };
@@ -46,7 +46,7 @@ impl Default for Game {
             score.insert(player_id.clone(), 0);
         }
 
-        Game {
+        Self {
             deck,
             id: "game_id".to_string(),
             name: "game_name".to_string(),
@@ -80,7 +80,8 @@ impl Game {
     }
 
     pub fn say_mahjong(&mut self, player_id: &PlayerId) -> bool {
-        if !self.can_say_mahjong(self.table.hands.get(player_id).unwrap()) {
+        let hand = self.table.hands.get(player_id).unwrap();
+        if !hand.can_say_mahjong(&self.deck) {
             return false;
         }
 
@@ -95,21 +96,6 @@ impl Game {
 
     pub fn start_game(&mut self) {
         self.phase = GamePhase::Playing;
-    }
-
-    pub fn can_say_mahjong(&self, player_hand: &Hand) -> bool {
-        if player_hand.0.len() != 14 {
-            return false;
-        }
-
-        let tiles_without_meld = player_hand
-            .0
-            .iter()
-            .filter(|t| t.set_id.is_none())
-            .map(|t| self.deck.0.get(&t.id).unwrap())
-            .collect();
-
-        get_is_pair(&tiles_without_meld)
     }
 
     pub fn get_possible_melds(&self) -> Vec<PossibleMeld> {
@@ -148,27 +134,8 @@ impl Game {
                 self.get_board_tile_player_diff(Some(&round), Some(&hand), player);
             let claimed_tile = get_tile_claimed_id_for_user(player, &round.tile_claimed);
 
-            let opts = GetPossibleMelds {
-                board_tile_player_diff,
-                claimed_tile,
-                deck: &self.deck,
-                hand: &hand,
-            };
-
-            let possible_melds = get_possible_melds(&opts);
-
-            if self.can_say_mahjong(&hand) {
-                melds.push(PossibleMeld {
-                    discard_tile: None,
-                    player_id: player.clone(),
-                    tiles: hand
-                        .0
-                        .iter()
-                        .filter(|t| t.set_id.is_none())
-                        .map(|t| t.id)
-                        .collect(),
-                });
-            }
+            let possible_melds =
+                hand.get_possible_melds(board_tile_player_diff, claimed_tile, &self.deck);
 
             for meld in possible_melds {
                 melds.push(PossibleMeld {
@@ -352,9 +319,10 @@ impl Game {
         if get_is_pung(&opts) || get_is_chow(&opts) || get_is_kong(&opts) {
             let set_id = Uuid::new_v4().to_string();
             let concealed = board_tile_player_diff.is_none();
-            let hand = self.table.hands.get_mut(player_id).unwrap();
+            let player_hand = self.table.hands.get_mut(player_id).unwrap();
 
-            hand.0
+            player_hand
+                .0
                 .iter_mut()
                 .filter(|t| tiles.contains(&t.id))
                 .for_each(|tile| {

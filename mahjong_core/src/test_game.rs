@@ -20,13 +20,13 @@ mod test {
         assert_eq!(drawn_tile, Some(5));
         assert_eq!(game.round.wall_tile_drawn, Some(5));
         assert_eq!(game.table.hands, {
-            let mut hands = HashMap::new();
-            hands.insert(
+            let mut expected_hands = HashMap::new();
+            expected_hands.insert(
                 game.players[0].clone(),
                 Hand(vec![HandTile::from_id(1), HandTile::from_id(5)]),
             );
-            hands.insert(game.players[1].clone(), Hand(vec![HandTile::from_id(2)]));
-            hands
+            expected_hands.insert(game.players[1].clone(), Hand(vec![HandTile::from_id(2)]));
+            expected_hands
         });
     }
 
@@ -45,10 +45,10 @@ mod test {
         assert_eq!(drawn_tile, None);
         assert_eq!(game.round.wall_tile_drawn, None);
         assert_eq!(game.table.hands, {
-            let mut hands = HashMap::new();
-            hands.insert(game.players[0].clone(), Hand(vec![HandTile::from_id(1)]));
-            hands.insert(game.players[1].clone(), Hand(vec![HandTile::from_id(2)]));
-            hands
+            let mut expected_hands = HashMap::new();
+            expected_hands.insert(game.players[0].clone(), Hand(vec![HandTile::from_id(1)]));
+            expected_hands.insert(game.players[1].clone(), Hand(vec![HandTile::from_id(2)]));
+            expected_hands
         });
     }
 

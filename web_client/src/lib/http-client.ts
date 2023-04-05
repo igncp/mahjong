@@ -3,6 +3,7 @@ import qs from "qs";
 import { env } from "./env";
 import {
   GameId,
+  PlayerId,
   TAdminGetGameResponse,
   TAdminGetGamesResponse,
   TAdminPostAIContinueRequest,
@@ -22,10 +23,23 @@ import {
   TAdminPostSayMahjongResponse,
   TAdminPostSortHandsResponse,
   TSocketMessage,
+  TSocketQuery,
   TUserGetGamesQuery,
   TUserGetGamesResponse,
   TUserLoadGameQuery,
   TUserLoadGameResponse,
+  TUserPostBreakMeldRequest,
+  TUserPostBreakMeldResponse,
+  TUserPostCreateMeldRequest,
+  TUserPostCreateMeldResponse,
+  TUserPostDiscardTileRequest,
+  TUserPostDiscardTileResponse,
+  TUserPostDrawTileRequest,
+  TUserPostDrawTileResponse,
+  TUserPostMovePlayerRequest,
+  TUserPostMovePlayerResponse,
+  TUserPostSortHandRequest,
+  TUserPostSortHandResponse,
 } from "./mahjong-service";
 
 const baseUrl = env.SERVICE_URL;
@@ -132,13 +146,20 @@ export const HttpClient = {
 
   async connectToSocket({
     gameId,
+    playerId,
     onMessage,
   }: {
     gameId: GameId;
+    playerId?: PlayerId;
     onMessage: (message: TSocketMessage) => void;
   }) {
+    let isIntentional = false;
+    const query: TSocketQuery = {
+      game_id: gameId,
+      ...(playerId && { player_id: playerId }),
+    };
     const socket = new WebSocket(
-      `${baseUrl.replace("http", "ws")}/v1/ws?game_id=${gameId}`
+      `${baseUrl.replace("http", "ws")}/v1/ws?${qs.stringify(query)}`
     );
 
     socket.onmessage = (event) => {
@@ -146,13 +167,67 @@ export const HttpClient = {
       onMessage(data);
     };
 
+    socket.onerror = () => {
+      console.log("Socket onerrror");
+    };
+
+    socket.onclose = () => {
+      if (!isIntentional) {
+        setTimeout(() => {
+          console.log("Trying to reconnect onclose");
+          HttpClient.connectToSocket({ gameId, onMessage });
+        }, 1000);
+      }
+    };
+
     return () => {
+      isIntentional = true;
       socket.close();
     };
   },
 
   getHealth: async (): Promise<void> =>
     await fetch(`${baseUrl}/health`).then(() => undefined),
+
+  async userBreakMeld(
+    gameId: GameId,
+    body: TUserPostBreakMeldRequest
+  ): Promise<TUserPostBreakMeldResponse> {
+    return await fetchJson(`/v1/user/game/${gameId}/break-meld`, {
+      body: JSON.stringify(body),
+      method: "POST",
+    });
+  },
+
+  async userCreateMeld(
+    gameId: GameId,
+    body: TUserPostCreateMeldRequest
+  ): Promise<TUserPostCreateMeldResponse> {
+    return await fetchJson(`/v1/user/game/${gameId}/create-meld`, {
+      body: JSON.stringify(body),
+      method: "POST",
+    });
+  },
+
+  async userDiscardTile(
+    gameId: GameId,
+    body: TUserPostDiscardTileRequest
+  ): Promise<TUserPostDiscardTileResponse> {
+    return await fetchJson(`/v1/user/game/${gameId}/discard-tile`, {
+      body: JSON.stringify(body),
+      method: "POST",
+    });
+  },
+
+  async userDrawTile(
+    gameId: GameId,
+    body: TUserPostDrawTileRequest
+  ): Promise<TUserPostDrawTileResponse> {
+    return await fetchJson(`/v1/user/game/${gameId}/draw-tile`, {
+      body: JSON.stringify(body),
+      method: "POST",
+    });
+  },
 
   async userGetGames(
     query: TUserGetGamesQuery
@@ -165,5 +240,25 @@ export const HttpClient = {
     query: TUserLoadGameQuery
   ): Promise<TUserLoadGameResponse> {
     return await fetchJson(`/v1/user/game/${gameId}?${qs.stringify(query)}`);
+  },
+
+  async userMovePlayer(
+    gameId: GameId,
+    body: TUserPostMovePlayerRequest
+  ): Promise<TUserPostMovePlayerResponse> {
+    return await fetchJson(`/v1/user/game/${gameId}/move-player`, {
+      body: JSON.stringify(body),
+      method: "POST",
+    });
+  },
+
+  async userSortHand(
+    gameId: GameId,
+    body: TUserPostSortHandRequest
+  ): Promise<TUserPostSortHandResponse> {
+    return await fetchJson(`/v1/user/game/${gameId}/sort-hand`, {
+      body: JSON.stringify(body),
+      method: "POST",
+    });
   },
 };
