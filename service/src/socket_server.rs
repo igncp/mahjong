@@ -28,10 +28,18 @@ pub struct ClientMessage {
     pub room: String,
 }
 
+type RoomName = String;
+
 pub struct ListRooms;
 
 impl actix::Message for ListRooms {
-    type Result = Vec<String>;
+    type Result = Vec<RoomName>;
+}
+
+pub struct ListSessions;
+
+impl actix::Message for ListSessions {
+    type Result = HashMap<RoomName, usize>;
 }
 
 #[derive(Debug)]
@@ -80,6 +88,7 @@ impl Handler<Connect> for MahjongWebsocketServer {
         self.send_message(&msg.room, &sent_msg, 0);
         let id = self.rng.gen::<usize>();
         self.sessions.insert(id, msg.addr);
+
         self.rooms
             .entry(msg.room)
             .or_insert_with(HashSet::new)
@@ -102,9 +111,15 @@ impl Handler<Disconnect> for MahjongWebsocketServer {
             }
         }
 
-        for room in rooms {
+        for room in rooms.clone() {
             let sent_msg = SocketMessage::PlayerLeft;
             self.send_message(&room, &sent_msg, 0);
+        }
+
+        for room in rooms {
+            if self.rooms.get(&room).unwrap().is_empty() {
+                self.rooms.remove(&room);
+            }
         }
     }
 }
@@ -128,5 +143,20 @@ impl Handler<ListRooms> for MahjongWebsocketServer {
         }
 
         MessageResult(rooms)
+    }
+}
+
+impl Handler<ListSessions> for MahjongWebsocketServer {
+    type Result = MessageResult<ListSessions>;
+
+    fn handle(&mut self, _: ListSessions, _: &mut Context<Self>) -> Self::Result {
+        let mut sessions = HashMap::new();
+
+        for key in self.rooms.keys() {
+            let sessions_num = self.rooms.get(key).unwrap().len();
+            sessions.insert(key.to_owned(), sessions_num);
+        }
+
+        MessageResult(sessions)
     }
 }

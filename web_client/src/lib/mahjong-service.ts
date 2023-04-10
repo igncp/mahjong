@@ -1,14 +1,9 @@
-import {
-  format_tile,
-  get_possible_melds,
-  get_possible_melds_summary,
-} from "pkg";
-
 // These are maintained manually. An alternative would be to use:
 // https://github.com/Aleph-Alpha/ts-rs or OpenAPI spec but for now it is
 // faster to maintain manually.
 
 export type GameId = string;
+export type GameVersion = string;
 export type PlayerId = string;
 export type TileId = number;
 
@@ -46,7 +41,7 @@ export type Game = {
   name: string;
   players: PlayerId[];
   round: {
-    player_index: PlayerId;
+    player_index: number;
   };
   score: Score;
   table: {
@@ -70,21 +65,30 @@ export type ServiceGame = {
   players: Record<PlayerId, ServicePlayer>;
 };
 
+export type HandSummary = {
+  tiles: number;
+  visible: HandTile[];
+};
+
 export type GameSummary = {
   board: Board;
   deck: Deck;
   draw_wall_count: number;
   hand: Hand;
   id: GameId;
+  other_hands: Record<PlayerId, HandSummary>;
   players: PlayerId[];
   player_id: PlayerId;
   round: {
+    discarded_tile: TileId | null;
     player_index: number;
   };
   score: Score;
+  version: GameVersion;
 };
 
 export type ServiceGameSummary = {
+  ai_enabled: boolean;
   game_summary: GameSummary;
   players: Record<PlayerId, ServicePlayerSummary>;
 };
@@ -162,6 +166,7 @@ export type TUserLoadGameQuery = {
 export type TUserLoadGameResponse = ServiceGameSummary;
 
 export type TUserPostDrawTileRequest = {
+  game_version: GameVersion;
   player_id: PlayerId;
 };
 export type TUserPostDrawTileResponse = ServiceGameSummary;
@@ -177,7 +182,19 @@ export type TUserPostMovePlayerRequest = {
 };
 export type TUserPostMovePlayerResponse = ServiceGameSummary;
 
+export type TUserPostSayMahjongRequest = {
+  player_id: PlayerId;
+};
+export type TUserPostSayMahjongResponse = ServiceGameSummary;
+
+export type TUserPostSetSettingsRequest = {
+  ai_enabled: boolean;
+  player_id: PlayerId;
+};
+export type TUserPostSetSettingsResponse = void;
+
 export type TUserPostSortHandRequest = {
+  game_version: GameVersion;
   player_id: PlayerId;
 };
 export type TUserPostSortHandResponse = ServiceGameSummary;
@@ -188,57 +205,51 @@ export type TUserPostCreateMeldRequest = {
 };
 export type TUserPostCreateMeldResponse = ServiceGameSummary;
 
+export type TUserPostCreateGameRequest = {
+  player_id: PlayerId;
+};
+export type TUserPostCreateGameResponse = ServiceGameSummary;
+
 export type TUserPostBreakMeldRequest = {
   player_id: PlayerId;
   set_id: SetId;
 };
 export type TUserPostBreakMeldResponse = ServiceGameSummary;
 
+export type TUserPostSetAuthRequest = {
+  password: string;
+  username: string;
+};
+export type TUserPostSetAuthResponse = {
+  token: string;
+};
+
+export type TUserPostContinueAIRequest = {
+  player_id: PlayerId;
+};
+export type TUserPostContinueAIResponse = {
+  changed: boolean;
+  service_game_summary: ServiceGameSummary;
+};
+
+export type TUserPostClaimTileRequest = {
+  player_id: PlayerId;
+};
+export type TUserPostClaimTileResponse = ServiceGameSummary;
+
 export type TSocketQuery = {
   game_id: GameId;
   player_id?: PlayerId;
+  token: string;
 };
 
-export class ModelServiceGame {
-  constructor(public data: ServiceGame) {}
-
-  getCurrentPlayer() {
-    const playerId = this.data.game.players[this.data.game.round.player_index];
-
-    return this.data.players[playerId];
-  }
-
-  getTileString(tileId: TileId) {
-    const tile = this.data.game.deck[tileId];
-    const tileString = format_tile(tile);
-
-    return `[${tileString}]`;
-  }
-
-  getPlayerScore(playerId: PlayerId) {
-    return this.data.game.score[playerId];
-  }
-
-  getPossibleMelds(): PossibleMeld[] {
-    const possibleMelds = get_possible_melds(JSON.stringify(this.data));
-
-    return possibleMelds;
-  }
+export enum UserRole {
+  Player = "Player",
+  Admin = "Admin",
 }
 
-export class ModelServiceGameSummary {
-  constructor(public data: ServiceGameSummary) {}
-
-  getTileString(tileId: TileId) {
-    const tile = this.data.game_summary.deck[tileId];
-    const tileString = format_tile(tile);
-
-    return `[${tileString}]`;
-  }
-
-  getPossibleMelds(): PossibleMeld[] {
-    const possibleMelds = get_possible_melds_summary(JSON.stringify(this.data));
-
-    return possibleMelds;
-  }
-}
+export type TokenClaims = {
+  exp: number;
+  role: UserRole;
+  sub: PlayerId;
+};

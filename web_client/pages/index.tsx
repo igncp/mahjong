@@ -1,13 +1,7 @@
 import Head from "next/head";
 import { useRouter } from "next/router";
 
-import { SiteUrls } from "src/lib/site/urls";
-import {
-  DashboardAdmin,
-  DashboardPlayer,
-  GameScreen,
-  IndexScreen,
-} from "src/screens/list";
+import { GameScreen, IndexScreen } from "src/screens/list";
 
 const Home = () => {
   const { asPath } = useRouter();
@@ -22,10 +16,6 @@ const Home = () => {
       </Head>
       {(() => {
         switch (true) {
-          case asPath === SiteUrls.dashboardAdmin:
-            return <DashboardAdmin />;
-          case paths[1] === "dashboard" && paths[2] === "player":
-            return <DashboardPlayer userId={paths[3]} />;
           case paths[1] === "game":
             return (
               <GameScreen

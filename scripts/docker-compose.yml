@@ -4,7 +4,9 @@ services:
   server:
     image: igncp/mahjong_service
     environment:
+      MAHJONG_JWT_SECRET: ${MAHJONG_JWT_SECRET}
       MAHJONG_STORAGE_FILE: /app/data/mahjong.json
+      MAHJONG_STORAGE_SQLITE_DB: /app/data/mahjong.json
     volumes:
       - ./data:/app/data
     ports:

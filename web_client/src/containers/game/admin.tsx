@@ -1,12 +1,11 @@
+import { useRouter } from "next/router";
 import { Fragment, useEffect, useState } from "react";
 
 import Header from "src/containers/common/header";
 import { HttpClient } from "src/lib/http-client";
-import {
-  ModelServiceGame,
-  SetId,
-  TAdminGetGameResponse,
-} from "src/lib/mahjong-service";
+import { SetId, TAdminGetGameResponse } from "src/lib/mahjong-service";
+import { ModelServiceGame } from "src/lib/models/service-game";
+import { SiteUrls } from "src/lib/site/urls";
 import Button from "src/ui/common/button";
 import CopyToClipboard from "src/ui/common/copy-to-clipboard";
 
@@ -15,6 +14,7 @@ interface IProps {
 }
 
 const Game = ({ gameId }: IProps) => {
+  const router = useRouter();
   const [serviceGame, setServiceGame] = useState<TAdminGetGameResponse | null>(
     null
   );
@@ -34,11 +34,14 @@ const Game = ({ gameId }: IProps) => {
             }
           },
         }),
-      ]);
+      ]).catch(() => {
+        router.push(SiteUrls.index);
+        return [];
+      });
 
       setServiceGame(game);
 
-      disconnectSocket = disconnect;
+      disconnectSocket = disconnect || disconnectSocket;
     })();
 
     return () => {
@@ -52,6 +55,7 @@ const Game = ({ gameId }: IProps) => {
   const currentPlayer = serviceGameM.getCurrentPlayer();
   const possibleMelds = serviceGameM.getPossibleMelds();
 
+  console.log("debug: admin.tsx: serviceGame", serviceGame);
   return (
     <main>
       <Header />

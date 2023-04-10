@@ -1,9 +1,13 @@
+use crate::{
+    auth::{AuthInfo, Username},
+    common::Storage,
+    env::ENV_FILE_STORAGE_KEY,
+};
 use async_trait::async_trait;
-use mahjong_core::{GameId, PlayerId};
+use mahjong_core::{Game, GameId, PlayerId};
 use serde::{Deserialize, Serialize};
-use service_contracts::ServiceGame;
-
-use crate::common::Storage;
+use service_contracts::{ServiceGame, ServicePlayer};
+use std::collections::HashMap;
 
 pub struct FileStorage {
     file_path: String,
@@ -11,42 +15,96 @@ pub struct FileStorage {
 
 #[derive(Serialize, Deserialize)]
 struct FileContent {
-    games: Option<Vec<ServiceGame>>,
+    auth: Option<HashMap<Username, AuthInfo>>,
+    games: Option<HashMap<GameId, Game>>,
+    players: Option<HashMap<PlayerId, ServicePlayer>>,
 }
 
 #[async_trait]
 impl Storage for FileStorage {
-    async fn save_game(&self, game: &ServiceGame) -> Result<(), String> {
-        let mut file_content = self.get_file();
-        if file_content.games.is_none() {
-            file_content.games = Some(vec![]);
+    async fn get_auth_info(&self, username: &Username) -> Result<Option<AuthInfo>, String> {
+        let file_content = self.get_file();
+        let auth = file_content.auth.unwrap_or_default();
+
+        let auth_info = auth.get(username);
+
+        if let Some(auth_info) = auth_info {
+            Ok(Some(auth_info.clone()))
+        } else {
+            Ok(None)
         }
-        let games = file_content.games.as_mut().unwrap();
-        let mut games: Vec<ServiceGame> = games
-            .iter()
-            .filter(|g| g.game.id != game.game.id)
-            .cloned()
-            .collect();
+    }
 
-        games.insert(0, game.clone());
+    async fn save_auth_info(&self, auth_info: &AuthInfo) -> Result<(), String> {
+        let mut file_content = self.get_file();
+        let mut auth = file_content.auth.unwrap_or_default();
 
-        file_content.games = Some(games);
+        auth.insert(auth_info.username.clone(), auth_info.clone());
+
+        file_content.auth = Some(auth);
 
         self.save_file(&file_content);
 
         Ok(())
     }
 
-    async fn get_game(&self, id: &str) -> Result<Option<ServiceGame>, String> {
-        let file_content = self.get_file();
-        let game = file_content
-            .games
-            .unwrap()
-            .iter()
-            .cloned()
-            .find(|game| game.game.id == id);
+    async fn save_game(&self, service_game: &ServiceGame) -> Result<(), String> {
+        let mut file_content = self.get_file();
+        if file_content.games.is_none() {
+            file_content.games = Some(HashMap::new());
+        }
+        if file_content.players.is_none() {
+            file_content.players = Some(HashMap::new());
+        }
 
-        Ok(game)
+        let games = file_content.games.as_mut().unwrap();
+        let players = file_content.players.as_mut().unwrap();
+
+        games.insert(service_game.game.id.clone(), service_game.game.clone());
+        for (player_id, player) in &service_game.players {
+            players.insert(player_id.clone(), player.clone());
+        }
+
+        self.save_file(&file_content);
+
+        Ok(())
+    }
+
+    async fn get_game(&self, id: &GameId) -> Result<Option<ServiceGame>, String> {
+        let mut file_content = self.get_file();
+        if file_content.games.is_none() {
+            file_content.games = Some(HashMap::new());
+        }
+        if file_content.players.is_none() {
+            file_content.players = Some(HashMap::new());
+        }
+
+        let games = file_content.games.as_mut().unwrap();
+        let players = file_content.players.as_mut().unwrap();
+
+        let game = games.get(id);
+
+        if game.is_none() {
+            return Ok(None);
+        }
+
+        let players: HashMap<PlayerId, ServicePlayer> = game
+            .unwrap()
+            .players
+            .iter()
+            .map(|player_id| {
+                let player = players.get(player_id).unwrap();
+
+                (player_id.clone(), player.clone())
+            })
+            .collect();
+
+        let service_game = Some(ServiceGame {
+            game: game.unwrap().clone(),
+            players,
+        });
+
+        Ok(service_game)
     }
 
     async fn get_games_ids(&self, player_id: &Option<PlayerId>) -> Result<Vec<GameId>, String> {
@@ -57,27 +115,52 @@ impl Storage for FileStorage {
             return Ok(vec![]);
         }
 
-        let mut games = games.unwrap();
+        let games = games.unwrap();
+
+        let mut games_ids: Vec<GameId> = games.keys().cloned().collect();
 
         if player_id.is_some() {
-            let player_id = player_id.as_ref().unwrap();
-            games = games
-                .iter()
-                .cloned()
-                .filter(|game| game.game.table.hands.get(player_id).is_some())
-                .collect();
+            games_ids.retain(|game_id| {
+                let game = games.get(game_id).unwrap();
+
+                game.players.contains(player_id.as_ref().unwrap())
+            });
         }
 
-        let games_ids = games.iter().map(|game| game.game.id.clone()).collect();
-
         Ok(games_ids)
+    }
+
+    async fn get_player(&self, id: &PlayerId) -> Result<Option<ServicePlayer>, String> {
+        let file_content = self.get_file();
+        let players = file_content.players.unwrap_or_default();
+
+        let player = players.get(id);
+
+        if let Some(player) = player {
+            Ok(Some(player.clone()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn save_player(&self, player: &ServicePlayer) -> Result<(), String> {
+        let mut file_content = self.get_file();
+        let mut players = file_content.players.unwrap_or_default();
+
+        players.insert(player.id.clone(), player.clone());
+
+        file_content.players = Some(players);
+
+        self.save_file(&file_content);
+
+        Ok(())
     }
 }
 
 impl FileStorage {
+    #[allow(dead_code)]
     pub fn new_dyn() -> Box<dyn Storage> {
-        let file_path =
-            std::env::var("MAHJONG_STORAGE_FILE").unwrap_or("./mahjong.json".to_string());
+        let file_path = std::env::var(ENV_FILE_STORAGE_KEY).unwrap_or("./mahjong.json".to_string());
 
         let file_storage = Self { file_path };
 

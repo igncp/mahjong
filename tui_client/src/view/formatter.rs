@@ -1,5 +1,7 @@
-use mahjong_core::{ui::format_to_emoji, Board, Deck, Game, Hand, PlayerId, Score, Tile};
-use service_contracts::{GameSummary, ServiceGame};
+use mahjong_core::{
+    game_summary::GameSummary, ui::format_to_emoji, Board, Deck, Game, Hand, PlayerId, Score, Tile,
+};
+use service_contracts::ServiceGame;
 
 pub fn get_draw_wall(game: &Game, show_index: bool) -> String {
     game.table

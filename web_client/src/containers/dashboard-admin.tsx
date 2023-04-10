@@ -2,8 +2,6 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { MouseEventHandler, useEffect, useState } from "react";
 
-import Header from "src/containers/common/header";
-
 import { HttpClient } from "../lib/http-client";
 import { TAdminGetGamesResponse } from "../lib/mahjong-service";
 import { SiteUrls } from "../lib/site/urls";
@@ -34,21 +32,18 @@ const DashboardAdmin = () => {
   };
 
   return (
-    <main>
-      <Header />
-      <ul>
-        {page.map((game) => (
-          <li key={game}>
-            <Link href={SiteUrls.adminGame(game)}>{game}</Link>
-          </li>
-        ))}
-        <li key="new-admin-game">
-          <a href="#" onClick={handleNewAdminGame}>
-            New admin game
-          </a>
+    <ul>
+      {page.map((game) => (
+        <li key={game}>
+          <Link href={SiteUrls.adminGame(game)}>{game}</Link>
         </li>
-      </ul>
-    </main>
+      ))}
+      <li key="new-admin-game">
+        <a href="#" onClick={handleNewAdminGame}>
+          New admin game
+        </a>
+      </li>
+    </ul>
   );
 };
 

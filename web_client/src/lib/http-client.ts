@@ -1,5 +1,6 @@
 import qs from "qs";
 
+import { getAuthTokenHeader, tokenObserver } from "./auth";
 import { env } from "./env";
 import {
   GameId,
@@ -30,6 +31,12 @@ import {
   TUserLoadGameResponse,
   TUserPostBreakMeldRequest,
   TUserPostBreakMeldResponse,
+  TUserPostClaimTileRequest,
+  TUserPostClaimTileResponse,
+  TUserPostContinueAIRequest,
+  TUserPostContinueAIResponse,
+  TUserPostCreateGameRequest,
+  TUserPostCreateGameResponse,
   TUserPostCreateMeldRequest,
   TUserPostCreateMeldResponse,
   TUserPostDiscardTileRequest,
@@ -38,20 +45,30 @@ import {
   TUserPostDrawTileResponse,
   TUserPostMovePlayerRequest,
   TUserPostMovePlayerResponse,
+  TUserPostSayMahjongRequest,
+  TUserPostSayMahjongResponse,
+  TUserPostSetAuthRequest,
+  TUserPostSetAuthResponse,
+  TUserPostSetSettingsRequest,
+  TUserPostSetSettingsResponse,
   TUserPostSortHandRequest,
   TUserPostSortHandResponse,
 } from "./mahjong-service";
 
 const baseUrl = env.SERVICE_URL;
 
-const fetchJson = <T>(url: string, opts?: RequestInit): Promise<T> =>
-  fetch(`${baseUrl}${url}`, {
+const fetchJson = <T>(url: string, opts?: RequestInit): Promise<T> => {
+  const tokenHeader = getAuthTokenHeader();
+
+  return fetch(`${baseUrl}${url}`, {
     ...opts,
     headers: {
       "Content-Type": "application/json",
+      ...tokenHeader,
       ...opts?.headers,
     },
   }).then((r) => r.json());
+};
 
 export const HttpClient = {
   async adminAIContinue(
@@ -144,20 +161,19 @@ export const HttpClient = {
     });
   },
 
-  async connectToSocket({
-    gameId,
-    playerId,
-    onMessage,
-  }: {
+  async connectToSocket(opts: {
     gameId: GameId;
     playerId?: PlayerId;
     onMessage: (message: TSocketMessage) => void;
   }) {
+    const { gameId, playerId, onMessage } = opts;
     let isIntentional = false;
     const query: TSocketQuery = {
       game_id: gameId,
+      token: tokenObserver.getValue() as string,
       ...(playerId && { player_id: playerId }),
     };
+
     const socket = new WebSocket(
       `${baseUrl.replace("http", "ws")}/v1/ws?${qs.stringify(query)}`
     );
@@ -175,7 +191,7 @@ export const HttpClient = {
       if (!isIntentional) {
         setTimeout(() => {
           console.log("Trying to reconnect onclose");
-          HttpClient.connectToSocket({ gameId, onMessage });
+          HttpClient.connectToSocket(opts);
         }, 1000);
       }
     };
@@ -189,11 +205,49 @@ export const HttpClient = {
   getHealth: async (): Promise<void> =>
     await fetch(`${baseUrl}/health`).then(() => undefined),
 
+  async setAuth(
+    body: TUserPostSetAuthRequest
+  ): Promise<TUserPostSetAuthResponse> {
+    return await fetchJson("/v1/user", {
+      body: JSON.stringify(body),
+      method: "POST",
+    });
+  },
+
   async userBreakMeld(
     gameId: GameId,
     body: TUserPostBreakMeldRequest
   ): Promise<TUserPostBreakMeldResponse> {
     return await fetchJson(`/v1/user/game/${gameId}/break-meld`, {
+      body: JSON.stringify(body),
+      method: "POST",
+    });
+  },
+
+  async userClaimTile(
+    gameId: GameId,
+    body: TUserPostClaimTileRequest
+  ): Promise<TUserPostClaimTileResponse> {
+    return await fetchJson(`/v1/user/game/${gameId}/claim-tile`, {
+      body: JSON.stringify(body),
+      method: "POST",
+    });
+  },
+
+  async userContinueAI(
+    gameId: GameId,
+    body: TUserPostContinueAIRequest
+  ): Promise<TUserPostContinueAIResponse> {
+    return await fetchJson(`/v1/user/game/${gameId}/ai-continue`, {
+      body: JSON.stringify(body),
+      method: "POST",
+    });
+  },
+
+  async userCreateGame(
+    body: TUserPostCreateGameRequest
+  ): Promise<TUserPostCreateGameResponse> {
+    return await fetchJson("/v1/user/game", {
       body: JSON.stringify(body),
       method: "POST",
     });
@@ -247,6 +301,25 @@ export const HttpClient = {
     body: TUserPostMovePlayerRequest
   ): Promise<TUserPostMovePlayerResponse> {
     return await fetchJson(`/v1/user/game/${gameId}/move-player`, {
+      body: JSON.stringify(body),
+      method: "POST",
+    });
+  },
+
+  async userSayMahjong(
+    gameId: GameId,
+    body: TUserPostSayMahjongRequest
+  ): Promise<TUserPostSayMahjongResponse> {
+    return await fetchJson(`/v1/user/game/${gameId}/say-mahjong`, {
+      body: JSON.stringify(body),
+      method: "POST",
+    });
+  },
+
+  async userSetSettings(
+    body: TUserPostSetSettingsRequest
+  ): Promise<TUserPostSetSettingsResponse> {
+    return await fetchJson(`/v1/user/settings`, {
       body: JSON.stringify(body),
       method: "POST",
     });

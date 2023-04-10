@@ -60,6 +60,7 @@ impl ServiceHTTPClient {
         player_id: Option<PlayerId>,
     ) -> Result<(), String> {
         let query = WebSocketQuery {
+            token: "".to_string(),
             game_id: game_id.to_string(),
             player_id,
         };

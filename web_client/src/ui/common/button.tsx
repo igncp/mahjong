@@ -6,7 +6,7 @@ type TProps = {
 } & React.ButtonHTMLAttributes<HTMLButtonElement>;
 
 const Button = (props: TProps) => (
-  <button style={{ cursor: "pointer" }} {...props} />
+  <button style={props.disabled ? {} : { cursor: "pointer" }} {...props} />
 );
 
 export default Button;

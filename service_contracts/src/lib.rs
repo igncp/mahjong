@@ -1,23 +1,13 @@
 #![deny(clippy::use_self, clippy::shadow_unrelated)]
-pub use crate::game_summary::GameSummary;
-use mahjong_core::{hand::SetIdContent, Game, GameId, Hand, Hands, PlayerId, TileId};
+use mahjong_core::{
+    game::GameVersion, game_summary::GameSummary, hand::SetIdContent, Game, GameId, Hand, Hands,
+    PlayerId, TileId,
+};
 use serde::{Deserialize, Serialize};
+pub use service_player::{ServicePlayer, ServicePlayerSummary};
 use std::collections::{HashMap, HashSet};
 
-mod game_summary;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ServicePlayer {
-    pub id: PlayerId,
-    pub name: String,
-    pub is_ai: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ServicePlayerSummary {
-    pub id: PlayerId,
-    pub name: String,
-}
+mod service_player;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceGame {
@@ -27,6 +17,7 @@ pub struct ServiceGame {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceGameSummary {
+    pub ai_enabled: bool,
     pub game_summary: GameSummary,
     pub players: HashMap<PlayerId, ServicePlayerSummary>,
 }
@@ -47,22 +38,28 @@ impl ServiceGameSummary {
 
         game_summary?;
 
+        let players: HashMap<PlayerId, ServicePlayerSummary> = game
+            .players
+            .clone()
+            .into_iter()
+            .map(|(id, player)| {
+                (
+                    id,
+                    ServicePlayerSummary {
+                        id: player.id,
+                        name: player.name,
+                    },
+                )
+            })
+            .collect();
+
+        let player = game.players.get(player_id);
+        let ai_enabled = player.map(|p| p.ai_enabled).unwrap_or(false);
+
         Some(Self {
+            ai_enabled,
             game_summary: GameSummary::from_game(&game.game, player_id).unwrap(),
-            players: game
-                .players
-                .clone()
-                .into_iter()
-                .map(|(id, player)| {
-                    (
-                        id,
-                        ServicePlayerSummary {
-                            id: player.id,
-                            name: player.name,
-                        },
-                    )
-                })
-                .collect(),
+            players,
         })
     }
 }
@@ -82,6 +79,7 @@ pub enum SocketMessage {
 pub struct WebSocketQuery {
     pub game_id: GameId,
     pub player_id: Option<PlayerId>,
+    pub token: String,
 }
 
 pub type AdminGetGamesResponse = Vec<GameId>;
@@ -120,9 +118,16 @@ pub type UserPostDiscardTileResponse = ServiceGameSummary;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserPostDrawTileRequest {
+    pub game_version: GameVersion,
     pub player_id: PlayerId,
 }
 pub type UserPostDrawTileResponse = ServiceGameSummary;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserPostCreateGameRequest {
+    pub player_id: PlayerId,
+}
+pub type UserPostCreateGameResponse = ServiceGameSummary;
 
 pub type AdminPostMovePlayerRequest = ();
 pub type AdminPostMovePlayerResponse = ServiceGame;
@@ -150,6 +155,7 @@ pub type UserPostMovePlayerResponse = ServiceGameSummary;
 
 #[derive(Deserialize, Serialize)]
 pub struct UserPostSortHandRequest {
+    pub game_version: GameVersion,
     pub player_id: PlayerId,
 }
 pub type UserPostSortHandResponse = ServiceGameSummary;
@@ -189,4 +195,43 @@ pub struct AdminPostAIContinueRequest {
 pub struct AdminPostAIContinueResponse {
     pub service_game: ServiceGame,
     pub changed: bool,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct UserPostAIContinueRequest {
+    pub player_id: PlayerId,
+}
+#[derive(Deserialize, Serialize)]
+pub struct UserPostAIContinueResponse {
+    pub service_game_summary: ServiceGameSummary,
+    pub changed: bool,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct UserPostClaimTileRequest {
+    pub player_id: PlayerId,
+}
+pub type UserPostClaimTileResponse = ServiceGameSummary;
+
+#[derive(Deserialize, Serialize)]
+pub struct UserPostSettingsRequest {
+    pub ai_enabled: Option<bool>,
+    pub player_id: PlayerId,
+}
+pub type UserPostSettingsResponse = ();
+
+#[derive(Deserialize, Serialize)]
+pub struct UserPostSayMahjongRequest {
+    pub player_id: PlayerId,
+}
+pub type UserPostSayMahjongResponse = ServiceGameSummary;
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct UserPostSetAuthRequest {
+    pub username: String,
+    pub password: String,
+}
+#[derive(Deserialize, Serialize)]
+pub struct UserPostSetAuthResponse {
+    pub token: String,
 }

@@ -9,12 +9,14 @@ pub use tile::{Tile, TileId};
 pub mod ai;
 pub mod deck;
 pub mod game;
+pub mod game_summary;
 pub mod hand;
 pub mod meld;
 pub mod round;
 pub mod score;
 mod test_deck;
 mod test_game;
+mod test_game_summary;
 mod test_meld;
 mod test_round;
 pub mod tile;
@@ -110,9 +112,9 @@ pub type Score = HashMap<PlayerId, ScoreItem>;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RoundTileClaimed {
-    by: Option<PlayerId>,
-    from: PlayerId,
-    id: TileId,
+    pub by: Option<PlayerId>,
+    pub from: PlayerId,
+    pub id: TileId,
 }
 
 pub type TileClaimed = Option<RoundTileClaimed>;
@@ -121,7 +123,7 @@ pub type TileClaimed = Option<RoundTileClaimed>;
 pub struct Round {
     pub dealer_player_index: usize,
     pub player_index: usize,
-    tile_claimed: TileClaimed,
-    wall_tile_drawn: Option<TileId>,
+    pub tile_claimed: TileClaimed,
+    pub wall_tile_drawn: Option<TileId>,
     pub wind: Wind,
 }

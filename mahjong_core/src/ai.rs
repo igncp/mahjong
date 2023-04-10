@@ -106,4 +106,11 @@ impl<'a> StandardAI<'a> {
 
         false
     }
+
+    pub fn get_is_after_discard(&self) -> bool {
+        let current_player = self.game.get_current_player();
+        let current_hand = self.game.table.hands.get(&current_player).unwrap();
+
+        current_hand.0.len() == 13 && self.game.round.tile_claimed.is_some()
+    }
 }

@@ -6,7 +6,10 @@ use crate::{
     Deck, Hand, HandTile, PlayerId, Round, RoundTileClaimed, Score, Table, TileId,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::{
+    collections::HashSet,
+    fmt::{Display, Formatter},
+};
 use uuid::Uuid;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -16,7 +19,18 @@ pub enum GamePhase {
     Playing,
 }
 
+impl Display for GamePhase {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Beginning => write!(f, "Beginning"),
+            Self::End => write!(f, "End"),
+            Self::Playing => write!(f, "Playing"),
+        }
+    }
+}
+
 pub type GameId = String;
+pub type GameVersion = String;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Game {
@@ -28,11 +42,13 @@ pub struct Game {
     pub round: Round,
     pub score: Score,
     pub table: Table,
+    pub version: GameVersion,
 }
 
 impl Default for Game {
     fn default() -> Self {
         let deck = Deck::default();
+        let version = Uuid::new_v4().to_string();
         let mut players = vec![];
 
         for player_id in 0..4 {
@@ -55,6 +71,7 @@ impl Default for Game {
             round: Round::default(),
             score,
             table,
+            version,
         }
     }
 }
@@ -444,5 +461,9 @@ impl Game {
 
     pub fn get_dealer(&self) -> Option<&PlayerId> {
         self.players.get(self.round.dealer_player_index)
+    }
+
+    pub fn update_version(&mut self) {
+        self.version = Uuid::new_v4().to_string();
     }
 }

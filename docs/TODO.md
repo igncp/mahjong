@@ -1,17 +1,18 @@
 ## Doing
 
-- Setup a full game via CLI in "admin" mode
-- Start playing game via TUI in "client" mode
+- Add settings for users
+    - Stop AI when there is a possible meld
+
+## Improvements
+
+- Diesel updates (no remove + insert)
 
 ## Backlog
 
-- Create a queue of actions per game
-  - Implement the game version to avoid parallel actions
-- Authentication for users and admins
+- Use the game version in more endpoints
 - Improve scoring logic
-- Connect a DB
-- Research approach to reuse types with TS
+- Consider connecting to postgres and setup container DB
 - Consider moving `deck` outside of `Game` and having multiple deck types
-- Websockets reconnection (for deployments)
-- Game hall state where it waits for other real players to join
+- Study how to add rxjs into web client
 - Start the web client in github pages
+- Game hall state where it waits for other real players to join

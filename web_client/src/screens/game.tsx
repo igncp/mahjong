@@ -20,7 +20,7 @@ const Game = ({ gameId, gameType, userId }: IProps) => {
     case gameType === "admin":
       return <GameAdmin gameId={gameId} />;
     case gameType === "player" && !!userId:
-      return <GamePlayer gameId={gameId} userId={userId} />;
+      return <GamePlayer gameId={gameId} userId={userId as string} />;
     default:
       return null;
   }

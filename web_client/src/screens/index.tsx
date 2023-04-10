@@ -1,38 +1,25 @@
-import { useRouter } from "next/router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import AuthForm from "src/containers/auth-form";
 import Header from "src/containers/common/header";
-import Button from "src/ui/common/button";
-
-import { SiteUrls } from "../lib/site/urls";
+import Dashboard from "src/containers/dashboard";
+import { getIsLoggedIn, tokenObserver } from "src/lib/auth";
 
 const Index = () => {
-  const [playerId, setPlayerId] = useState("");
-  const router = useRouter();
+  const [isLoggedIn, setIsLoggedIn] = useState(getIsLoggedIn());
+
+  useEffect(() => {
+    const subscription = tokenObserver.subscribe(() => {
+      setIsLoggedIn(getIsLoggedIn());
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <main>
       <Header />
-      <ul>
-        <li>
-          <Button onClick={() => router.push(SiteUrls.dashboardAdmin)}>
-            Admin Dashboard
-          </Button>
-        </li>
-        <li>
-          <Button
-            disabled={!playerId}
-            onClick={() => router.push(SiteUrls.dashboardPlayer(playerId))}
-          >
-            Player Dashboard
-          </Button>
-          <input
-            onChange={(e) => setPlayerId(e.target.value)}
-            type="text"
-            value={playerId}
-          />
-        </li>
-      </ul>
+      {isLoggedIn ? <Dashboard /> : <AuthForm />}
     </main>
   );
 };

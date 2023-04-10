@@ -10,11 +10,14 @@
   "dependencies": {
     "@next/eslint-plugin-next": "^13.2.4",
     "@trivago/prettier-plugin-sort-imports": "^4.1.1",
+    "@types/qs": "^6.9.7",
+    "jsonwebtoken": "^9.0.0",
     "next": "^13.2.4",
     "prettier": "^2.8.7",
     "qs": "^6.11.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",
+    "rxjs": "^7.8.0",
     "web_lib": "file:pkg"
   },
   "devDependencies": {
