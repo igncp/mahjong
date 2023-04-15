@@ -120,9 +120,17 @@ fn docker(current_dir: &str) {
             "docker build",
             format!("-t 'igncp/mahjong_service:{docker_image_tag}'").as_str(),
             "-f scripts/Dockerfile.service",
-            "--push",
             "--progress=plain",
             ".",
+        ]
+        .join(" "),
+        current_dir,
+    );
+
+    run_bash_cmd(
+        &vec![
+            "docker image push",
+            format!("'igncp/mahjong_service:{docker_image_tag}'").as_str(),
         ]
         .join(" "),
         current_dir,
