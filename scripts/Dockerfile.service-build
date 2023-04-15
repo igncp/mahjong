@@ -3,7 +3,7 @@ USER root
 RUN apt-get update && apt-get install -y libssl-dev
 RUN useradd -m -s /bin/bash rust && mkdir -p /app && chown -R rust:rust /app
 
-RUN apt-get install -y curl pkg-config build-essential gcc-x86-64-linux-gnu
+RUN apt-get install -y curl pkg-config build-essential sqlite3 libsqlite3-dev
 
 USER rust
 
@@ -12,17 +12,11 @@ WORKDIR /app
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup.sh \
   && bash rustup.sh -y
 
-RUN . "$HOME/.cargo/env" && rustup target add x86_64-unknown-linux-musl
-
 COPY --chown=rust:rust . .
-
-ENV CC_x86_64_unknown_linux_musl=x86_64-linux-gnu-gcc
-ENV RUSTFLAGS='-C linker=x86_64-linux-gnu-gcc'
 
 RUN . "$HOME/.cargo/env" \
   && cargo build \
     --release \
-    -p mahjong_service \
-    --target x86_64-unknown-linux-musl
+    -p mahjong_service
 
 CMD find /app -type f -name "mahjong_service"

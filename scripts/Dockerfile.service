@@ -1,6 +1,6 @@
 FROM debian:bullseye-slim
 USER root
-RUN apt-get update && apt-get install -y libssl-dev
+RUN apt-get update && apt-get install -y libssl-dev libsqlite3-dev sqlite3
 RUN useradd -m -s /bin/bash rust && mkdir -p /app && chown -R rust:rust /app
 
 USER rust

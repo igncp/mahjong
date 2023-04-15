@@ -102,17 +102,24 @@ fn docker(current_dir: &str) {
         "--rm",
         "-v $(pwd)/dist:/mount",
         "mahjong_service_build",
-        "cp /app/target/x86_64-unknown-linux-musl/release/mahjong_service /mount/",
+        "cp /app/target/release/mahjong_service /mount/",
     ]
     .join(" ");
     run_bash_cmd(&service_cmd, current_dir);
 
+    #[cfg(target_arch = "x86_64")]
+    let docker_image_tag = "x86_64";
+    #[cfg(target_arch = "aarch64")]
+    let docker_image_tag = "aarch64";
+    #[cfg(target_arch = "arm")]
+    let docker_image_tag = "arm";
+
     run_bash_cmd(
+        // This could use buildx but that cross-compiling is not working with sqlite3
         &vec![
-            "docker buildx build",
-            "-t 'igncp/mahjong_service'",
+            "docker build",
+            format!("-t 'igncp/mahjong_service:{docker_image_tag}'").as_str(),
             "-f scripts/Dockerfile.service",
-            "--platform linux/amd64,linux/arm64",
             "--push",
             "--progress=plain",
             ".",
