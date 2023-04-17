@@ -206,6 +206,10 @@ export class ModelServiceGameSummary {
     }
   }
 
+  getTile(tileId: TileId) {
+    return this.gameState[0].game_summary.deck[tileId];
+  }
+
   private handleError = () => {
     this.loadingState[1](false);
   };

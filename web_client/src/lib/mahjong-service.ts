@@ -14,14 +14,69 @@ export enum Flower {
   Plum = "Plum",
 }
 
-type FlowerTile = {
+export enum Season {
+  Autumn = "Autumn",
+  Spring = "Spring",
+  Summer = "Summer",
+  Winter = "Winter",
+}
+
+export enum Wind {
+  East = "East",
+  North = "North",
+  South = "South",
+  West = "West",
+}
+
+export enum Dragon {
+  Green = "Green",
+  Red = "Red",
+  White = "White",
+}
+
+export enum Suit {
+  Bamboo = "Bamboo",
+  Characters = "Characters",
+  Dots = "Dots",
+}
+
+export type SuitTile = {
+  Suit: {
+    id: TileId;
+    suit: Suit;
+    value: number;
+  };
+};
+
+export type FlowerTile = {
   Flower: {
     id: TileId;
     value: Flower;
   };
 };
 
-export type Tile = FlowerTile;
+export type SeasonTile = {
+  Season: {
+    id: TileId;
+    value: Season;
+  };
+};
+
+export type WindTile = {
+  Wind: {
+    id: TileId;
+    value: Wind;
+  };
+};
+
+export type DragonTile = {
+  Dragon: {
+    id: TileId;
+    value: Dragon;
+  };
+};
+
+export type Tile = FlowerTile | SeasonTile | WindTile | DragonTile | SuitTile;
 export type SetId = string;
 
 type HandTile = {

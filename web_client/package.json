@@ -2,15 +2,17 @@
   "name": "mahjong-web-client",
   "private": true,
   "scripts": {
+    "build": "rm -rf out .next && next build && next export",
+    "dev": "next dev -p 9000",
     "lint": "prettier --check 'src/**' 'pages/**' && eslint .",
     "lint:fix": "prettier --write 'src/**' 'pages/**' && eslint --fix .",
-    "dev": "next dev -p 9000",
-    "build": "rm -rf out .next && next build && next export"
+    "typecheck": "tsc --noEmit --project ."
   },
   "dependencies": {
     "@next/eslint-plugin-next": "^13.2.4",
     "@trivago/prettier-plugin-sort-imports": "^4.1.1",
     "@types/qs": "^6.9.7",
+    "antd": "^5.4.2",
     "jsonwebtoken": "^9.0.0",
     "next": "^13.2.4",
     "prettier": "^2.8.7",

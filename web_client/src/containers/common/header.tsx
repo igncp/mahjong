@@ -11,7 +11,7 @@ const Header = () => {
   const router = useRouter();
 
   return (
-    <HeaderComp linkPath={SiteUrls.index} text="Mahjong Web Client">
+    <HeaderComp linkPath={SiteUrls.index} text="Mahjong">
       {isLoggedIn && (
         <span
           style={{

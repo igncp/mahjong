@@ -1,12 +1,13 @@
+import { Button as AntdButton } from "antd";
 import React from "react";
 
 type TProps = {
   children: React.ReactNode;
+  disabled?: boolean;
   onClick?: () => void;
-} & React.ButtonHTMLAttributes<HTMLButtonElement>;
+  type?: "link" | "primary";
+};
 
-const Button = (props: TProps) => (
-  <button style={props.disabled ? {} : { cursor: "pointer" }} {...props} />
-);
+const Button = (props: TProps) => <AntdButton {...props} />;
 
 export default Button;

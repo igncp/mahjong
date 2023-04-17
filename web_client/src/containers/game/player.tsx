@@ -17,7 +17,12 @@ import {
 } from "src/lib/models/service-game-summary";
 import { SiteUrls } from "src/lib/site/urls";
 import Button from "src/ui/common/button";
+import Card from "src/ui/common/card";
 import CopyToClipboard from "src/ui/common/copy-to-clipboard";
+import PageContent from "src/ui/common/page-content";
+import Space from "src/ui/common/space";
+import Text from "src/ui/common/text";
+import TileImg from "src/ui/tile-img";
 
 interface IProps {
   gameId: GameId;
@@ -104,191 +109,214 @@ const Game = ({ gameId, userId }: IProps) => {
   };
 
   return (
-    <main>
+    <main style={{ width: "100vw" }}>
       <Header />
-      <p>
-        Game ID: <CopyToClipboard text={serviceGameSummary.game_summary.id} />
-      </p>
-      <p>
-        <b>{player.name}</b>{" "}
-        {playerIndex === serviceGameSummary.game_summary.round.player_index
-          ? " *"
-          : ""}{" "}
-        ({serviceGameSummary.game_summary.score[userId]}){" "}
-        <CopyToClipboard text={userId} />
-      </p>
-      <p>
-        Draw Wall:{" "}
-        <span
+      <PageContent>
+        <p>
+          Game ID: <CopyToClipboard text={serviceGameSummary.game_summary.id} />
+        </p>
+        <p>
+          <b>{player.name}</b>{" "}
+          {playerIndex === serviceGameSummary.game_summary.round.player_index
+            ? " *"
+            : ""}{" "}
+          ({serviceGameSummary.game_summary.score[userId]}){" "}
+          <CopyToClipboard text={userId} />
+        </p>
+        <p>
+          Draw Wall:{" "}
+          <span
+            style={{
+              display: "inline-flex",
+              flexDirection: "row",
+              flexWrap: "wrap",
+              gap: "10px",
+            }}
+          >
+            {serviceGameSummary.game_summary.draw_wall_count}
+          </span>
+        </p>
+        <p
           style={{
-            display: "inline-flex",
-            flexDirection: "row",
+            alignItems: "center",
+            display: "flex",
             flexWrap: "wrap",
-            gap: "10px",
           }}
         >
-          {serviceGameSummary.game_summary.draw_wall_count}
-        </span>
-      </p>
-      <p>
-        Board:{" "}
-        <span
-          style={{
-            display: "inline-flex",
-            flexDirection: "row",
-            flexWrap: "wrap",
-            gap: "10px",
-          }}
-        >
-          {serviceGameSummary.game_summary.board.map(
-            (tileId, tileIndex, tiles) => {
-              const isDiscardedTile =
-                tiles.length === tileIndex + 1 &&
-                typeof serviceGameSummary.game_summary.round.discarded_tile ===
-                  "number";
+          Board:{" "}
+          <span
+            style={{
+              display: "inline-flex",
+              flexDirection: "row",
+              flexWrap: "wrap",
+            }}
+          >
+            {serviceGameSummary.game_summary.board.map(
+              (tileId, tileIndex, tiles) => {
+                const isDiscardedTile =
+                  tiles.length === tileIndex + 1 &&
+                  typeof serviceGameSummary.game_summary.round
+                    .discarded_tile === "number";
+                const tile = serviceGameM.getTile(tileId);
 
-              return (
-                <span
-                  key={tileId}
-                  {...(isDiscardedTile
-                    ? {
-                        onClick: () => {
-                          serviceGameM.claimTile();
-                        },
-                        style: {
-                          color: "blue",
-                          cursor: "pointer",
-                        },
-                      }
-                    : {})}
-                >
-                  {serviceGameM.getTileString(tileId)}
-                </span>
-              );
-            }
-          )}
-        </span>
-      </p>
-      <p>Hand: ({hand.length})</p>
-      {handWithoutMelds.map((handTile) => (
-        <span
-          key={handTile.id}
-          onClick={() => {
-            if (canDiscardTile) {
-              serviceGameM.discardTile(handTile.id);
-            }
-          }}
-          style={{
-            color: canDiscardTile ? "black" : "gray",
-            cursor: canDiscardTile ? "pointer" : "default",
-          }}
-        >
-          {serviceGameM.getTileString(handTile.id)}
-        </span>
-      ))}
-      <ul>
-        {Array.from(setsIds).map((setId) => {
-          const setTiles = hand.filter((tile) => tile.set_id === setId);
-          const isConcealed = setTiles.every((tile) => tile.concealed);
-
-          return (
-            <li key={setId}>
-              Meld:{` ${isConcealed ? "concealed" : "open"} `}
-              {setTiles.map((tile) => (
-                <span key={tile.id}>{serviceGameM.getTileString(tile.id)}</span>
-              ))}
-              {isConcealed && (
-                <Button
-                  disabled={loading}
-                  onClick={() => {
-                    serviceGameM.breakMeld(setId);
-                  }}
-                >
-                  Break meld
-                </Button>
-              )}
-            </li>
-          );
-        })}
-        {possibleMelds.map((possibleMeld, idx) => (
-          <li key={idx}>
-            Possible meld:{" "}
-            {possibleMeld.tiles.map((tileId) => (
-              <span key={tileId}>{serviceGameM.getTileString(tileId)}</span>
-            ))}
-            <Button
-              disabled={
-                loading ||
-                possibleMeld.tiles.filter(
-                  (tileId) =>
-                    serviceGameSummary.game_summary.hand.find(
-                      (handTile) => handTile.id === tileId
-                    ) === undefined
-                ).length !== 0
+                return (
+                  <span
+                    key={tileId}
+                    {...(isDiscardedTile
+                      ? {
+                          onClick: () => {
+                            serviceGameM.claimTile();
+                          },
+                          style: {
+                            color: "blue",
+                            cursor: "pointer",
+                          },
+                        }
+                      : {})}
+                  >
+                    <TileImg tile={tile} />
+                  </span>
+                );
               }
-              onClick={async () => {
-                serviceGameM.createMeld(possibleMeld.tiles);
+            )}
+          </span>
+        </p>
+        <p
+          style={{
+            alignItems: "center",
+            display: "flex",
+            flexWrap: "wrap",
+          }}
+        >
+          Hand: ({hand.length})
+          {handWithoutMelds.map((handTile) => (
+            <span
+              key={handTile.id}
+              onClick={() => {
+                if (canDiscardTile) {
+                  serviceGameM.discardTile(handTile.id);
+                }
+              }}
+              style={{
+                color: canDiscardTile ? "black" : "gray",
+                cursor: canDiscardTile ? "pointer" : "default",
               }}
             >
-              Create meld
-            </Button>
-          </li>
-        ))}
-      </ul>
-      <p>Other players</p>
-      <ul>
-        {serviceGameSummary.game_summary.players.map(
-          (playerId, playerIndex) => {
-            const player = serviceGameSummary.players[playerId];
-
-            if (playerId === userId) return null;
-
-            const playerHand =
-              serviceGameSummary.game_summary.other_hands[playerId];
-            const melds = playerHand.visible.reduce((meldsInner, tile) => {
-              if (tile.set_id) {
-                meldsInner[tile.set_id] = meldsInner[tile.set_id] || [];
-                meldsInner[tile.set_id].push(tile.id);
-              }
-
-              return meldsInner;
-            }, {} as Record<string, TileId[]>);
-            const meldsSets = Object.keys(melds).sort();
+              <TileImg tile={serviceGameM.getTile(handTile.id)} />
+            </span>
+          ))}
+        </p>
+        <ul>
+          {Array.from(setsIds).map((setId) => {
+            const setTiles = hand.filter((tile) => tile.set_id === setId);
+            const isConcealed = setTiles.every((tile) => tile.concealed);
 
             return (
-              <li key={playerId}>
-                {player.name} ({serviceGameSummary.game_summary.score[playerId]}
-                ){" "}
-                {playerIndex ===
-                serviceGameSummary.game_summary.round.player_index
-                  ? " *"
-                  : ""}
-                {meldsSets.length > 0 && (
-                  <ul>
-                    {meldsSets.map((meldSetId) => {
-                      const meldTiles = melds[meldSetId];
-
-                      return (
-                        <li key={meldSetId}>
-                          Visible meld:{" "}
-                          {meldTiles.map((tileId) => (
-                            <span key={tileId}>
-                              {serviceGameM.getTileString(tileId)}
-                            </span>
-                          ))}
-                        </li>
-                      );
-                    })}
-                  </ul>
+              <li
+                key={setId}
+                style={{
+                  alignItems: "center",
+                  display: "flex",
+                  gap: "5px",
+                }}
+              >
+                - Meld:<b>{` ${isConcealed ? "concealed" : "open"} `}</b>
+                {setTiles.map((tile) => (
+                  <span key={tile.id}>
+                    <TileImg tile={serviceGameM.getTile(tile.id)} />
+                  </span>
+                ))}
+                {isConcealed && (
+                  <Button
+                    disabled={loading}
+                    onClick={() => {
+                      serviceGameM.breakMeld(setId);
+                    }}
+                  >
+                    Break meld
+                  </Button>
                 )}
               </li>
             );
-          }
-        )}
-      </ul>
-      <p>Actions:</p>
-      <ul>
-        <li>
+          })}
+          {possibleMelds.map((possibleMeld, idx) => (
+            <li key={idx}>
+              Possible meld:{" "}
+              {possibleMeld.tiles.map((tileId) => (
+                <span key={tileId}>{serviceGameM.getTileString(tileId)}</span>
+              ))}
+              <Button
+                disabled={
+                  loading ||
+                  possibleMeld.tiles.filter(
+                    (tileId) =>
+                      serviceGameSummary.game_summary.hand.find(
+                        (handTile) => handTile.id === tileId
+                      ) === undefined
+                  ).length !== 0
+                }
+                onClick={async () => {
+                  serviceGameM.createMeld(possibleMeld.tiles);
+                }}
+              >
+                Create meld
+              </Button>
+            </li>
+          ))}
+        </ul>
+        <Text>Other players</Text>
+        <ul>
+          {serviceGameSummary.game_summary.players.map(
+            (playerId, playerIndex) => {
+              const player = serviceGameSummary.players[playerId];
+
+              if (playerId === userId) return null;
+
+              const playerHand =
+                serviceGameSummary.game_summary.other_hands[playerId];
+              const melds = playerHand.visible.reduce((meldsInner, tile) => {
+                if (tile.set_id) {
+                  meldsInner[tile.set_id] = meldsInner[tile.set_id] || [];
+                  meldsInner[tile.set_id].push(tile.id);
+                }
+
+                return meldsInner;
+              }, {} as Record<string, TileId[]>);
+              const meldsSets = Object.keys(melds).sort();
+
+              return (
+                <li key={playerId}>
+                  {player.name} (
+                  {serviceGameSummary.game_summary.score[playerId]}){" "}
+                  {playerIndex ===
+                  serviceGameSummary.game_summary.round.player_index
+                    ? " *"
+                    : ""}
+                  {meldsSets.length > 0 && (
+                    <ul>
+                      {meldsSets.map((meldSetId) => {
+                        const meldTiles = melds[meldSetId];
+
+                        return (
+                          <li key={meldSetId}>
+                            Visible meld:{" "}
+                            {meldTiles.map((tileId) => (
+                              <span key={tileId}>
+                                {serviceGameM.getTileString(tileId)}
+                              </span>
+                            ))}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </li>
+              );
+            }
+          )}
+        </ul>
+        <Text>Actions:</Text>
+        <Space wrap>
           <Button
             disabled={loading}
             onClick={async () => {
@@ -302,8 +330,6 @@ const Game = ({ gameId, userId }: IProps) => {
           >
             Draw tile
           </Button>
-        </li>
-        <li>
           <Button
             disabled={loading}
             onClick={async () => {
@@ -315,8 +341,6 @@ const Game = ({ gameId, userId }: IProps) => {
           >
             Next turn
           </Button>
-        </li>
-        <li>
           <Button
             disabled={loading}
             onClick={() => {
@@ -325,8 +349,6 @@ const Game = ({ gameId, userId }: IProps) => {
           >
             Sort hand
           </Button>
-        </li>
-        <li>
           <Button
             disabled={loading}
             onClick={async () => {
@@ -340,8 +362,6 @@ const Game = ({ gameId, userId }: IProps) => {
           >
             Continue AI
           </Button>
-        </li>
-        <li>
           <Button
             disabled={loading}
             onClick={() => {
@@ -350,33 +370,33 @@ const Game = ({ gameId, userId }: IProps) => {
           >
             Say Mahjong
           </Button>
-        </li>
-        <li>
-          AI:{" "}
-          <form style={{ display: "inline-block" }}>
-            <label style={{ marginRight: "10px" }}>
-              Enabled
-              <input
-                checked={serviceGameSummary.ai_enabled}
-                name="ai_enabled"
-                onChange={onAIEnabledChanged}
-                type="radio"
-                value={"enabled"}
-              />
-            </label>
-            <label>
-              Disabled
-              <input
-                checked={!serviceGameSummary.ai_enabled}
-                name="ai_enabled"
-                onChange={onAIEnabledChanged}
-                type="radio"
-                value={"disabled"}
-              />
-            </label>
-          </form>
-        </li>
-      </ul>
+          <Card>
+            AI:{" "}
+            <form style={{ display: "inline-block" }}>
+              <label style={{ marginRight: "10px" }}>
+                Enabled
+                <input
+                  checked={serviceGameSummary.ai_enabled}
+                  name="ai_enabled"
+                  onChange={onAIEnabledChanged}
+                  type="radio"
+                  value={"enabled"}
+                />
+              </label>
+              <label>
+                Disabled
+                <input
+                  checked={!serviceGameSummary.ai_enabled}
+                  name="ai_enabled"
+                  onChange={onAIEnabledChanged}
+                  type="radio"
+                  value={"disabled"}
+                />
+              </label>
+            </form>
+          </Card>
+        </Space>
+      </PageContent>
     </main>
   );
 };
