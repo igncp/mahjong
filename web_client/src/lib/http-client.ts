@@ -174,17 +174,16 @@ export const HttpClient = {
       ...(playerId && { player_id: playerId }),
     };
 
-    const socket = new WebSocket(
-      `${baseUrl.replace("http", "ws")}/v1/ws?${qs.stringify(query)}`
-    );
+    const sockerUrl = baseUrl.replace("https", "wss").replace("http", "ws");
+    const socket = new WebSocket(`${sockerUrl}/v1/ws?${qs.stringify(query)}`);
 
     socket.onmessage = (event) => {
       const data: TSocketMessage = JSON.parse(event.data);
       onMessage(data);
     };
 
-    socket.onerror = () => {
-      console.log("Socket onerrror");
+    socket.onerror = (error) => {
+      console.log("Socket onerrror", error);
     };
 
     socket.onclose = () => {
@@ -192,7 +191,7 @@ export const HttpClient = {
         setTimeout(() => {
           console.log("Trying to reconnect onclose");
           HttpClient.connectToSocket(opts);
-        }, 1000);
+        }, 10_000);
       }
     };
 
