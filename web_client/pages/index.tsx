@@ -5,9 +5,11 @@ import { GameScreen, IndexScreen } from "src/screens/list";
 
 const Home = () => {
   const { asPath } = useRouter();
+  console.log("debug: index.tsx: asPath", asPath);
   const routes = asPath.split("#");
   const mainPath = routes[1] || "";
   const paths = mainPath.split("/");
+  console.log("debug: index.tsx: paths", paths);
 
   return (
     <>
