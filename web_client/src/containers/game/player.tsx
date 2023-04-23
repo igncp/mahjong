@@ -83,7 +83,6 @@ const Game = ({ gameId, userId }: IProps) => {
         HttpClient.connectToSocket({
           gameId,
           onMessage: (data) => {
-            console.log("debug: player.tsx: data", data);
             if (data.GameSummaryUpdate) {
               setServiceGame(data.GameSummaryUpdate);
             }
@@ -97,7 +96,6 @@ const Game = ({ gameId, userId }: IProps) => {
         return [];
       });
 
-      console.log("debug: player.tsx: game", game);
       setServiceGame(game);
 
       disconnectSocket = disconnect || disconnectSocket;
@@ -108,7 +106,6 @@ const Game = ({ gameId, userId }: IProps) => {
     };
   }, [gameId]);
 
-  console.log("debug: player.tsx: serviceGameSummary", serviceGameSummary);
   if (!serviceGameSummary) return null;
 
   serviceGameMRef.current =
@@ -164,8 +161,6 @@ const Game = ({ gameId, userId }: IProps) => {
       discard_wait_ms: msValue,
     });
   };
-
-  console.log("RENDER");
 
   return (
     <main style={{ width: "100vw" }}>

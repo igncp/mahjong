@@ -55,7 +55,6 @@ const Game = ({ gameId }: IProps) => {
   const currentPlayer = serviceGameM.getCurrentPlayer();
   const possibleMelds = serviceGameM.getPossibleMelds();
 
-  console.log("debug: admin.tsx: serviceGame", serviceGame);
   return (
     <main>
       <Header />
