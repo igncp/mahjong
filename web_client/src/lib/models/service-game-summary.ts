@@ -126,18 +126,29 @@ export class ModelServiceGameSummary {
   }
 
   getTileString(tileId: TileId) {
-    const tile = this.gameState[0].game_summary.deck[tileId];
-    const tileString = format_tile(tile);
+    try {
+      const tile = this.gameState[0].game_summary.deck[tileId];
+      const tileString = format_tile(tile);
 
-    return `[${tileString}]`;
+      return `[${tileString}]`;
+    } catch (err) {
+      console.log("debug: service-game-summary.ts: err", err);
+    }
+    return "";
   }
 
   getPossibleMelds(): PossibleMeld[] {
-    const possibleMelds = get_possible_melds_summary(
-      JSON.stringify(this.gameState[0])
-    );
+    try {
+      const possibleMelds = get_possible_melds_summary(
+        JSON.stringify(this.gameState[0])
+      );
 
-    return possibleMelds;
+      return possibleMelds;
+    } catch (error) {
+      console.log("debug: service-game-summary.ts: error", error);
+    }
+
+    return [];
   }
 
   async sayMahjong() {

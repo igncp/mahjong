@@ -16,6 +16,7 @@ interface IProps {
 }
 
 const Game = ({ gameId, gameType, userId }: IProps) => {
+  console.log("debug: game.tsx: gameId", gameId, gameType, userId);
   switch (true) {
     case gameType === "admin":
       return <GameAdmin gameId={gameId} />;
