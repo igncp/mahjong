@@ -1,5 +1,6 @@
 use crate::auth::{AuthHandler, UserRole};
 use crate::common::Storage;
+use crate::env::ENV_ADMIN_PASS;
 use crate::game_wrapper::GameWrapper;
 use crate::games_loop::GamesLoop;
 use crate::socket_server::MahjongWebsocketServer;
@@ -754,6 +755,17 @@ async fn user_post_auth(
     let user = user.unwrap();
 
     if user.is_none() {
+        // Temporary handling to keep the same admin password in prod
+        if body.username == "admin" {
+            let env_admin_pass = std::env::var(ENV_ADMIN_PASS);
+
+            if let Ok(env_admin_pass) = env_admin_pass {
+                if env_admin_pass != body.password {
+                    return HttpResponse::Unauthorized().json("Invalid username or password");
+                }
+            }
+        }
+
         let result = auth_handler
             .create_user(
                 &body.username,

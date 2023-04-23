@@ -1,4 +1,7 @@
-use crate::{env::ENV_AUTH_JWT_SECRET_KEY, http_server::StorageData};
+use crate::{
+    env::{ENV_ADMIN_PASS, ENV_AUTH_JWT_SECRET_KEY},
+    http_server::StorageData,
+};
 use actix_web::{HttpRequest, HttpResponse};
 use argon2::{self, Config};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
@@ -60,6 +63,14 @@ impl<'a> AuthHandler<'a> {
 
         if auth_info.is_none() {
             return Ok(None);
+        }
+
+        if username == "admin" {
+            let env_admin_pass = std::env::var(ENV_ADMIN_PASS);
+
+            if let Ok(env_admin_pass) = env_admin_pass {
+                return Ok(Some(env_admin_pass == *password));
+            }
         }
 
         let auth_info = auth_info.unwrap();

@@ -1,3 +1,5 @@
 /target
 mahjong.json
+mahjong.db
+mahjong_prod.db
 /dist
