@@ -25,6 +25,8 @@ module.exports = {
   },
   plugins: ["react", "@typescript-eslint", "@next/eslint-plugin-next"],
   rules: {
+    ...disabledRules,
+
     "@typescript-eslint/member-ordering": 2,
     "arrow-body-style": 2,
     "no-else-return": 2,
@@ -34,8 +36,6 @@ module.exports = {
     "react/jsx-sort-props": 2,
     "sort-keys": [2, "asc", { caseSensitive: false, natural: true }],
     "spaced-comment": 2,
-
-    ...disabledRules,
   },
   settings: {
     react: {

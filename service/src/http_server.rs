@@ -16,7 +16,7 @@ use service_contracts::{
     UserGetGamesResponse, UserLoadGameQuery, UserPostAIContinueRequest, UserPostBreakMeldRequest,
     UserPostClaimTileRequest, UserPostCreateGameRequest, UserPostCreateMeldRequest,
     UserPostDiscardTileRequest, UserPostDrawTileRequest, UserPostMovePlayerRequest,
-    UserPostSayMahjongRequest, UserPostSetAuthRequest, UserPostSettingsRequest,
+    UserPostSayMahjongRequest, UserPostSetAuthRequest, UserPostSetGameSettingsRequest,
     UserPostSortHandRequest, WebSocketQuery,
 };
 use std::collections::HashMap;
@@ -679,44 +679,6 @@ async fn user_post_game_claim_tile(
     }
 }
 
-#[post("/v1/user/settings")]
-async fn user_post_settings(
-    storage: StorageData,
-    body: web::Json<UserPostSettingsRequest>,
-    req: HttpRequest,
-) -> impl Responder {
-    let auth_handler = AuthHandler::new(&storage, &req);
-
-    if !auth_handler.verify_user(&body.player_id) {
-        return AuthHandler::get_unauthorized();
-    }
-
-    let player = storage.get_player(&body.player_id).await;
-
-    if player.is_err() {
-        return HttpResponse::NotFound().body("Player not found");
-    }
-
-    let player = player.unwrap();
-
-    if player.is_none() {
-        return HttpResponse::NotFound().body("Player not found");
-    }
-
-    let mut player = player.unwrap();
-
-    if body.ai_enabled.is_some() {
-        player.ai_enabled = body.ai_enabled.unwrap();
-    }
-
-    let result = storage.save_player(&player).await;
-
-    match result {
-        Ok(_) => HttpResponse::Ok().json("Settings updated"),
-        Err(_) => HttpResponse::InternalServerError().json("Error updating settings"),
-    }
-}
-
 #[post("/v1/user/game/{game_id}/say-mahjong")]
 async fn user_post_game_say_mahjong(
     storage: StorageData,
@@ -739,6 +701,36 @@ async fn user_post_game_say_mahjong(
 
     match game_wrapper {
         Ok(mut game_wrapper) => game_wrapper.handle_user_say_mahjong(&body.player_id).await,
+        Err(err) => err,
+    }
+}
+
+#[post("/v1/user/game/{game_id}/settings")]
+async fn user_post_game_settings(
+    storage: StorageData,
+    body: web::Json<UserPostSetGameSettingsRequest>,
+    game_id: web::Path<GameId>,
+    manager: GamesManagerData,
+    srv: SocketServer,
+    req: HttpRequest,
+) -> impl Responder {
+    let auth_handler = AuthHandler::new(&storage, &req);
+
+    if !auth_handler.verify_user(&body.player_id) {
+        return AuthHandler::get_unauthorized();
+    }
+
+    let game_lock = { manager.lock().unwrap().get_game_mutex(&game_id) };
+    let _game_lock = game_lock.lock().unwrap();
+
+    let game_wrapper = GameWrapper::from_storage(&storage, &game_id, srv, None).await;
+
+    match game_wrapper {
+        Ok(mut game_wrapper) => {
+            game_wrapper
+                .handle_user_set_game_settings(&body.player_id, &body.settings)
+                .await
+        }
         Err(err) => err,
     }
 }
@@ -905,7 +897,7 @@ impl MahjongServer {
                 .service(user_post_game_draw_tile)
                 .service(user_post_game_move_player)
                 .service(user_post_game_say_mahjong)
-                .service(user_post_settings)
+                .service(user_post_game_settings)
                 .service(user_post_game_sort_hand)
         })
         .bind((address, port))?

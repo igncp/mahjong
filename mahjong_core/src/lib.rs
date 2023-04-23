@@ -68,7 +68,7 @@ pub struct DragonTile {
     pub value: Dragon,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Flower {
     Bamboo,
     Chrysanthemum,
@@ -82,7 +82,7 @@ pub struct FlowerTile {
     pub value: Flower,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Season {
     Autumn,
     Spring,

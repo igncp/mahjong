@@ -1,22 +1,27 @@
 use crate::{
+    ai_wrapper::AIWrapper,
     http_server::{SocketServer, StorageData},
     socket_server::ClientMessage,
     socket_session::MahjongWebsocketSession,
 };
 use actix_web::{web, HttpResponse};
-use mahjong_core::{ai::StandardAI, game::GameVersion, Game, PlayerId, TileId};
+use mahjong_core::{game::GameVersion, Game, PlayerId, TileId};
 use service_contracts::{
     AdminPostAIContinueRequest, AdminPostAIContinueResponse, AdminPostBreakMeldRequest,
     AdminPostBreakMeldResponse, AdminPostClaimTileResponse, AdminPostCreateMeldRequest,
     AdminPostCreateMeldResponse, AdminPostDiscardTileResponse, AdminPostDrawTileResponse,
     AdminPostMovePlayerResponse, AdminPostSayMahjongResponse, AdminPostSwapDrawTilesResponse,
-    ServiceGame, ServiceGameSummary, ServicePlayer, SocketMessage, UserPostAIContinueRequest,
-    UserPostAIContinueResponse, UserPostBreakMeldRequest, UserPostBreakMeldResponse,
-    UserPostCreateGameResponse, UserPostCreateMeldRequest, UserPostCreateMeldResponse,
-    UserPostDiscardTileResponse, UserPostDrawTileResponse, UserPostMovePlayerResponse,
-    UserPostSayMahjongResponse, UserPostSortHandResponse,
+    GameSettings, ServiceGame, ServiceGameSummary, ServicePlayer, SocketMessage,
+    UserPostAIContinueRequest, UserPostAIContinueResponse, UserPostBreakMeldRequest,
+    UserPostBreakMeldResponse, UserPostCreateGameResponse, UserPostCreateMeldRequest,
+    UserPostCreateMeldResponse, UserPostDiscardTileResponse, UserPostDrawTileResponse,
+    UserPostMovePlayerResponse, UserPostSayMahjongResponse, UserPostSetGameSettingsResponse,
+    UserPostSortHandResponse,
 };
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    time::{SystemTime, UNIX_EPOCH},
+};
 use uuid::Uuid;
 
 pub struct GameWrapper<'a> {
@@ -186,6 +191,23 @@ impl<'a> GameWrapper<'a> {
             .await
     }
 
+    pub async fn handle_user_set_game_settings(
+        &mut self,
+        player_id: &PlayerId,
+        settings: &GameSettings,
+    ) -> HttpResponse {
+        if settings.fixed_settings {
+            return HttpResponse::BadRequest().body("Cannot change fixed settings");
+        }
+
+        self.service_game.settings = settings.clone();
+        let game_summary: UserPostSetGameSettingsResponse =
+            ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
+
+        self.save_and_return(game_summary, "Error setting game settings")
+            .await
+    }
+
     pub async fn handle_admin_draw_tile(&mut self) -> HttpResponse {
         self.service_game.game.draw_tile_from_wall();
 
@@ -244,17 +266,12 @@ impl<'a> GameWrapper<'a> {
         &mut self,
         body: &AdminPostAIContinueRequest,
     ) -> HttpResponse {
-        let ai_players = self.service_game.get_ai_players();
-
-        let mut standard_ai = StandardAI::new(&mut self.service_game.game, &ai_players);
-        if body.draw.is_some() {
-            standard_ai.draw = body.draw.unwrap();
-        }
+        let mut standard_ai = AIWrapper::new(&mut self.service_game, body.draw);
 
         let mut global_changed = false;
 
         loop {
-            let changed = standard_ai.play_action();
+            let changed = standard_ai.play_action().changed;
             if !global_changed {
                 global_changed = changed;
             }
@@ -275,13 +292,12 @@ impl<'a> GameWrapper<'a> {
         &mut self,
         body: &UserPostAIContinueRequest,
     ) -> HttpResponse {
-        let ai_players = self.service_game.get_ai_players();
-        let mut standard_ai = StandardAI::new(&mut self.service_game.game, &ai_players);
+        let mut standard_ai = AIWrapper::new(&mut self.service_game, None);
 
         let mut global_changed = false;
 
         loop {
-            let changed = standard_ai.play_action();
+            let changed = standard_ai.play_action().changed;
 
             if !global_changed {
                 global_changed = changed;
@@ -313,15 +329,12 @@ impl<'a> GameWrapper<'a> {
     }
 
     pub async fn handle_server_ai_continue(&mut self) -> HttpResponse {
-        for (_, player) in self.service_game.players.iter() {
-            if !player.is_ai && !player.ai_enabled {
-                // This response is not used
-                return HttpResponse::BadRequest().body("AI disabled");
-            }
+        if !self.service_game.settings.ai_enabled {
+            // This response is not used
+            return HttpResponse::BadRequest().body("AI disabled");
         }
 
-        let ai_players = self.service_game.get_ai_players();
-        let mut standard_ai = StandardAI::new(&mut self.service_game.game, &ai_players);
+        let mut standard_ai = AIWrapper::new(&mut self.service_game, None);
 
         standard_ai.play_action();
 
@@ -355,10 +368,16 @@ impl<'a> GameWrapper<'a> {
     }
 
     pub async fn handle_discard_tile(&mut self, is_admin: bool, tile_id: &TileId) -> HttpResponse {
+        let now_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+
         self.service_game.game.discard_tile_to_board(tile_id);
         let mut game = self.service_game.clone();
 
         game.game.update_version();
+        game.settings.last_discard_time = now_time;
 
         if is_admin {
             let response: AdminPostDiscardTileResponse = game;
@@ -570,7 +589,6 @@ fn create_game(player: &Option<ServicePlayer>) -> ServiceGame {
                 id: game_player.clone(),
                 is_ai: true,
                 name: format!("Player {}", index),
-                ..ServicePlayer::default()
             };
             players_set.insert(game_player.clone(), service_player);
         }
@@ -579,5 +597,6 @@ fn create_game(player: &Option<ServicePlayer>) -> ServiceGame {
     ServiceGame {
         game,
         players: players_set,
+        settings: GameSettings::default(),
     }
 }

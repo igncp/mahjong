@@ -11,6 +11,7 @@ const List = <A,>(props: Props<A>) => <AntdList {...props} />;
 
 type ItemProps = {
   children: React.ReactNode;
+  style?: React.CSSProperties;
 };
 
 export const ListItem = (props: ItemProps) => <AntdList.Item {...props} />;

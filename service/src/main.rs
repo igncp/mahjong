@@ -5,6 +5,7 @@ use http_server::MahjongServer;
 use sqlite_storage::SQLiteStorage;
 use std::process;
 
+mod ai_wrapper;
 mod auth;
 mod common;
 mod env;

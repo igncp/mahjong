@@ -2,8 +2,9 @@ use crate::{
     auth::{AuthInfo, Username},
     common::Storage,
     env::ENV_SQLITE_DB_KEY,
-    sqlite_storage::models::{
-        DieselAuthInfo, DieselGame, DieselGamePlayer, DieselGameScore, DieselPlayer,
+    sqlite_storage::{
+        models::{DieselAuthInfo, DieselGame, DieselGamePlayer, DieselGameScore, DieselPlayer},
+        models_translation::wait_common,
     },
 };
 use async_trait::async_trait;
@@ -14,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use service_contracts::{ServiceGame, ServicePlayer};
 use std::collections::HashMap;
 
-use self::models::{DieselGameBoard, DieselGameDrawWall, DieselGameHand};
+use self::models::{DieselGameBoard, DieselGameDrawWall, DieselGameHand, DieselGameSettings};
 
 mod models;
 mod models_translation;
@@ -37,14 +38,18 @@ impl Storage for SQLiteStorage {
         use schema::auth_info::dsl;
         let mut connection = SqliteConnection::establish(&self.db_path).unwrap();
 
-        let results = dsl::auth_info
-            .filter(dsl::username.eq(username))
-            .limit(1)
-            .load::<DieselAuthInfo>(&mut connection)
-            .unwrap();
-
-        let auth_info: Option<AuthInfo> =
-            results.get(0).map(|auth_info| auth_info.clone().into_raw());
+        let auth_info: Option<AuthInfo> = loop {
+            if let Ok(data) = dsl::auth_info
+                .filter(dsl::username.eq(username))
+                .limit(1)
+                .load::<DieselAuthInfo>(&mut connection)
+            {
+                break data;
+            }
+            wait_common();
+        }
+        .get(0)
+        .map(|auth_info| auth_info.clone().into_raw());
 
         Ok(auth_info)
     }
@@ -75,6 +80,7 @@ impl Storage for SQLiteStorage {
         DieselGameBoard::update_from_game(&mut connection, service_game);
         DieselGameDrawWall::update_from_game(&mut connection, service_game);
         DieselGameHand::update_from_game(&mut connection, service_game);
+        DieselGameSettings::update_from_game(&mut connection, service_game);
 
         let diesel_game = DieselGame::from_raw(&service_game.game);
         diesel_game.update(&mut connection);
@@ -98,6 +104,11 @@ impl Storage for SQLiteStorage {
         let board = DieselGameBoard::read_from_game(&mut connection, id);
         let draw_wall = DieselGameDrawWall::read_from_game(&mut connection, id);
         let hands = DieselGameHand::read_from_game(&mut connection, id);
+        let settings = DieselGameSettings::read_from_game(&mut connection, id);
+
+        if settings.is_none() {
+            return Ok(None);
+        }
 
         let mut game = result.unwrap();
         game.set_players(&game_players);
@@ -106,7 +117,11 @@ impl Storage for SQLiteStorage {
         game.table.board = board;
         game.table.draw_wall = draw_wall;
 
-        let service_game = ServiceGame { game, players };
+        let service_game = ServiceGame {
+            game,
+            players,
+            settings: settings.unwrap(),
+        };
 
         Ok(Some(service_game))
     }

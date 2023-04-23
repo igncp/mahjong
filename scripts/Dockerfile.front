@@ -1,0 +1,4 @@
+FROM httpd:latest
+
+COPY --chown=www-data:www-data  web_client/httpd.conf /usr/local/apache2/conf/httpd.conf
+COPY --chown=www-data:www-data  web_client/out/ /usr/local/apache2/htdocs/

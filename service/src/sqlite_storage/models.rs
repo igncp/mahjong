@@ -5,6 +5,7 @@ use super::schema::game_draw_wall;
 use super::schema::game_hand;
 use super::schema::game_player;
 use super::schema::game_score;
+use super::schema::game_settings;
 use super::schema::player;
 use diesel::prelude::*;
 use mahjong_core::game::GameVersion;
@@ -23,7 +24,6 @@ pub struct DieselAuthInfo {
 #[derive(Insertable, Queryable, Clone)]
 #[diesel(table_name = player)]
 pub struct DieselPlayer {
-    pub ai_enabled: i32,
     pub id: PlayerId,
     pub is_ai: i32,
     pub name: String,
@@ -86,4 +86,14 @@ pub struct DieselGameHand {
     pub set_id: Option<String>,
     pub tile_id: i32,
     pub tile_index: i32,
+}
+
+#[derive(Insertable, Queryable, Clone)]
+#[diesel(table_name = game_settings)]
+pub struct DieselGameSettings {
+    pub ai_enabled: i32,
+    pub discard_wait_ms: Option<i32>,
+    pub fixed_settings: i32,
+    pub game_id: GameId,
+    pub last_discard_time: i64,
 }

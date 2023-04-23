@@ -1,7 +1,12 @@
 import { format_tile, get_possible_melds_summary } from "pkg";
 
 import { HttpClient } from "../http-client";
-import { PossibleMeld, ServiceGameSummary, TileId } from "../mahjong-service";
+import {
+  GameSettings,
+  PossibleMeld,
+  ServiceGameSummary,
+  TileId,
+} from "../mahjong-service";
 
 export type ModelState<A> = [A, (v: A) => void];
 
@@ -180,7 +185,7 @@ export class ModelServiceGameSummary {
     }
   }
 
-  async setAIEnabled(enabled: boolean) {
+  async setGameSettings(gameSettings: GameSettings) {
     try {
       if (this.loadingState[0]) {
         return;
@@ -188,17 +193,16 @@ export class ModelServiceGameSummary {
 
       this.loadingState[1](true);
 
-      console.log("setAIEnabled", enabled);
-      await HttpClient.userSetSettings({
-        ai_enabled: enabled,
+      await HttpClient.userSetGameSettings(this.gameState[0].game_summary.id, {
         player_id: this.gameState[0].game_summary.player_id,
+        settings: gameSettings,
       });
 
       this.loadingState[1](false);
 
       this.gameState[1]({
         ...this.gameState[0],
-        ai_enabled: enabled,
+        settings: gameSettings,
       });
     } catch (e) {
       console.log("ERR", e);

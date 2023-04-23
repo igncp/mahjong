@@ -69,8 +69,17 @@ diesel::table! {
 }
 
 diesel::table! {
-    player (id) {
+    game_settings (game_id) {
         ai_enabled -> Integer,
+        discard_wait_ms -> Nullable<Integer>,
+        fixed_settings -> Integer,
+        game_id -> Text,
+        last_discard_time -> BigInt,
+    }
+}
+
+diesel::table! {
+    player (id) {
         id -> Text,
         is_ai -> Integer,
         name -> Text,
@@ -85,5 +94,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     game_hand,
     game_player,
     game_score,
+    game_settings,
     player,
 );

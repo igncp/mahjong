@@ -6,22 +6,32 @@ use std::collections::HashSet;
 // Naive AI as a placeholder which can be extended later
 pub struct StandardAI<'a> {
     game: &'a mut Game,
-    ai_players: &'a HashSet<PlayerId>,
+    ai_players: HashSet<PlayerId>,
+    pub can_pass_turn: bool,
     pub draw: bool,
 }
 
+pub struct PlayActionResult {
+    pub changed: bool,
+    pub tile_discarded: Option<bool>,
+}
+
 impl<'a> StandardAI<'a> {
-    pub fn new(game: &'a mut Game, ai_players: &'a HashSet<PlayerId>) -> Self {
+    pub fn new(game: &'a mut Game, ai_players: HashSet<PlayerId>) -> Self {
         Self {
             ai_players,
+            can_pass_turn: true,
             draw: true,
             game,
         }
     }
 
-    pub fn play_action(&mut self) -> bool {
+    pub fn play_action(&mut self) -> PlayActionResult {
         if self.ai_players.is_empty() {
-            return false;
+            return PlayActionResult {
+                changed: false,
+                tile_discarded: None,
+            };
         }
 
         // TODO: Check if any player can claim a tile that would produce a meld
@@ -36,7 +46,10 @@ impl<'a> StandardAI<'a> {
                 let meld_created = self.game.create_meld(&meld.player_id, &tiles);
 
                 if meld_created {
-                    return true;
+                    return PlayActionResult {
+                        changed: true,
+                        tile_discarded: Some(false),
+                    };
                 }
             }
         }
@@ -49,7 +62,10 @@ impl<'a> StandardAI<'a> {
                 let tile_drawn = self.game.draw_tile_from_wall();
 
                 if tile_drawn.is_some() {
-                    return true;
+                    return PlayActionResult {
+                        changed: true,
+                        tile_discarded: Some(false),
+                    };
                 }
             }
 
@@ -69,14 +85,20 @@ impl<'a> StandardAI<'a> {
                     let discarded = self.game.discard_tile_to_board(&tile_to_discard);
 
                     if discarded {
-                        return true;
+                        return PlayActionResult {
+                            changed: true,
+                            tile_discarded: Some(true),
+                        };
                     }
                 }
-            } else {
+            } else if self.can_pass_turn {
                 let success = self.game.round.next(&self.game.table.hands);
 
                 if success {
-                    return true;
+                    return PlayActionResult {
+                        changed: true,
+                        tile_discarded: Some(false),
+                    };
                 }
             }
         } else {
@@ -84,27 +106,39 @@ impl<'a> StandardAI<'a> {
 
             if !is_tile_claimed {
                 if !self.draw {
-                    return false;
+                    return PlayActionResult {
+                        changed: false,
+                        tile_discarded: None,
+                    };
                 }
 
                 let tile_drawn = self.game.draw_tile_from_wall();
 
                 if tile_drawn.is_some() {
-                    return true;
+                    return PlayActionResult {
+                        changed: false,
+                        tile_discarded: Some(false),
+                    };
                 }
-            } else {
+            } else if self.can_pass_turn {
                 let player_tiles = self.game.table.hands.get(&current_player).unwrap();
                 if player_tiles.0.len() == 13 {
                     let success = self.game.round.next(&self.game.table.hands);
 
                     if success {
-                        return true;
+                        return PlayActionResult {
+                            changed: false,
+                            tile_discarded: Some(false),
+                        };
                     }
                 }
             }
         }
 
-        false
+        PlayActionResult {
+            changed: false,
+            tile_discarded: None,
+        }
     }
 
     pub fn get_is_after_discard(&self) -> bool {

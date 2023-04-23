@@ -49,8 +49,8 @@ import {
   TUserPostSayMahjongResponse,
   TUserPostSetAuthRequest,
   TUserPostSetAuthResponse,
-  TUserPostSetSettingsRequest,
-  TUserPostSetSettingsResponse,
+  TUserPostSetGameSettingsRequest,
+  TUserPostSetGameSettingsResponse,
   TUserPostSortHandRequest,
   TUserPostSortHandResponse,
 } from "./mahjong-service";
@@ -316,10 +316,11 @@ export const HttpClient = {
     });
   },
 
-  async userSetSettings(
-    body: TUserPostSetSettingsRequest
-  ): Promise<TUserPostSetSettingsResponse> {
-    return await fetchJson(`/v1/user/settings`, {
+  async userSetGameSettings(
+    gameId: GameId,
+    body: TUserPostSetGameSettingsRequest
+  ): Promise<TUserPostSetGameSettingsResponse> {
+    return await fetchJson(`/v1/user/game/${gameId}/settings`, {
       body: JSON.stringify(body),
       method: "POST",
     });

@@ -10,16 +10,36 @@ use std::collections::{HashMap, HashSet};
 mod service_player;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GameSettings {
+    pub ai_enabled: bool,
+    pub discard_wait_ms: Option<u32>,
+    pub fixed_settings: bool,
+    pub last_discard_time: u128,
+}
+
+impl Default for GameSettings {
+    fn default() -> Self {
+        Self {
+            ai_enabled: true,
+            discard_wait_ms: Some(1000),
+            fixed_settings: false,
+            last_discard_time: 0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceGame {
     pub game: Game,
     pub players: HashMap<PlayerId, ServicePlayer>,
+    pub settings: GameSettings,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceGameSummary {
-    pub ai_enabled: bool,
     pub game_summary: GameSummary,
     pub players: HashMap<PlayerId, ServicePlayerSummary>,
+    pub settings: GameSettings,
 }
 
 impl ServiceGame {
@@ -53,13 +73,10 @@ impl ServiceGameSummary {
             })
             .collect();
 
-        let player = game.players.get(player_id);
-        let ai_enabled = player.map(|p| p.ai_enabled).unwrap_or(false);
-
         Some(Self {
-            ai_enabled,
             game_summary: GameSummary::from_game(&game.game, player_id).unwrap(),
             players,
+            settings: game.settings.clone(),
         })
     }
 }
@@ -214,17 +231,17 @@ pub struct UserPostClaimTileRequest {
 pub type UserPostClaimTileResponse = ServiceGameSummary;
 
 #[derive(Deserialize, Serialize)]
-pub struct UserPostSettingsRequest {
-    pub ai_enabled: Option<bool>,
-    pub player_id: PlayerId,
-}
-pub type UserPostSettingsResponse = ();
-
-#[derive(Deserialize, Serialize)]
 pub struct UserPostSayMahjongRequest {
     pub player_id: PlayerId,
 }
 pub type UserPostSayMahjongResponse = ServiceGameSummary;
+
+#[derive(Deserialize, Serialize)]
+pub struct UserPostSetGameSettingsRequest {
+    pub player_id: PlayerId,
+    pub settings: GameSettings,
+}
+pub type UserPostSetGameSettingsResponse = ServiceGameSummary;
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct UserPostSetAuthRequest {

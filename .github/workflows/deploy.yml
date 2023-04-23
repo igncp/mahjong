@@ -31,6 +31,14 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Install wasm-pack
+        run: |
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - name: Build docker image
+        env:
+          NEXT_PUBLIC_SERVICE_URL: https://mahjong-rust.com/api
         run: |
           ./target/release/scripts docker

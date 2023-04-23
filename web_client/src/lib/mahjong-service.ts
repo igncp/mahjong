@@ -125,6 +125,12 @@ export type HandSummary = {
   visible: HandTile[];
 };
 
+export type GameSettings = {
+  ai_enabled: boolean;
+  discard_wait_ms: number | null;
+  fixed_settings: boolean;
+};
+
 export type GameSummary = {
   board: Board;
   deck: Deck;
@@ -143,7 +149,7 @@ export type GameSummary = {
 };
 
 export type ServiceGameSummary = {
-  ai_enabled: boolean;
+  settings: GameSettings;
   game_summary: GameSummary;
   players: Record<PlayerId, ServicePlayerSummary>;
 };
@@ -242,11 +248,11 @@ export type TUserPostSayMahjongRequest = {
 };
 export type TUserPostSayMahjongResponse = ServiceGameSummary;
 
-export type TUserPostSetSettingsRequest = {
-  ai_enabled: boolean;
+export type TUserPostSetGameSettingsRequest = {
   player_id: PlayerId;
+  settings: GameSettings;
 };
-export type TUserPostSetSettingsResponse = void;
+export type TUserPostSetGameSettingsResponse = ServiceGameSummary;
 
 export type TUserPostSortHandRequest = {
   game_version: GameVersion;

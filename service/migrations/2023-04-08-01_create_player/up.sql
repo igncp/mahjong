@@ -1,6 +1,5 @@
 CREATE TABLE IF NOT EXISTS player (
-  ai_enabled INT NOT NULL,
-	is_ai INT NOT NULL,
 	id TEXT PRIMARY KEY UNIQUE NOT NULL,
+	is_ai INT NOT NULL,
 	name TEXT NOT NULL
 );

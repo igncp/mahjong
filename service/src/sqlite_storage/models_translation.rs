@@ -1,6 +1,6 @@
 use super::models::{
     DieselAuthInfo, DieselGame, DieselGameBoard, DieselGameDrawWall, DieselGameHand,
-    DieselGamePlayer, DieselGameScore, DieselPlayer,
+    DieselGamePlayer, DieselGameScore, DieselGameSettings, DieselPlayer,
 };
 use super::schema;
 use crate::auth::AuthInfo;
@@ -10,10 +10,11 @@ use mahjong_core::{
     Board, DrawWall, Game, GameId, Hand, HandTile, Hands, PlayerId, Round, RoundTileClaimed, Score,
     TileId,
 };
-use service_contracts::{ServiceGame, ServicePlayer};
+use schema::player::dsl as player_dsl;
+use service_contracts::{GameSettings, ServiceGame, ServicePlayer};
 use std::collections::HashMap;
 
-fn wait_common() {
+pub fn wait_common() {
     std::thread::sleep(std::time::Duration::from_millis(1));
 }
 
@@ -40,7 +41,6 @@ impl DieselAuthInfo {
 impl DieselPlayer {
     pub fn into_raw(self) -> ServicePlayer {
         ServicePlayer {
-            ai_enabled: self.ai_enabled == 1,
             id: self.id,
             is_ai: self.is_ai == 1,
             name: self.name,
@@ -49,7 +49,6 @@ impl DieselPlayer {
 
     pub fn from_raw(raw: &ServicePlayer) -> Self {
         Self {
-            ai_enabled: if raw.ai_enabled { 1 } else { 0 },
             id: raw.id.clone(),
             is_ai: if raw.is_ai { 1 } else { 0 },
             name: raw.name.clone(),
@@ -60,8 +59,6 @@ impl DieselPlayer {
         connection: &mut SqliteConnection,
         ids: &Vec<PlayerId>,
     ) -> HashMap<PlayerId, ServicePlayer> {
-        use schema::player::dsl as player_dsl;
-
         loop {
             if let Ok(data) = player_dsl::player
                 .filter(player_dsl::id.eq_any(ids))
@@ -147,8 +144,6 @@ impl DieselPlayer {
         connection: &mut SqliteConnection,
         player_id: &PlayerId,
     ) -> Option<ServicePlayer> {
-        use schema::player::dsl as player_dsl;
-
         loop {
             if let Ok(player) = player_dsl::player
                 .filter(player_dsl::id.eq(player_id))
@@ -603,5 +598,74 @@ impl DieselGameHand {
         });
 
         hands
+    }
+}
+
+impl DieselGameSettings {
+    pub fn update_from_game(connection: &mut SqliteConnection, service_game: &ServiceGame) {
+        use schema::game_settings::table as game_settings_table;
+
+        loop {
+            if diesel::delete(game_settings_table)
+                .filter(schema::game_settings::dsl::game_id.eq(&service_game.game.id))
+                .execute(connection)
+                .is_ok()
+            {
+                break;
+            }
+            wait_common();
+        }
+
+        let settings = Self {
+            last_discard_time: service_game.settings.last_discard_time as i64,
+            ai_enabled: if service_game.settings.ai_enabled {
+                1
+            } else {
+                0
+            },
+            discard_wait_ms: service_game.settings.discard_wait_ms.map(|x| x as i32),
+            game_id: service_game.game.id.clone(),
+            fixed_settings: if service_game.settings.fixed_settings {
+                1
+            } else {
+                0
+            },
+        };
+
+        loop {
+            if diesel::insert_into(game_settings_table)
+                .values(&settings)
+                .execute(connection)
+                .is_ok()
+            {
+                break;
+            }
+            wait_common();
+        }
+    }
+
+    pub fn read_from_game(
+        connection: &mut SqliteConnection,
+        game_id: &GameId,
+    ) -> Option<GameSettings> {
+        use schema::game_settings::dsl as game_settings_dsl;
+
+        loop {
+            if let Ok(data) = game_settings_dsl::game_settings
+                .filter(game_settings_dsl::game_id.eq(game_id))
+                .limit(1)
+                .load::<Self>(connection)
+            {
+                break data;
+            }
+            wait_common();
+        }
+        .get(0)
+        .map(|game_settings| GameSettings {
+            ai_enabled: game_settings.ai_enabled == 1,
+            discard_wait_ms: game_settings.discard_wait_ms.map(|x| x as u32),
+            fixed_settings: game_settings.fixed_settings == 1,
+            last_discard_time: game_settings.last_discard_time as u128,
+        })
     }
 }

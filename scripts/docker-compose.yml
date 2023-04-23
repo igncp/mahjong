@@ -9,5 +9,10 @@ services:
       MAHJONG_STORAGE_SQLITE_DB: /app/data/mahjong.db
     volumes:
       - ./data:/app/data
+  front:
+    image: igncp/mahjong_front:${DOCKER_TAG}
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
     ports:
-      - 3000:3000
+      - 80:80
+      - 443:443

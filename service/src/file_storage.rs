@@ -6,7 +6,7 @@ use crate::{
 use async_trait::async_trait;
 use mahjong_core::{Game, GameId, PlayerId};
 use serde::{Deserialize, Serialize};
-use service_contracts::{ServiceGame, ServicePlayer};
+use service_contracts::{GameSettings, ServiceGame, ServicePlayer};
 use std::collections::HashMap;
 
 pub struct FileStorage {
@@ -18,6 +18,7 @@ struct FileContent {
     auth: Option<HashMap<Username, AuthInfo>>,
     games: Option<HashMap<GameId, Game>>,
     players: Option<HashMap<PlayerId, ServicePlayer>>,
+    settings: Option<HashMap<GameId, GameSettings>>,
 }
 
 #[async_trait]
@@ -56,14 +57,19 @@ impl Storage for FileStorage {
         if file_content.players.is_none() {
             file_content.players = Some(HashMap::new());
         }
+        if file_content.settings.is_none() {
+            file_content.settings = Some(HashMap::new());
+        }
 
         let games = file_content.games.as_mut().unwrap();
         let players = file_content.players.as_mut().unwrap();
+        let settings = file_content.settings.as_mut().unwrap();
 
         games.insert(service_game.game.id.clone(), service_game.game.clone());
         for (player_id, player) in &service_game.players {
             players.insert(player_id.clone(), player.clone());
         }
+        settings.insert(service_game.game.id.clone(), service_game.settings.clone());
 
         self.save_file(&file_content);
 
@@ -78,9 +84,13 @@ impl Storage for FileStorage {
         if file_content.players.is_none() {
             file_content.players = Some(HashMap::new());
         }
+        if file_content.settings.is_none() {
+            file_content.settings = Some(HashMap::new());
+        }
 
         let games = file_content.games.as_mut().unwrap();
         let players = file_content.players.as_mut().unwrap();
+        let settings = file_content.settings.as_mut().unwrap();
 
         let game = games.get(id);
 
@@ -102,6 +112,7 @@ impl Storage for FileStorage {
         let service_game = Some(ServiceGame {
             game: game.unwrap().clone(),
             players,
+            settings: settings.get(id).unwrap().clone(),
         });
 
         Ok(service_game)

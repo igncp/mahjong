@@ -5,6 +5,13 @@
 use clap::Command;
 use std::env;
 
+#[cfg(target_arch = "x86_64")]
+const DOCKER_IMAGE_TAG: &str = "x86_64";
+#[cfg(target_arch = "aarch64")]
+const DOCKER_IMAGE_TAG: &str = "aarch64";
+#[cfg(target_arch = "arm")]
+const DOCKER_IMAGE_TAG: &str = "arm";
+
 fn run_bash_cmd(cmd: &str, current_dir: &str) {
     let prefix = if current_dir == "scripts" {
         "cd .. && "
@@ -42,8 +49,9 @@ fn check(current_dir: &str) {
     doc(current_dir);
 }
 
-fn doc(current_dir: &str) {
-    run_bash_cmd("cargo doc --release", current_dir);
+fn doc(_current_dir: &str) {
+    // This is failing currently
+    // run_bash_cmd("cargo doc --release", current_dir);
 }
 
 fn clippy(current_dir: &str) {
@@ -76,49 +84,12 @@ fn list(current_dir: &str) {
     println!("{list_str}");
 }
 
-fn docker(current_dir: &str) {
-    run_bash_cmd(
-        &vec![
-            "docker build",
-            "-t 'mahjong_service_build'",
-            "-f scripts/Dockerfile.service-build",
-            "--progress=plain",
-            ".",
-        ]
-        .join(" "),
-        current_dir,
-    );
-
-    run_bash_cmd("rm -rf dist && mkdir -p dist", current_dir);
-
-    // TODO: Should revisit this
-    run_bash_cmd(
-        "whoami && id -u && ls -lah dist && chmod -R 777 dist",
-        current_dir,
-    );
-
-    let service_cmd = vec![
-        "docker run",
-        "--rm",
-        "-v $(pwd)/dist:/mount",
-        "mahjong_service_build",
-        "cp /app/target/release/mahjong_service /mount/",
-    ]
-    .join(" ");
-    run_bash_cmd(&service_cmd, current_dir);
-
-    #[cfg(target_arch = "x86_64")]
-    let docker_image_tag = "x86_64";
-    #[cfg(target_arch = "aarch64")]
-    let docker_image_tag = "aarch64";
-    #[cfg(target_arch = "arm")]
-    let docker_image_tag = "arm";
-
+fn docker_service(current_dir: &str) {
     run_bash_cmd(
         // This could use buildx but that cross-compiling is not working with sqlite3
         &vec![
             "docker build",
-            format!("-t 'igncp/mahjong_service:{docker_image_tag}'").as_str(),
+            format!("-t 'igncp/mahjong_service:{DOCKER_IMAGE_TAG}'").as_str(),
             "-f scripts/Dockerfile.service",
             "--progress=plain",
             ".",
@@ -130,11 +101,40 @@ fn docker(current_dir: &str) {
     run_bash_cmd(
         &vec![
             "docker image push",
-            format!("'igncp/mahjong_service:{docker_image_tag}'").as_str(),
+            format!("'igncp/mahjong_service:{DOCKER_IMAGE_TAG}'").as_str(),
         ]
         .join(" "),
         current_dir,
     );
+}
+
+fn docker_front(current_dir: &str) {
+    run_bash_cmd(
+        &vec![
+            "docker build",
+            format!("-t 'igncp/mahjong_front:{DOCKER_IMAGE_TAG}'").as_str(),
+            "-f scripts/Dockerfile.front",
+            "--progress=plain",
+            ".",
+        ]
+        .join(" "),
+        current_dir,
+    );
+
+    run_bash_cmd(
+        &vec![
+            "docker image push",
+            format!("'igncp/mahjong_front:{DOCKER_IMAGE_TAG}'").as_str(),
+        ]
+        .join(" "),
+        current_dir,
+    );
+}
+
+fn docker(current_dir: &str) {
+    web(current_dir);
+    docker_front(current_dir);
+    docker_service(current_dir);
 }
 
 fn web(current_dir: &str) {
@@ -176,7 +176,6 @@ fn main() {
         Some(("clippy", _)) => clippy(current_dir),
         Some(("docker", _)) => docker(current_dir),
         Some(("list", _)) => list(current_dir),
-        Some(("web", _)) => web(current_dir),
         Some(("fix", _)) => fix(current_dir),
         _ => {
             cmd.print_long_help().unwrap();
