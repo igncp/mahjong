@@ -14,6 +14,7 @@ use mahjong_core::{Game, GameId, PlayerId};
 use serde::{Deserialize, Serialize};
 use service_contracts::{ServiceGame, ServicePlayer};
 use std::collections::HashMap;
+use tracing::debug;
 
 use self::models::{DieselGameBoard, DieselGameDrawWall, DieselGameHand, DieselGameSettings};
 
@@ -162,6 +163,8 @@ impl SQLiteStorage {
     #[allow(dead_code)]
     pub fn new_dyn() -> Box<dyn Storage> {
         let db_path = std::env::var(ENV_SQLITE_DB_KEY).unwrap_or("sqlite://mahjong.db".to_string());
+
+        debug!("SQLiteStorage: {}", db_path);
 
         let file_storage = Self { db_path };
 

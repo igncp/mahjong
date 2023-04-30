@@ -70,7 +70,7 @@ pub fn draw_admin_view<B: Backend>(f: &mut Frame<B>, app: &App, ui_state: &mut U
         UIScreen::Game => {
             let service_game = app.service_game.as_ref().unwrap();
             let draw_wall_str = get_draw_wall(&service_game.game, ui_state.display_draw_wall_index);
-            let board_str = get_board(&service_game.game.table.board, &service_game.game.deck);
+            let board_str = get_board(&service_game.game.table.board);
 
             let paragraph_text = vec![
                 Spans::from(format!("- Input: {}", ui_state.input)),

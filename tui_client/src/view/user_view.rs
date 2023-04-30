@@ -135,11 +135,9 @@ pub fn draw_user_view<B: Backend>(f: &mut Frame<B>, app: &App, ui_state: &mut UI
                                 Some(player_hand.tiles)
                             )
                         ));
-                        format_hand(&player_hand.visible, &game.game_summary.deck)
-                            .iter()
-                            .for_each(|s| {
-                                secondary_strs.push(s.clone());
-                            });
+                        format_hand(&player_hand.visible).iter().for_each(|s| {
+                            secondary_strs.push(s.clone());
+                        });
                         secondary_strs.push("".to_string());
                     }
                 }
@@ -157,7 +155,7 @@ pub fn draw_user_view<B: Backend>(f: &mut Frame<B>, app: &App, ui_state: &mut UI
                     ),
                     "".to_string(),
                     "- Board:".to_string(),
-                    get_board(&game.game_summary.board, &game.game_summary.deck),
+                    get_board(&game.game_summary.board),
                 ]
                 .iter()
                 .for_each(|s| secondary_strs.push(s.clone()));

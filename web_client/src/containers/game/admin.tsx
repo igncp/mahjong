@@ -1,9 +1,9 @@
 import { useRouter } from "next/router";
 import { Fragment, useEffect, useState } from "react";
 
+import { SetId, TAdminGetGameResponse } from "mahjong_sdk/src/core";
+import { HttpClient } from "mahjong_sdk/src/http-server";
 import Header from "src/containers/common/header";
-import { HttpClient } from "src/lib/http-client";
-import { SetId, TAdminGetGameResponse } from "src/lib/mahjong-service";
 import { ModelServiceGame } from "src/lib/models/service-game";
 import { SiteUrls } from "src/lib/site/urls";
 import Button from "src/ui/common/button";
@@ -20,33 +20,26 @@ const Game = ({ gameId }: IProps) => {
   );
 
   useEffect(() => {
-    // TODO: Improve this with rxjs
-    let disconnectSocket = () => {};
+    const disconnect = HttpClient.connectToSocket({
+      gameId,
+      onMessage: (data) => {
+        if (data.GameUpdate) {
+          setServiceGame(data.GameUpdate);
+        }
+      },
+    });
 
-    (async () => {
-      const [game, disconnect] = await Promise.all([
-        HttpClient.adminGetGame(gameId),
-        HttpClient.connectToSocket({
-          gameId,
-          onMessage: (data) => {
-            if (data.GameUpdate) {
-              setServiceGame(data.GameUpdate);
-            }
-          },
-        }),
-      ]).catch(() => {
+    HttpClient.adminGetGame(gameId).subscribe({
+      error: () => {
         router.push(SiteUrls.index);
         return [];
-      });
+      },
+      next: (game) => {
+        setServiceGame(game);
+      },
+    });
 
-      setServiceGame(game);
-
-      disconnectSocket = disconnect || disconnectSocket;
-    })();
-
-    return () => {
-      disconnectSocket();
-    };
+    return disconnect;
   }, [gameId]);
 
   if (!serviceGame) return null;

@@ -6,16 +6,16 @@
     "dev": "next dev -p 9000",
     "lint": "prettier --check 'src/**' 'pages/**' && eslint .",
     "lint:fix": "prettier --write 'src/**' 'pages/**' && eslint --fix .",
+    "sync_sdk": "cd ../ts_sdk && rm -rf *.tgz && npm i && npm pack && cd ../web_client && npm install ../ts_sdk/*.tgz",
     "typecheck": "tsc --noEmit --project ."
   },
   "dependencies": {
     "@next/eslint-plugin-next": "^13.2.4",
-    "@trivago/prettier-plugin-sort-imports": "^4.1.1",
     "@types/qs": "^6.9.7",
     "antd": "^5.4.2",
     "jsonwebtoken": "^9.0.0",
+    "mahjong_sdk": "file:../ts_sdk/mahjong_sdk-0.1.0.tgz",
     "next": "^13.2.4",
-    "prettier": "^2.8.7",
     "qs": "^6.11.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -23,6 +23,7 @@
     "web_lib": "file:pkg"
   },
   "devDependencies": {
+    "@trivago/prettier-plugin-sort-imports": "^4.1.1",
     "@types/node": "18.15.9",
     "@types/react": "18.0.29",
     "@typescript-eslint/eslint-plugin": "^5.57.0",
@@ -30,6 +31,7 @@
     "eslint": "^8.37.0",
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-react": "^7.32.2",
+    "prettier": "^2.8.7",
     "typescript": "5.0.2"
   }
 }

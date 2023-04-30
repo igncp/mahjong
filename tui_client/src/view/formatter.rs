@@ -1,5 +1,6 @@
 use mahjong_core::{
-    game_summary::GameSummary, ui::format_to_emoji, Board, Deck, Game, Hand, PlayerId, Score, Tile,
+    deck::DEFAULT_DECK, game_summary::GameSummary, ui::format_to_emoji, Board, Game, Hand,
+    PlayerId, Score, Tile,
 };
 use service_contracts::ServiceGame;
 
@@ -9,7 +10,7 @@ pub fn get_draw_wall(game: &Game, show_index: bool) -> String {
         .iter()
         .enumerate()
         .map(|(index, tile_id)| {
-            let tile = game.deck.0.get(tile_id).unwrap();
+            let tile = DEFAULT_DECK.0.get(tile_id).unwrap();
             let tile_str = format_to_emoji(tile);
 
             if show_index {
@@ -22,11 +23,11 @@ pub fn get_draw_wall(game: &Game, show_index: bool) -> String {
         .join(" ")
 }
 
-pub fn get_board(board: &Board, deck: &Deck) -> String {
+pub fn get_board(board: &Board) -> String {
     board
         .iter()
         .map(|tile_id| {
-            let tile = deck.0.get(tile_id).unwrap();
+            let tile = DEFAULT_DECK.0.get(tile_id).unwrap();
             let tile_str = format_to_emoji(tile);
 
             format!("[{}]", tile_str)
@@ -40,14 +41,14 @@ pub fn get_user_hand_str(game: &GameSummary) -> Vec<String> {
 
     lines.push("- Hand:".to_string());
 
-    format_hand(&game.hand, &game.deck)
+    format_hand(&game.hand)
         .iter()
         .for_each(|line| lines.push(line.to_string()));
 
     lines
 }
 
-pub fn format_hand(hand: &Hand, deck: &Deck) -> Vec<String> {
+pub fn format_hand(hand: &Hand) -> Vec<String> {
     let mut lines = vec![];
 
     let line = hand
@@ -56,7 +57,7 @@ pub fn format_hand(hand: &Hand, deck: &Deck) -> Vec<String> {
         .filter(|tile| tile.set_id.is_none())
         .enumerate()
         .map(|(idx, hand_tile)| {
-            let tile = deck.0.get(&hand_tile.id).unwrap();
+            let tile = DEFAULT_DECK.0.get(&hand_tile.id).unwrap();
             let tile_str = format_to_emoji(tile);
             let idx_formatted = format!("{:0>2}", idx);
             format!("[{idx_formatted}]({tile_str})",)
@@ -75,7 +76,7 @@ pub fn format_hand(hand: &Hand, deck: &Deck) -> Vec<String> {
     melds.melds.iter().for_each(|(_, tiles)| {
         let mut full_tiles = tiles
             .iter()
-            .map(|tile| deck.0.get(&tile.id).unwrap())
+            .map(|tile| DEFAULT_DECK.0.get(&tile.id).unwrap())
             .collect::<Vec<&Tile>>();
         let is_concealed = tiles.iter().any(|tile| tile.concealed);
         full_tiles.sort_by(|a, b| a.cmp_custom(b));
@@ -148,19 +149,19 @@ pub fn get_admin_hands_str(game: &ServiceGame) -> Vec<String> {
             player_line
         ));
 
-        format_hand(hand, &game.game.deck).iter().for_each(|line| {
+        format_hand(hand).iter().for_each(|line| {
             lines.push(line.to_string());
         });
 
         possible_melds.iter_mut().for_each(|meld| {
             if &meld.player_id == player {
-                meld.sort_tiles(&game.game.deck);
+                meld.sort_tiles();
 
                 let meld_str = meld
                     .tiles
                     .iter()
                     .map(|tile_id| {
-                        let tile = &game.game.deck.0[tile_id];
+                        let tile = &DEFAULT_DECK.0[tile_id];
                         let tile_index =
                             hand.0.iter().position(|hand_tile| hand_tile.id == *tile_id);
 
@@ -181,7 +182,7 @@ pub fn get_admin_hands_str(game: &ServiceGame) -> Vec<String> {
                     "- Possible Meld:  {} ({})",
                     meld_str,
                     if meld.discard_tile.is_some() {
-                        let tile = game.game.deck.0.get(&meld.discard_tile.unwrap()).unwrap();
+                        let tile = DEFAULT_DECK.0.get(&meld.discard_tile.unwrap()).unwrap();
                         let emoji = format_to_emoji(tile);
                         let current_player_hand =
                             game.game.table.hands.get(&current_player).unwrap();

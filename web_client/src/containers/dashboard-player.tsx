@@ -1,15 +1,22 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+import { first, take, zip } from "rxjs";
 
-import { tokenObserver } from "src/lib/auth";
+import { tokenObserver } from "mahjong_sdk/src/auth";
+import {
+  TUserGetGamesResponse,
+  TUserGetInfoResponse,
+} from "mahjong_sdk/src/core";
+import { HttpClient } from "mahjong_sdk/src/http-server";
 import Button from "src/ui/common/button";
+import Card from "src/ui/common/card";
+import Input from "src/ui/common/input";
 import List, { ListItem } from "src/ui/common/list";
 import PageContent from "src/ui/common/page-content";
+import Space from "src/ui/common/space";
 import Title from "src/ui/common/title";
 
-import { HttpClient } from "../lib/http-client";
-import { TUserGetGamesResponse } from "../lib/mahjong-service";
 import { SiteUrls } from "../lib/site/urls";
 
 type TProps = {
@@ -17,45 +24,131 @@ type TProps = {
 };
 
 const DashboardUser = ({ userId }: TProps) => {
-  const [gamesIds, setPage] = useState<TUserGetGamesResponse | null>(null);
+  const [gamesIds, setGamesIds] = useState<TUserGetGamesResponse | null>(null);
+  const [userInfo, setUserInfo] = useState<TUserGetInfoResponse | null>(null);
+  const [editName, setEditName] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
   const router = useRouter();
 
   useEffect(() => {
-    (async () => {
-      const games = await HttpClient.userGetGames({
+    const subscription = zip(
+      HttpClient.userGetGames({
         player_id: userId,
-      }).catch(() => {
-        tokenObserver.next(null);
-        return null;
+      }),
+      HttpClient.userGetInfo(userId)
+    )
+      .pipe(take(1))
+      .subscribe({
+        error: () => {
+          tokenObserver.next(null);
+          subscription.unsubscribe();
+        },
+        next: ([games, user]) => {
+          setUserInfo(user || null);
+          setGamesIds(games || null);
+        },
       });
 
-      if (!games) return;
-
-      setPage(games);
-    })();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  if (!gamesIds) return null;
+  if (!gamesIds || !userInfo) return null;
+
+  const isSaveNameDisabled = !nameInput || isLoading;
+
+  const onSaveNameSubmit = () => {
+    if (isSaveNameDisabled) return;
+    setIsLoading(true);
+
+    HttpClient.userPatchInfo(userId, {
+      name: nameInput,
+    })
+      .pipe(first())
+      .subscribe({
+        error: () => {
+          tokenObserver.next(null);
+        },
+        next: (newUser) => {
+          setIsLoading(false);
+
+          setUserInfo(newUser || null);
+          setEditName(false);
+        },
+      });
+  };
 
   return (
     <PageContent>
-      <Title level={2}>Player games:</Title>
-      <List
-        bordered
-        dataSource={gamesIds}
-        renderItem={(gameId) => (
-          <ListItem>
-            <Link href={SiteUrls.playerGame(gameId, userId)}>{gameId}</Link>
-          </ListItem>
-        )}
-      />
+      {editName ? (
+        <Space>
+          <Card title="Edit the name">
+            <Space direction="vertical">
+              <Input
+                onChange={(e) => {
+                  setNameInput(e.target.value);
+                }}
+                onPressEnter={onSaveNameSubmit}
+                placeholder="The new name"
+                value={nameInput}
+              />
+              <Space>
+                <Button
+                  disabled={isSaveNameDisabled}
+                  onClick={onSaveNameSubmit}
+                  type="primary"
+                >
+                  Save
+                </Button>
+                <Button
+                  onClick={() => {
+                    setEditName(false);
+                  }}
+                  type="dashed"
+                >
+                  Cancel
+                </Button>
+              </Space>
+            </Space>
+          </Card>
+        </Space>
+      ) : (
+        <Title
+          level={2}
+          onClick={() => {
+            setNameInput(userInfo.name);
+            setEditName(true);
+          }}
+          style={{ cursor: "pointer" }}
+        >
+          {userInfo.name} ({userInfo.total_score} points)
+        </Title>
+      )}
+      <Space>
+        <List
+          bordered
+          dataSource={gamesIds}
+          renderItem={(gameId) => (
+            <ListItem>
+              <Link href={SiteUrls.playerGame(gameId, userId)}>{gameId}</Link>
+            </ListItem>
+          )}
+        />
+      </Space>
       <Button
-        onClick={async () => {
-          const game = await HttpClient.userCreateGame({
+        onClick={() => {
+          HttpClient.userCreateGame({
             player_id: userId,
-          });
-
-          router.push(SiteUrls.playerGame(game.game_summary.id, userId));
+          })
+            .pipe(first())
+            .subscribe({
+              next: (game) => {
+                router.push(SiteUrls.playerGame(game.game_summary.id, userId));
+              },
+            });
         }}
       >
         Create game

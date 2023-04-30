@@ -1,7 +1,8 @@
 import { useRouter } from "next/router";
 import React from "react";
 
-import { getIsLoggedIn, tokenObserver } from "src/lib/auth";
+import { tokenObserver } from "mahjong_sdk/src/auth";
+import { getIsLoggedIn } from "src/lib/auth";
 import { SiteUrls } from "src/lib/site/urls";
 import Button from "src/ui/common/button";
 import HeaderComp from "src/ui/common/header";

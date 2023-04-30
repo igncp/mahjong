@@ -1,28 +1,31 @@
 use crate::auth::{AuthHandler, UserRole};
 use crate::common::Storage;
-use crate::env::ENV_ADMIN_PASS;
 use crate::game_wrapper::GameWrapper;
 use crate::games_loop::GamesLoop;
 use crate::socket_server::MahjongWebsocketServer;
 use crate::socket_session::MahjongWebsocketSession;
+use crate::user_wrapper::UserWrapper;
 use actix::prelude::*;
 use actix_cors::Cors;
-use actix_web::{get, post, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{
+    get, patch, post, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
+};
 use actix_web_actors::ws;
 use mahjong_core::GameId;
 use service_contracts::{
     AdminGetGamesResponse, AdminPostAIContinueRequest, AdminPostBreakMeldRequest,
     AdminPostClaimTileRequest, AdminPostCreateMeldRequest, AdminPostDiscardTileRequest,
     AdminPostSayMahjongRequest, AdminPostSwapDrawTilesRequest, UserGetGamesQuery,
-    UserGetGamesResponse, UserLoadGameQuery, UserPostAIContinueRequest, UserPostBreakMeldRequest,
-    UserPostClaimTileRequest, UserPostCreateGameRequest, UserPostCreateMeldRequest,
-    UserPostDiscardTileRequest, UserPostDrawTileRequest, UserPostMovePlayerRequest,
-    UserPostSayMahjongRequest, UserPostSetAuthRequest, UserPostSetGameSettingsRequest,
-    UserPostSortHandRequest, WebSocketQuery,
+    UserGetGamesResponse, UserLoadGameQuery, UserPatchInfoRequest, UserPostAIContinueRequest,
+    UserPostBreakMeldRequest, UserPostClaimTileRequest, UserPostCreateGameRequest,
+    UserPostCreateMeldRequest, UserPostDiscardTileRequest, UserPostDrawTileRequest,
+    UserPostMovePlayerRequest, UserPostSayMahjongRequest, UserPostSetAuthRequest,
+    UserPostSetGameSettingsRequest, UserPostSortHandRequest, WebSocketQuery,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
+use tracing::{debug, trace, warn};
 
 pub type StorageData = web::Data<Arc<Box<dyn Storage>>>;
 pub type SocketServer = web::Data<Arc<Mutex<Addr<MahjongWebsocketServer>>>>;
@@ -742,11 +745,11 @@ async fn user_post_auth(
     body: web::Json<UserPostSetAuthRequest>,
     req: HttpRequest,
 ) -> impl Responder {
+    let username = body.username.clone();
+    let username = username.to_lowercase();
     let mut auth_handler = AuthHandler::new(&storage, &req);
 
-    let user = auth_handler
-        .validate_user(&body.username, &body.password)
-        .await;
+    let user = auth_handler.validate_user(&username, &body.password).await;
 
     if user.is_err() {
         return HttpResponse::Unauthorized().finish();
@@ -755,22 +758,12 @@ async fn user_post_auth(
     let user = user.unwrap();
 
     if user.is_none() {
-        // Temporary handling to keep the same admin password in prod
-        if body.username == "admin" {
-            let env_admin_pass = std::env::var(ENV_ADMIN_PASS);
-
-            if let Ok(env_admin_pass) = env_admin_pass {
-                if env_admin_pass != body.password {
-                    return HttpResponse::Unauthorized().json("Invalid username or password");
-                }
-            }
-        }
-
+        trace!("Creating new username: {username}");
         let result = auth_handler
             .create_user(
-                &body.username,
+                &username,
                 &body.password,
-                if body.username == "admin" {
+                if username == "admin" {
                     UserRole::Admin
                 } else {
                     UserRole::Player
@@ -789,6 +782,8 @@ async fn user_post_auth(
         }
 
         return HttpResponse::Ok().json(data.unwrap());
+    } else {
+        trace!("Handling existing user: {username}");
     }
 
     let is_valid = user.unwrap();
@@ -797,13 +792,61 @@ async fn user_post_auth(
         let data = auth_handler.generate_token();
 
         if data.is_err() {
+            let err = data.err().unwrap();
+            debug!("Error generating token: {err}");
             return HttpResponse::InternalServerError().json("Error generating json");
         }
 
         HttpResponse::Ok().json(data.unwrap())
     } else {
+        trace!("Invalid password for username: {username}");
         HttpResponse::Unauthorized().json("Invalid username or password")
     }
+}
+
+#[get("/v1/user/info/{user_id}")]
+async fn user_get_info(
+    storage: StorageData,
+    req: HttpRequest,
+    user_id: web::Path<String>,
+) -> impl Responder {
+    let auth_handler = AuthHandler::new(&storage, &req);
+
+    // For now only allow getting the information of the current user
+    if !auth_handler.verify_user(&user_id) {
+        return AuthHandler::get_unauthorized();
+    }
+
+    let user_wrapper = UserWrapper::from_storage(&storage, &user_id).await;
+
+    if user_wrapper.is_err() {
+        return HttpResponse::InternalServerError().json("Error getting user info");
+    }
+
+    user_wrapper.unwrap().get_info().await
+}
+
+#[patch("/v1/user/info/{player_id}")]
+async fn user_patch_info(
+    storage: StorageData,
+    body: web::Json<UserPatchInfoRequest>,
+    user_id: web::Path<String>,
+    req: HttpRequest,
+) -> impl Responder {
+    let auth_handler = AuthHandler::new(&storage, &req);
+
+    // For now only allow getting the information of the current user
+    if !auth_handler.verify_user(&user_id) {
+        return AuthHandler::get_unauthorized();
+    }
+
+    let user_wrapper = UserWrapper::from_storage(&storage, &user_id).await;
+
+    if user_wrapper.is_err() {
+        return HttpResponse::InternalServerError().json("Error getting user info");
+    }
+
+    user_wrapper.unwrap().update_info(&body).await
 }
 
 #[get("/v1/ws")]
@@ -859,7 +902,7 @@ impl MahjongServer {
         let port = 3000;
         let address = "0.0.0.0";
 
-        println!("Starting the Mahjong HTTP server on port http://{address}:{port}");
+        warn!("Starting the Mahjong HTTP server on port http://{address}:{port}");
 
         let games_manager = GamesManager::new();
         let games_manager_arc = Arc::new(Mutex::new(games_manager));
@@ -899,6 +942,8 @@ impl MahjongServer {
                 .service(get_ws)
                 .service(user_get_game_load)
                 .service(user_get_games)
+                .service(user_get_info)
+                .service(user_patch_info)
                 .service(user_post_auth)
                 .service(user_post_game_ai_continue)
                 .service(user_post_game_break_meld)

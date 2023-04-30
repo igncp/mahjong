@@ -106,7 +106,6 @@ mod test {
         let game = Game::default();
 
         assert_eq!(game.players.len(), 4);
-        assert_eq!(game.deck.0.keys().len(), 144);
 
         for player in game.players.iter() {
             let hand = game.table.hands.get(player).unwrap();

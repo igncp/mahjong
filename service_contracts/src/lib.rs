@@ -252,3 +252,15 @@ pub struct UserPostSetAuthRequest {
 pub struct UserPostSetAuthResponse {
     pub token: String,
 }
+
+#[derive(Deserialize, Serialize)]
+pub struct UserGetInfoResponse {
+    pub name: String,
+    pub total_score: i32,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct UserPatchInfoRequest {
+    pub name: String,
+}
+pub type UserPatchInfoResponse = UserGetInfoResponse;

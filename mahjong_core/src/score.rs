@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use crate::{Flower, Game, PlayerId, Season, Tile};
+use crate::{deck::DEFAULT_DECK, Flower, Game, PlayerId, Season, Tile};
 
 enum ScoringRule {
     AllFlowers,
@@ -71,7 +71,7 @@ impl Game {
         let mut seasons: HashSet<Season> = HashSet::new();
 
         for tile in winner_hand.0 {
-            let tile = self.deck.0.get(&tile.id).unwrap();
+            let tile = DEFAULT_DECK.0.get(&tile.id).unwrap();
 
             match tile {
                 Tile::Flower(flower) => {

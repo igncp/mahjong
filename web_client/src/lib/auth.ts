@@ -1,24 +1,5 @@
-import { BehaviorSubject } from "rxjs";
-
-import { TokenClaims } from "./mahjong-service";
-
-const TOKEN_KEY = "mahjongAuthToken";
-
-export const tokenObserver = new BehaviorSubject<string | null>(
-  typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null
-);
-
-tokenObserver.subscribe((token) => {
-  token
-    ? localStorage.setItem(TOKEN_KEY, token)
-    : localStorage.removeItem(TOKEN_KEY);
-});
-
-export const getAuthTokenHeader = (): { Authorization?: string } => {
-  const token = tokenObserver.getValue();
-
-  return token ? ({ Authorization: `Bearer ${token}` } as const) : {};
-};
+import { tokenObserver } from "mahjong_sdk/src/auth";
+import { TokenClaims } from "mahjong_sdk/src/core";
 
 export const getIsLoggedIn = () => {
   const token = tokenObserver.getValue();

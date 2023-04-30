@@ -4,6 +4,7 @@ import React, { ChangeEvent } from "react";
 type TProps = {
   disabled?: boolean;
   onChange?: (value: ChangeEvent<HTMLInputElement>) => void;
+  onPressEnter?: () => void;
   placeholder?: string;
   type?: "text" | "password";
   value?: string;

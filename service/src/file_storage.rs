@@ -8,6 +8,7 @@ use mahjong_core::{Game, GameId, PlayerId};
 use serde::{Deserialize, Serialize};
 use service_contracts::{GameSettings, ServiceGame, ServicePlayer};
 use std::collections::HashMap;
+use tracing::debug;
 
 pub struct FileStorage {
     file_path: String,
@@ -172,6 +173,8 @@ impl FileStorage {
     #[allow(dead_code)]
     pub fn new_dyn() -> Box<dyn Storage> {
         let file_path = std::env::var(ENV_FILE_STORAGE_KEY).unwrap_or("./mahjong.json".to_string());
+
+        debug!("FileStorage: {}", file_path);
 
         let file_storage = Self { file_path };
 

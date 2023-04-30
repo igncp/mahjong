@@ -5,7 +5,9 @@ import {
   PossibleMeld,
   ServiceGame,
   TileId,
-} from "../mahjong-service";
+} from "mahjong_sdk/src/core";
+
+import { DEFAULT_DECK } from "./service-game-summary";
 
 export class ModelServiceGame {
   constructor(public data: ServiceGame) {}
@@ -17,7 +19,7 @@ export class ModelServiceGame {
   }
 
   getTileString(tileId: TileId) {
-    const tile = this.data.game.deck[tileId];
+    const tile = DEFAULT_DECK[tileId];
     const tileString = format_tile(tile);
 
     return `[${tileString}]`;

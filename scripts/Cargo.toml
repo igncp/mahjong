@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 clap = "4.1.11"
+uuid = { version = "1.3.0", features = ["v4", "fast-rng", "macro-diagnostics", "js"] }
+rust-argon2 = "1.0.0"

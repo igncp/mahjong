@@ -1,7 +1,7 @@
 import qs from "qs";
+import { from } from "rxjs";
 
 import { getAuthTokenHeader, tokenObserver } from "./auth";
-import { env } from "./env";
 import {
   GameId,
   PlayerId,
@@ -27,8 +27,11 @@ import {
   TSocketQuery,
   TUserGetGamesQuery,
   TUserGetGamesResponse,
+  TUserGetInfoResponse,
   TUserLoadGameQuery,
   TUserLoadGameResponse,
+  TUserPatchInfoRequest,
+  TUserPatchInfoResponse,
   TUserPostBreakMeldRequest,
   TUserPostBreakMeldResponse,
   TUserPostClaimTileRequest,
@@ -53,9 +56,13 @@ import {
   TUserPostSetGameSettingsResponse,
   TUserPostSortHandRequest,
   TUserPostSortHandResponse,
-} from "./mahjong-service";
+} from "./core";
 
-const baseUrl = env.SERVICE_URL;
+let baseUrl = "";
+
+export const setBaseUrl = (val: string) => {
+  baseUrl = val;
+};
 
 const fetchJson = <T>(url: string, opts?: RequestInit): Promise<T> => {
   const tokenHeader = getAuthTokenHeader();
@@ -127,12 +134,12 @@ export const HttpClient = {
     });
   },
 
-  async adminGetGame(gameId: GameId): Promise<TAdminGetGameResponse> {
-    return await fetchJson(`/v1/admin/game/${gameId}`);
+  adminGetGame(gameId: GameId) {
+    return from(fetchJson<TAdminGetGameResponse>(`/v1/admin/game/${gameId}`));
   },
 
-  async adminGetGames(): Promise<TAdminGetGamesResponse> {
-    return await fetchJson("/v1/admin/game");
+  adminGetGames() {
+    return from(fetchJson<TAdminGetGamesResponse>("/v1/admin/game"));
   },
 
   async adminMovePlayer(gameId: GameId): Promise<TAdminPostMovePlayerResponse> {
@@ -141,8 +148,12 @@ export const HttpClient = {
     });
   },
 
-  async adminNewGame(): Promise<TAdminPostNewGameResponse> {
-    return await fetchJson(`/v1/admin/game`, { method: "POST" });
+  adminNewGame() {
+    return from(
+      fetchJson<TAdminPostNewGameResponse>(`/v1/admin/game`, {
+        method: "POST",
+      })
+    );
   },
 
   async adminSayMahjong(
@@ -161,7 +172,7 @@ export const HttpClient = {
     });
   },
 
-  async connectToSocket(opts: {
+  connectToSocket(opts: {
     gameId: GameId;
     playerId?: PlayerId;
     onMessage: (message: TSocketMessage) => void;
@@ -204,134 +215,168 @@ export const HttpClient = {
   getHealth: async (): Promise<void> =>
     await fetch(`${baseUrl}/health`).then(() => undefined),
 
-  async setAuth(
-    body: TUserPostSetAuthRequest
-  ): Promise<TUserPostSetAuthResponse> {
-    return await fetchJson("/v1/user", {
-      body: JSON.stringify(body),
-      method: "POST",
-    });
+  setAuth(body: TUserPostSetAuthRequest) {
+    return from(
+      fetchJson<TUserPostSetAuthResponse>("/v1/user", {
+        body: JSON.stringify(body),
+        method: "POST",
+      })
+    );
   },
 
-  async userBreakMeld(
-    gameId: GameId,
-    body: TUserPostBreakMeldRequest
-  ): Promise<TUserPostBreakMeldResponse> {
-    return await fetchJson(`/v1/user/game/${gameId}/break-meld`, {
-      body: JSON.stringify(body),
-      method: "POST",
-    });
+  userBreakMeld(gameId: GameId, body: TUserPostBreakMeldRequest) {
+    return from(
+      fetchJson<TUserPostBreakMeldResponse>(
+        `/v1/user/game/${gameId}/break-meld`,
+        {
+          body: JSON.stringify(body),
+          method: "POST",
+        }
+      )
+    );
   },
 
-  async userClaimTile(
-    gameId: GameId,
-    body: TUserPostClaimTileRequest
-  ): Promise<TUserPostClaimTileResponse> {
-    return await fetchJson(`/v1/user/game/${gameId}/claim-tile`, {
-      body: JSON.stringify(body),
-      method: "POST",
-    });
+  userClaimTile(gameId: GameId, body: TUserPostClaimTileRequest) {
+    return from(
+      fetchJson<TUserPostClaimTileResponse>(
+        `/v1/user/game/${gameId}/claim-tile`,
+        {
+          body: JSON.stringify(body),
+          method: "POST",
+        }
+      )
+    );
   },
 
-  async userContinueAI(
-    gameId: GameId,
-    body: TUserPostContinueAIRequest
-  ): Promise<TUserPostContinueAIResponse> {
-    return await fetchJson(`/v1/user/game/${gameId}/ai-continue`, {
-      body: JSON.stringify(body),
-      method: "POST",
-    });
+  userContinueAI(gameId: GameId, body: TUserPostContinueAIRequest) {
+    return from(
+      fetchJson<TUserPostContinueAIResponse>(
+        `/v1/user/game/${gameId}/ai-continue`,
+        {
+          body: JSON.stringify(body),
+          method: "POST",
+        }
+      )
+    );
   },
 
-  async userCreateGame(
-    body: TUserPostCreateGameRequest
-  ): Promise<TUserPostCreateGameResponse> {
-    return await fetchJson("/v1/user/game", {
-      body: JSON.stringify(body),
-      method: "POST",
-    });
+  userCreateGame(body: TUserPostCreateGameRequest) {
+    return from(
+      fetchJson<TUserPostCreateGameResponse>("/v1/user/game", {
+        body: JSON.stringify(body),
+        method: "POST",
+      })
+    );
   },
 
-  async userCreateMeld(
-    gameId: GameId,
-    body: TUserPostCreateMeldRequest
-  ): Promise<TUserPostCreateMeldResponse> {
-    return await fetchJson(`/v1/user/game/${gameId}/create-meld`, {
-      body: JSON.stringify(body),
-      method: "POST",
-    });
+  userCreateMeld(gameId: GameId, body: TUserPostCreateMeldRequest) {
+    return from(
+      fetchJson<TUserPostCreateMeldResponse>(
+        `/v1/user/game/${gameId}/create-meld`,
+        {
+          body: JSON.stringify(body),
+          method: "POST",
+        }
+      )
+    );
   },
 
-  async userDiscardTile(
-    gameId: GameId,
-    body: TUserPostDiscardTileRequest
-  ): Promise<TUserPostDiscardTileResponse> {
-    return await fetchJson(`/v1/user/game/${gameId}/discard-tile`, {
-      body: JSON.stringify(body),
-      method: "POST",
-    });
+  userDiscardTile(gameId: GameId, body: TUserPostDiscardTileRequest) {
+    return from(
+      fetchJson<TUserPostDiscardTileResponse>(
+        `/v1/user/game/${gameId}/discard-tile`,
+        {
+          body: JSON.stringify(body),
+          method: "POST",
+        }
+      )
+    );
   },
 
-  async userDrawTile(
-    gameId: GameId,
-    body: TUserPostDrawTileRequest
-  ): Promise<TUserPostDrawTileResponse> {
-    return await fetchJson(`/v1/user/game/${gameId}/draw-tile`, {
-      body: JSON.stringify(body),
-      method: "POST",
-    });
+  userDrawTile(gameId: GameId, body: TUserPostDrawTileRequest) {
+    return from(
+      fetchJson<TUserPostDrawTileResponse>(
+        `/v1/user/game/${gameId}/draw-tile`,
+        {
+          body: JSON.stringify(body),
+          method: "POST",
+        }
+      )
+    );
   },
 
-  async userGetGames(
-    query: TUserGetGamesQuery
-  ): Promise<TUserGetGamesResponse> {
-    return await fetchJson(`/v1/user/game?${qs.stringify(query)}`);
+  userGetGames(query: TUserGetGamesQuery) {
+    return from(
+      fetchJson<TUserGetGamesResponse>(`/v1/user/game?${qs.stringify(query)}`)
+    );
   },
 
-  async userLoadGame(
-    gameId: GameId,
-    query: TUserLoadGameQuery
-  ): Promise<TUserLoadGameResponse> {
-    return await fetchJson(`/v1/user/game/${gameId}?${qs.stringify(query)}`);
+  userGetInfo(userId: PlayerId) {
+    return from(fetchJson<TUserGetInfoResponse>(`/v1/user/info/${userId}`));
   },
 
-  async userMovePlayer(
-    gameId: GameId,
-    body: TUserPostMovePlayerRequest
-  ): Promise<TUserPostMovePlayerResponse> {
-    return await fetchJson(`/v1/user/game/${gameId}/move-player`, {
-      body: JSON.stringify(body),
-      method: "POST",
-    });
+  userLoadGame(gameId: GameId, query: TUserLoadGameQuery) {
+    return from(
+      fetchJson<TUserLoadGameResponse>(
+        `/v1/user/game/${gameId}?${qs.stringify(query)}`
+      )
+    );
   },
 
-  async userSayMahjong(
-    gameId: GameId,
-    body: TUserPostSayMahjongRequest
-  ): Promise<TUserPostSayMahjongResponse> {
-    return await fetchJson(`/v1/user/game/${gameId}/say-mahjong`, {
-      body: JSON.stringify(body),
-      method: "POST",
-    });
+  userMovePlayer(gameId: GameId, body: TUserPostMovePlayerRequest) {
+    return from(
+      fetchJson<TUserPostMovePlayerResponse>(
+        `/v1/user/game/${gameId}/move-player`,
+        {
+          body: JSON.stringify(body),
+          method: "POST",
+        }
+      )
+    );
   },
 
-  async userSetGameSettings(
-    gameId: GameId,
-    body: TUserPostSetGameSettingsRequest
-  ): Promise<TUserPostSetGameSettingsResponse> {
-    return await fetchJson(`/v1/user/game/${gameId}/settings`, {
-      body: JSON.stringify(body),
-      method: "POST",
-    });
+  userPatchInfo(userId: PlayerId, body: TUserPatchInfoRequest) {
+    return from(
+      fetchJson<TUserPatchInfoResponse>(`/v1/user/info/${userId}`, {
+        body: JSON.stringify(body),
+        method: "PATCH",
+      })
+    );
   },
 
-  async userSortHand(
-    gameId: GameId,
-    body: TUserPostSortHandRequest
-  ): Promise<TUserPostSortHandResponse> {
-    return await fetchJson(`/v1/user/game/${gameId}/sort-hand`, {
-      body: JSON.stringify(body),
-      method: "POST",
-    });
+  userSayMahjong(gameId: GameId, body: TUserPostSayMahjongRequest) {
+    return from(
+      fetchJson<TUserPostSayMahjongResponse>(
+        `/v1/user/game/${gameId}/say-mahjong`,
+        {
+          body: JSON.stringify(body),
+          method: "POST",
+        }
+      )
+    );
+  },
+
+  userSetGameSettings(gameId: GameId, body: TUserPostSetGameSettingsRequest) {
+    return from(
+      fetchJson<TUserPostSetGameSettingsResponse>(
+        `/v1/user/game/${gameId}/settings`,
+        {
+          body: JSON.stringify(body),
+          method: "POST",
+        }
+      )
+    );
+  },
+
+  userSortHand(gameId: GameId, body: TUserPostSortHandRequest) {
+    return from(
+      fetchJson<TUserPostSortHandResponse>(
+        `/v1/user/game/${gameId}/sort-hand`,
+        {
+          body: JSON.stringify(body),
+          method: "POST",
+        }
+      )
+    );
   },
 };

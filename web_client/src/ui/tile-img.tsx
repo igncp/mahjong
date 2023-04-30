@@ -6,7 +6,7 @@ import {
   Suit,
   Tile,
   Wind,
-} from "src/lib/mahjong-service";
+} from "mahjong_sdk/src/core";
 
 import Tooltip from "./common/tooltip";
 

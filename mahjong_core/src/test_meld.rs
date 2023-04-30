@@ -1,8 +1,5 @@
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
-
-    use crate::deck::DeckContent;
     use crate::meld::{get_is_chow, get_is_kong, get_is_pung, Meld, PlayerDiff, SetCheckOpts};
     use crate::tile::TileId;
     use crate::{Deck, Flower, FlowerTile, Hand, HandTile, Suit, SuitTile, Tile, Wind, WindTile};
@@ -12,96 +9,96 @@ mod test {
         vec![
             (
                 vec![
-                    Tile::Suit(SuitTile {
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
                         id: 0,
                         value: 1,
                         suit: Suit::Dots,
-                    }),
-                    Tile::Suit(SuitTile {
-                        id: 1,
+                    })),
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
+                        id: 0,
                         value: 1,
                         suit: Suit::Dots,
-                    }),
-                    Tile::Suit(SuitTile {
-                        id: 2,
+                    })),
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
+                        id: 0,
                         value: 1,
                         suit: Suit::Dots,
-                    }),
+                    })),
                 ],
                 true,
             ),
             (
                 vec![
-                    Tile::Suit(SuitTile {
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
                         id: 0,
                         value: 1,
                         suit: Suit::Dots,
-                    }),
-                    Tile::Suit(SuitTile {
+                    })),
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
                         id: 1,
                         value: 2,
                         suit: Suit::Dots,
-                    }),
-                    Tile::Suit(SuitTile {
+                    })),
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
                         id: 2,
                         value: 1,
                         suit: Suit::Dots,
-                    }),
+                    })),
                 ],
                 // Not all the same value
                 false,
             ),
             (
                 vec![
-                    Tile::Wind(WindTile {
+                    Deck::find_tile_without_id(Tile::Wind(WindTile {
                         id: 0,
                         value: Wind::North,
-                    }),
-                    Tile::Wind(WindTile {
+                    })),
+                    Deck::find_tile_without_id(Tile::Wind(WindTile {
                         id: 1,
                         value: Wind::North,
-                    }),
-                    Tile::Wind(WindTile {
+                    })),
+                    Deck::find_tile_without_id(Tile::Wind(WindTile {
                         id: 2,
                         value: Wind::North,
-                    }),
+                    })),
                 ],
                 true,
             ),
             // Bonus are never valid pungs
             (
                 vec![
-                    Tile::Flower(FlowerTile {
+                    Deck::find_tile_without_id(Tile::Flower(FlowerTile {
                         id: 0,
                         value: Flower::Bamboo,
-                    }),
-                    Tile::Flower(FlowerTile {
+                    })),
+                    Deck::find_tile_without_id(Tile::Flower(FlowerTile {
                         id: 1,
                         value: Flower::Bamboo,
-                    }),
-                    Tile::Flower(FlowerTile {
+                    })),
+                    Deck::find_tile_without_id(Tile::Flower(FlowerTile {
                         id: 2,
                         value: Flower::Bamboo,
-                    }),
+                    })),
                 ],
                 // Not all the same value
                 false,
             ),
             (
                 vec![
-                    Tile::Wind(WindTile {
+                    Deck::find_tile_without_id(Tile::Wind(WindTile {
                         id: 0,
                         value: Wind::West,
-                    }),
-                    Tile::Wind(WindTile {
-                        id: 1,
+                    })),
+                    Deck::find_tile_without_id(Tile::Wind(WindTile {
+                        id: 0,
                         value: Wind::West,
-                    }),
-                    Tile::Suit(SuitTile {
-                        id: 2,
+                    })),
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
+                        id: 0,
                         value: 7,
                         suit: Suit::Dots,
-                    }),
+                    })),
                 ],
                 false,
             ),
@@ -112,15 +109,9 @@ mod test {
     fn test_is_pung() {
         for (index, (tiles, expected_is_pung)) in get_is_pung_fixtures().iter().enumerate() {
             let sub_hand = tiles.iter().map(|tile| tile.get_id()).collect();
-            let deck_content: DeckContent = tiles
-                .iter()
-                .map(|tile| (tile.get_id(), tile.clone()))
-                .collect();
-            let deck = Deck(deck_content);
             let opts = SetCheckOpts {
                 board_tile_player_diff: None,
                 claimed_tile: None,
-                deck: &deck,
                 sub_hand: &sub_hand,
             };
             let is_pung = get_is_pung(&opts);
@@ -133,21 +124,21 @@ mod test {
         vec![
             (
                 vec![
-                    Tile::Suit(SuitTile {
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
                         value: 1,
                         suit: Suit::Dots,
                         id: 0,
-                    }),
-                    Tile::Suit(SuitTile {
+                    })),
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
                         value: 3,
                         suit: Suit::Dots,
                         id: 1,
-                    }),
-                    Tile::Suit(SuitTile {
+                    })),
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
                         value: 2,
                         suit: Suit::Dots,
                         id: 2,
-                    }),
+                    })),
                 ],
                 true,
                 None,
@@ -155,68 +146,89 @@ mod test {
             ),
             (
                 vec![
-                    Tile::Suit(SuitTile {
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
                         value: 1,
                         suit: Suit::Dots,
                         id: 0,
-                    }),
-                    Tile::Suit(SuitTile {
+                    })),
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
                         value: 3,
                         suit: Suit::Dots,
                         id: 1,
-                    }),
-                    Tile::Suit(SuitTile {
+                    })),
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
                         value: 2,
                         suit: Suit::Dots,
                         id: 2,
-                    }),
+                    })),
                 ],
                 true,
-                Some(1),
+                Some(
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
+                        value: 3,
+                        suit: Suit::Dots,
+                        id: 1,
+                    }))
+                    .get_id(),
+                ),
                 Some(1),
             ),
             (
                 vec![
-                    Tile::Suit(SuitTile {
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
                         value: 1,
                         suit: Suit::Dots,
                         id: 0,
-                    }),
-                    Tile::Suit(SuitTile {
+                    })),
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
                         value: 3,
                         suit: Suit::Dots,
                         id: 1,
-                    }),
-                    Tile::Suit(SuitTile {
+                    })),
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
                         value: 2,
                         suit: Suit::Dots,
                         id: 2,
-                    }),
+                    })),
                 ],
                 false,
-                Some(1),
+                Some(
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
+                        value: 3,
+                        suit: Suit::Dots,
+                        id: 1,
+                    }))
+                    .get_id(),
+                ),
                 Some(-1),
             ),
             (
                 vec![
-                    Tile::Suit(SuitTile {
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
                         value: 1,
                         suit: Suit::Dots,
                         id: 0,
-                    }),
-                    Tile::Suit(SuitTile {
+                    })),
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
                         value: 1,
                         suit: Suit::Dots,
                         id: 1,
-                    }),
-                    Tile::Suit(SuitTile {
+                    })),
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
                         value: 1,
                         suit: Suit::Dots,
                         id: 2,
-                    }),
+                    })),
                 ],
                 false,
-                Some(1),
+                Some(
+                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
+                        value: 3,
+                        suit: Suit::Dots,
+                        id: 1,
+                    }))
+                    .get_id(),
+                ),
                 None,
             ),
         ]
@@ -228,16 +240,9 @@ mod test {
             get_is_chow_fixtures().iter().enumerate()
         {
             let sub_hand = tiles.iter().map(|tile| tile.get_id()).collect();
-            let deck = Deck(
-                tiles
-                    .iter()
-                    .map(|tile| (tile.get_id(), tile.clone()))
-                    .collect(),
-            );
             let opts = SetCheckOpts {
                 board_tile_player_diff: *board_tile_player_diff,
                 claimed_tile: *claimed_tile,
-                deck: &deck,
                 sub_hand: &sub_hand,
             };
             let is_chow = get_is_chow(&opts);
@@ -276,16 +281,9 @@ mod test {
     fn test_get_is_kong() {
         for (index, (tiles, expected_is_kong)) in get_is_kong_fixtures().iter().enumerate() {
             let sub_hand = tiles.iter().map(|tile| tile.get_id()).collect();
-            let deck = Deck(
-                tiles
-                    .iter()
-                    .map(|tile| (tile.get_id(), tile.clone()))
-                    .collect(),
-            );
             let opts = SetCheckOpts {
                 board_tile_player_diff: None,
                 claimed_tile: None,
-                deck: &deck,
                 sub_hand: &sub_hand,
             };
             let is_chow = get_is_kong(&opts);
@@ -293,55 +291,53 @@ mod test {
         }
     }
 
-    type GetPossibleMeldsFixture = (Hand, Deck, PlayerDiff, Vec<Meld>);
+    type GetPossibleMeldsFixture = (Hand, PlayerDiff, Vec<Meld>);
     fn get_possible_melds_fixtures() -> Vec<GetPossibleMeldsFixture> {
-        fn get_hand_tile(id: TileId) -> HandTile {
+        fn get_hand_tile(tile: &Tile) -> HandTile {
             HandTile {
-                id,
+                id: tile.get_id(),
                 concealed: true,
                 set_id: None,
             }
         }
-        fn get_tile(id: TileId) -> (TileId, Tile) {
-            (
-                id,
-                Tile::Suit(SuitTile {
-                    value: 2,
-                    suit: Suit::Dots,
-                    id,
-                }),
-            )
-        }
+
+        let first_tile = Deck::find_tile_without_id(Tile::Suit(SuitTile {
+            value: 1,
+            suit: Suit::Dots,
+            id: 0,
+        }));
+        let second_tile = Deck::find_tile_without_id(Tile::Suit(SuitTile {
+            value: 2,
+            suit: Suit::Dots,
+            id: 0,
+        }));
+        let third_tile = Deck::find_tile_without_id(Tile::Suit(SuitTile {
+            value: 3,
+            suit: Suit::Dots,
+            id: 0,
+        }));
+
         vec![(
             Hand(vec![
-                get_hand_tile(0),
-                get_hand_tile(1),
-                get_hand_tile(2),
-                get_hand_tile(3),
+                get_hand_tile(&first_tile),
+                get_hand_tile(&second_tile),
+                get_hand_tile(&third_tile),
             ]),
-            Deck(HashMap::from_iter(vec![
-                get_tile(0),
-                get_tile(1),
-                get_tile(2),
-                get_tile(3),
-            ])),
             Some(0),
-            vec![
-                vec![0, 1, 2],
-                vec![0, 1, 2, 3],
-                vec![0, 1, 3],
-                vec![0, 2, 3],
-                vec![1, 2, 3],
-            ],
+            vec![vec![
+                first_tile.get_id(),
+                second_tile.get_id(),
+                third_tile.get_id(),
+            ]],
         )]
     }
 
     #[test]
     fn test_get_possible_melds() {
-        for (index, (hand, deck, player_diff, expected_meld)) in
+        for (index, (hand, player_diff, expected_meld)) in
             get_possible_melds_fixtures().iter().enumerate()
         {
-            let possible_melds = hand.get_possible_melds(*player_diff, None, deck);
+            let possible_melds = hand.get_possible_melds(*player_diff, None);
             assert_eq!(possible_melds, *expected_meld, "index: {index}");
         }
     }

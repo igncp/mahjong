@@ -1,5 +1,5 @@
 #![deny(clippy::use_self, clippy::shadow_unrelated)]
-use mahjong_core::{ui::format_to_emoji, Tile};
+use mahjong_core::{deck::DEFAULT_DECK, ui::format_to_emoji, Tile};
 use service_contracts::{ServiceGame, ServiceGameSummary};
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 
@@ -24,4 +24,10 @@ pub fn get_possible_melds_summary(game: String) -> JsValue {
     let possible_melds = service_game.game_summary.get_possible_melds();
 
     serde_wasm_bindgen::to_value(&possible_melds).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn get_deck() -> JsValue {
+    let deck = DEFAULT_DECK.clone();
+    serde_wasm_bindgen::to_value(&deck).unwrap()
 }

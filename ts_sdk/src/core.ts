@@ -88,10 +88,9 @@ type Hand = HandTile[];
 type Hands = Record<PlayerId, Hand>;
 type Score = Record<PlayerId, number>;
 type Board = TileId[];
-type Deck = Record<TileId, Tile>;
+export type Deck = Record<TileId, Tile>;
 
 export type Game = {
-  deck: Deck;
   id: GameId;
   name: string;
   players: PlayerId[];
@@ -133,7 +132,6 @@ export type GameSettings = {
 
 export type GameSummary = {
   board: Board;
-  deck: Deck;
   draw_wall_count: number;
   hand: Hand;
   id: GameId;
@@ -220,6 +218,15 @@ export type TUserGetGamesQuery = {
   player_id: PlayerId;
 };
 export type TUserGetGamesResponse = GameId[];
+
+export type TUserGetInfoResponse = {
+  name: string;
+  total_score: number;
+};
+export type TUserPatchInfoRequest = {
+  name: string;
+};
+export type TUserPatchInfoResponse = TUserGetInfoResponse;
 
 export type TUserLoadGameQuery = {
   player_id: PlayerId;

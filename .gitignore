@@ -1,5 +1,10 @@
 /target
+tsconfig.tsbuildinfo
 mahjong.json
 mahjong.db
+mahjong.db-journal
 mahjong_prod.db
 /dist
+node_modules
+.idea
+*.tgz

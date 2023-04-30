@@ -4,6 +4,7 @@ use actix::prelude::*;
 use actix_web_actors::ws;
 use mahjong_core::{GameId, PlayerId};
 use service_contracts::SocketMessage;
+use tracing::debug;
 
 use crate::socket_server::{
     Connect, Disconnect, ListRooms, MahjongWebsocketServer, SocketMessageStr,
@@ -61,7 +62,7 @@ impl Actor for MahjongWebsocketSession {
                 match res {
                     Ok(res) => {
                         act.id = res;
-                        println!("{} joined room {}", act.id, act.room);
+                        debug!("{} joined room {}", act.id, act.room);
                     }
                     _ => new_ctx.stop(),
                 }
@@ -71,7 +72,7 @@ impl Actor for MahjongWebsocketSession {
     }
 
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
-        println!("{} disconnected from {}", self.id, self.room);
+        debug!("{} disconnected from {}", self.id, self.room);
         self.addr.do_send(Disconnect { id: self.id });
         Running::Stop
     }

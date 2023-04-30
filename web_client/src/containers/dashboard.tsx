@@ -1,8 +1,9 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 
-import { parseJwt, tokenObserver } from "src/lib/auth";
-import { UserRole } from "src/lib/mahjong-service";
+import { tokenObserver } from "mahjong_sdk/src/auth";
+import { UserRole } from "mahjong_sdk/src/core";
+import { parseJwt } from "src/lib/auth";
 
 const DashboardAdmin = dynamic(() => import("./dashboard-admin"), {
   ssr: false,

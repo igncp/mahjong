@@ -1,15 +1,17 @@
+name: Deploy
+
 on:
   workflow_run:
     workflows: ["Checks"]
     types: [completed]
     branches:
       - 'main'
-
-name: Deploy
+  workflow_dispatch:
+    inputs:
 
 jobs:
   build:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     name: Build
     runs-on: ubuntu-latest
     steps:

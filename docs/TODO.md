@@ -2,6 +2,7 @@
 
 - Add settings for users
     - Stop AI when there is a possible meld
+- Form to create AI game vs players game
 
 ## Improvements
 
@@ -15,9 +16,9 @@
 - Use the game version in more endpoints
 - Improve scoring logic
 - Consider connecting to postgres and setup container DB for moves
-- Consider moving `deck` outside of `Game` and having multiple deck types
-- Study how to add rxjs into web client
-- Start the web client in github pages
+- Move most promises to observables
 - Game hall state where it waits for other real players to join
 - Statistics for moves
 - Impersonate player from admin view
+- Record of games for each player
+- Ranking of players

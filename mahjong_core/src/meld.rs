@@ -1,4 +1,4 @@
-use crate::{Deck, HandTile, PlayerId, SetId, SuitTile, Tile, TileClaimed, TileId};
+use crate::{deck::DEFAULT_DECK, HandTile, PlayerId, SetId, SuitTile, Tile, TileClaimed, TileId};
 use serde::{Deserialize, Serialize};
 
 pub type PlayerDiff = Option<i32>;
@@ -7,7 +7,6 @@ pub type PlayerDiff = Option<i32>;
 pub struct SetCheckOpts<'a> {
     pub board_tile_player_diff: PlayerDiff,
     pub claimed_tile: Option<TileId>,
-    pub deck: &'a Deck,
     pub sub_hand: &'a Vec<TileId>,
 }
 
@@ -20,8 +19,8 @@ pub fn get_is_pung(opts: &SetCheckOpts) -> bool {
 
     for tile_index in 1..3 {
         let tile_id = opts.sub_hand[tile_index];
-        let last_tile = opts.deck.0.get(&last_tile_id);
-        let tile = opts.deck.0.get(&tile_id);
+        let last_tile = DEFAULT_DECK.0.get(&last_tile_id);
+        let tile = DEFAULT_DECK.0.get(&tile_id);
 
         if tile.is_none() || last_tile.is_none() {
             return false;
@@ -67,7 +66,7 @@ pub fn get_is_chow(opts: &SetCheckOpts) -> bool {
     let mut suit_tiles: Vec<SuitTile> = vec![];
 
     for tile_id in opts.sub_hand.clone() {
-        let tile = opts.deck.0.get(&tile_id);
+        let tile = DEFAULT_DECK.0.get(&tile_id);
 
         if tile.is_none() {
             return false;
@@ -90,7 +89,7 @@ pub fn get_is_chow(opts: &SetCheckOpts) -> bool {
     let mut last_tile_id = suit_tiles[0].id;
 
     for tile_index in 1..3 {
-        let last_tile = opts.deck.0.get(&last_tile_id);
+        let last_tile = DEFAULT_DECK.0.get(&last_tile_id);
         let tile = suit_tiles.get(tile_index);
 
         if tile.is_none() || last_tile.is_none() {
@@ -126,8 +125,8 @@ pub fn get_is_kong(opts: &SetCheckOpts) -> bool {
 
     for tile_index in 1..4 {
         let tile_id = opts.sub_hand[tile_index];
-        let last_tile = opts.deck.0.get(&last_tile_id);
-        let tile = opts.deck.0.get(&tile_id);
+        let last_tile = DEFAULT_DECK.0.get(&last_tile_id);
+        let tile = DEFAULT_DECK.0.get(&tile_id);
 
         if tile.is_none() || last_tile.is_none() {
             return false;
@@ -214,10 +213,10 @@ pub struct PossibleMeld {
 }
 
 impl PossibleMeld {
-    pub fn sort_tiles(&mut self, deck: &Deck) {
+    pub fn sort_tiles(&mut self) {
         self.tiles.sort_by(|a, b| {
-            let tile_a = &deck.0[a];
-            let tile_b = &deck.0[b];
+            let tile_a = &DEFAULT_DECK.0[a];
+            let tile_b = &DEFAULT_DECK.0[b];
 
             tile_a.cmp_custom(tile_b)
         });

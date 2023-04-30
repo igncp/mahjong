@@ -1,6 +1,7 @@
 use crate::{
+    deck::DEFAULT_DECK,
     meld::{get_is_chow, get_is_kong, get_is_pair, get_is_pung, Meld, PlayerDiff, SetCheckOpts},
-    Deck, TileId,
+    TileId,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -36,10 +37,10 @@ pub struct GetHandMeldsReturn<'a> {
 }
 
 impl Hand {
-    pub fn sort_default(&mut self, deck: &Deck) {
+    pub fn sort_default(&mut self) {
         self.0.sort_by(|a, b| {
-            let tile_a = deck.0.get(&a.id);
-            let tile_b = deck.0.get(&b.id);
+            let tile_a = DEFAULT_DECK.0.get(&a.id);
+            let tile_b = DEFAULT_DECK.0.get(&b.id);
             if tile_a.is_none() || tile_b.is_none() {
                 return std::cmp::Ordering::Equal;
             }
@@ -79,7 +80,7 @@ impl Hand {
         }
     }
 
-    pub fn can_say_mahjong(&self, deck: &Deck) -> bool {
+    pub fn can_say_mahjong(&self) -> bool {
         if self.0.len() != 14 {
             return false;
         }
@@ -88,7 +89,7 @@ impl Hand {
             .0
             .iter()
             .filter(|t| t.set_id.is_none())
-            .map(|t| deck.0.get(&t.id).unwrap())
+            .map(|t| DEFAULT_DECK.0.get(&t.id).unwrap())
             .collect();
 
         get_is_pair(&tiles_without_meld)
@@ -98,7 +99,6 @@ impl Hand {
         &self,
         board_tile_player_diff: PlayerDiff,
         claimed_tile: Option<TileId>,
-        deck: &Deck,
     ) -> Vec<Meld> {
         let hand_filtered: Vec<HandTile> = self
             .0
@@ -119,7 +119,6 @@ impl Hand {
                     let opts = SetCheckOpts {
                         board_tile_player_diff,
                         claimed_tile,
-                        deck,
                         sub_hand: &sub_hand,
                     };
 
@@ -141,7 +140,7 @@ impl Hand {
             }
         }
 
-        if self.can_say_mahjong(deck) {
+        if self.can_say_mahjong() {
             melds.push(
                 self.0
                     .iter()

@@ -1,13 +1,11 @@
-use crate::{
-    env::{ENV_ADMIN_PASS, ENV_AUTH_JWT_SECRET_KEY},
-    http_server::StorageData,
-};
+use crate::{env::ENV_AUTH_JWT_SECRET_KEY, http_server::StorageData};
 use actix_web::{HttpRequest, HttpResponse};
 use argon2::{self, Config};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use mahjong_core::PlayerId;
 use serde::{Deserialize, Serialize};
 use service_contracts::{ServicePlayer, UserPostSetAuthResponse};
+use tracing::{debug, error};
 use uuid::Uuid;
 
 pub type Username = String;
@@ -62,15 +60,8 @@ impl<'a> AuthHandler<'a> {
         let auth_info = self.storage.get_auth_info(username).await?;
 
         if auth_info.is_none() {
+            debug!("Not found auth_info for username: {username}");
             return Ok(None);
-        }
-
-        if username == "admin" {
-            let env_admin_pass = std::env::var(ENV_ADMIN_PASS);
-
-            if let Ok(env_admin_pass) = env_admin_pass {
-                return Ok(Some(env_admin_pass == *password));
-            }
         }
 
         let auth_info = auth_info.unwrap();
@@ -78,6 +69,7 @@ impl<'a> AuthHandler<'a> {
 
         if matches.is_err() {
             let err_str = matches.err().unwrap().to_string();
+            debug!("Matches produced an error for username: {username}, error: {err_str}");
             return Err(err_str);
         }
 
@@ -110,7 +102,7 @@ impl<'a> AuthHandler<'a> {
 
         let player = ServicePlayer {
             id: auth_info.user_id.clone(),
-            name: "Player 0".to_string(),
+            name: username.clone(),
 
             ..ServicePlayer::default()
         };
@@ -124,6 +116,7 @@ impl<'a> AuthHandler<'a> {
 
     pub fn generate_token(&self) -> Result<UserPostSetAuthResponse, String> {
         if self.auth_info.is_none() {
+            debug!("Tried to generate token but no user is logged in");
             return Err("No user logged in".to_string());
         }
 
@@ -158,6 +151,7 @@ impl<'a> AuthHandler<'a> {
         let encoding_secret = std::env::var(ENV_AUTH_JWT_SECRET_KEY);
 
         if encoding_secret.is_err() {
+            error!("Missing encoding_secret environment variable");
             return None;
         }
 
@@ -198,6 +192,7 @@ impl<'a> AuthHandler<'a> {
 
     fn get_verify_user_claims(claims: Option<Claims>, player_id: &PlayerId) -> bool {
         if claims.is_none() {
+            debug!("No claims for player_id: {player_id}");
             return false;
         }
 

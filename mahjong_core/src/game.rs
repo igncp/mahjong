@@ -1,9 +1,10 @@
 use crate::{
+    deck::DEFAULT_DECK,
     meld::{
         get_is_chow, get_is_kong, get_is_pung, get_tile_claimed_id_for_user, PlayerDiff,
         PossibleMeld, SetCheckOpts,
     },
-    Deck, Hand, HandTile, PlayerId, Round, RoundTileClaimed, Score, Table, TileId,
+    Hand, HandTile, PlayerId, Round, RoundTileClaimed, Score, Table, TileId,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -34,7 +35,6 @@ pub type GameVersion = String;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Game {
-    pub deck: Deck,
     pub id: GameId,
     pub name: String,
     pub phase: GamePhase,
@@ -47,7 +47,6 @@ pub struct Game {
 
 impl Default for Game {
     fn default() -> Self {
-        let deck = Deck::default();
         let version = Uuid::new_v4().to_string();
         let mut players = vec![];
 
@@ -55,7 +54,7 @@ impl Default for Game {
             players.push(player_id.to_string());
         }
 
-        let table = deck.create_table(&players);
+        let table = DEFAULT_DECK.create_table(&players);
         let mut score = Score::default();
 
         for player_id in &players {
@@ -63,7 +62,6 @@ impl Default for Game {
         }
 
         Self {
-            deck,
             id: "game_id".to_string(),
             name: "game_name".to_string(),
             phase: GamePhase::Beginning,
@@ -98,7 +96,7 @@ impl Game {
 
     pub fn say_mahjong(&mut self, player_id: &PlayerId) -> bool {
         let hand = self.table.hands.get(player_id).unwrap();
-        if !hand.can_say_mahjong(&self.deck) {
+        if !hand.can_say_mahjong() {
             return false;
         }
 
@@ -106,7 +104,7 @@ impl Game {
 
         self.round.move_after_win(&mut self.phase);
 
-        self.table = self.deck.create_table(&self.players);
+        self.table = DEFAULT_DECK.create_table(&self.players);
 
         true
     }
@@ -151,8 +149,7 @@ impl Game {
                 self.get_board_tile_player_diff(Some(&round), Some(&hand), player);
             let claimed_tile = get_tile_claimed_id_for_user(player, &round.tile_claimed);
 
-            let possible_melds =
-                hand.get_possible_melds(board_tile_player_diff, claimed_tile, &self.deck);
+            let possible_melds = hand.get_possible_melds(board_tile_player_diff, claimed_tile);
 
             for meld in possible_melds {
                 melds.push(PossibleMeld {
@@ -329,7 +326,6 @@ impl Game {
         let opts = SetCheckOpts {
             board_tile_player_diff,
             claimed_tile: opts_claimed_tile,
-            deck: &self.deck,
             sub_hand: &tiles_ids,
         };
 

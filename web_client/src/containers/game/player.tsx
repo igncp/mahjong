@@ -1,8 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
 
-import Header from "src/containers/common/header";
-import { HttpClient } from "src/lib/http-client";
 import {
   GameId,
   GameSettings,
@@ -11,12 +9,15 @@ import {
   SetId,
   TUserLoadGameResponse,
   TileId,
-} from "src/lib/mahjong-service";
+} from "mahjong_sdk/src/core";
+import { HttpClient } from "mahjong_sdk/src/http-server";
+import Header from "src/containers/common/header";
 import {
   ModelServiceGameSummary,
   ModelState,
 } from "src/lib/models/service-game-summary";
 import { SiteUrls } from "src/lib/site/urls";
+import Alert from "src/ui/common/alert";
 import Button from "src/ui/common/button";
 import Card from "src/ui/common/card";
 import { lightGreen } from "src/ui/common/colors";
@@ -72,38 +73,31 @@ const Game = ({ gameId, userId }: IProps) => {
   const [loading] = loadingState;
 
   useEffect(() => {
-    // TODO: Improve this with rxjs
-    let disconnectSocket = () => {};
+    const disconnect = HttpClient.connectToSocket({
+      gameId,
+      onMessage: (data) => {
+        if (data.GameSummaryUpdate) {
+          setServiceGame(data.GameSummaryUpdate);
+        }
+      },
+      playerId: userId,
+    });
 
-    (async () => {
-      const [game, disconnect] = await Promise.all([
-        HttpClient.userLoadGame(gameId, {
-          player_id: userId,
-        }),
-        HttpClient.connectToSocket({
-          gameId,
-          onMessage: (data) => {
-            if (data.GameSummaryUpdate) {
-              setServiceGame(data.GameSummaryUpdate);
-            }
-          },
-          playerId: userId,
-        }),
-      ]).catch((error) => {
+    HttpClient.userLoadGame(gameId, {
+      player_id: userId,
+    }).subscribe({
+      error: (error) => {
         console.log("debug: player.tsx: error", error);
         router.push(SiteUrls.index);
 
         return [];
-      });
+      },
+      next: (game) => {
+        setServiceGame(game);
+      },
+    });
 
-      setServiceGame(game);
-
-      disconnectSocket = disconnect || disconnectSocket;
-    })();
-
-    return () => {
-      disconnectSocket();
-    };
+    return disconnect;
   }, [gameId]);
 
   if (!serviceGameSummary) return null;
@@ -129,7 +123,7 @@ const Game = ({ gameId, userId }: IProps) => {
   }, new Set<SetId>());
 
   const player = serviceGameM.getPlayingPlayer();
-  const playerIndex = serviceGameM.getPlayingPlayerIndex();
+  const turnPlayer = serviceGameM.getTurnPlayer();
   const possibleMelds = serviceGameM.getPossibleMelds();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -167,15 +161,25 @@ const Game = ({ gameId, userId }: IProps) => {
       <Header />
       <PageContent style={{ paddingTop: "20px" }}>
         <Text>
-          <b>{player.name}</b>{" "}
-          {playerIndex === serviceGameSummary.game_summary.round.player_index
-            ? " *"
-            : ""}{" "}
-          ({serviceGameSummary.game_summary.score[userId]}){" "}
-          <CopyToClipboard text={userId} />
+          <b>{player.name}</b> ({serviceGameSummary.game_summary.score[userId]}{" "}
+          points) <CopyToClipboard text={userId} />
         </Text>
+        <Space>
+          <Alert
+            message={
+              <>
+                Current turn:{" "}
+                <b>
+                  {turnPlayer.name}
+                  {turnPlayer.id === player.id ? " (it's you)" : ""}
+                </b>
+              </>
+            }
+            type="info"
+          />
+        </Space>
         <Card
-          bodyStyle={{ background: lightGreen }}
+          bodyStyle={{ background: lightGreen, minHeight: "150px" }}
           title={`Board (${serviceGameSummary.game_summary.board.length} / ${
             serviceGameSummary.game_summary.draw_wall_count +
             serviceGameSummary.game_summary.board.length
@@ -330,7 +334,7 @@ const Game = ({ gameId, userId }: IProps) => {
                           ) === undefined
                       ).length !== 0
                     }
-                    onClick={async () => {
+                    onClick={() => {
                       serviceGameM.createMeld(possibleMeld.tiles);
                     }}
                   >
@@ -363,8 +367,6 @@ const Game = ({ gameId, userId }: IProps) => {
               }
               renderItem={(playerId) => {
                 const player = serviceGameSummary.players[playerId];
-                const playerIndex =
-                  serviceGameSummary.game_summary.players.indexOf(playerId);
 
                 const playerHand =
                   serviceGameSummary.game_summary.other_hands[playerId];
@@ -384,11 +386,8 @@ const Game = ({ gameId, userId }: IProps) => {
                       <UserAvatar />
                       <Text>
                         {player.name} (
-                        {serviceGameSummary.game_summary.score[playerId]}){" "}
-                        {playerIndex ===
-                        serviceGameSummary.game_summary.round.player_index
-                          ? " *"
-                          : ""}
+                        {serviceGameSummary.game_summary.score[playerId]}{" "}
+                        points)
                       </Text>
                       {meldsSets.length > 0 && (
                         <ul>
@@ -419,24 +418,29 @@ const Game = ({ gameId, userId }: IProps) => {
               <Space wrap>
                 <Button
                   disabled={loading}
-                  onClick={async () => {
-                    const gameSummary = await HttpClient.userDrawTile(gameId, {
+                  onClick={() => {
+                    HttpClient.userDrawTile(gameId, {
                       game_version: serviceGameSummary.game_summary.version,
                       player_id: userId,
+                    }).subscribe({
+                      next: (gameSummary) => {
+                        setServiceGame(gameSummary);
+                      },
                     });
-
-                    setServiceGame(gameSummary);
                   }}
                 >
                   Draw tile
                 </Button>
                 <Button
                   disabled={loading}
-                  onClick={async () => {
-                    const newGame = await HttpClient.userMovePlayer(gameId, {
+                  onClick={() => {
+                    HttpClient.userMovePlayer(gameId, {
                       player_id: userId,
+                    }).subscribe({
+                      next: (newGame) => {
+                        setServiceGame(newGame);
+                      },
                     });
-                    setServiceGame(newGame);
                   }}
                 >
                   Next turn
@@ -451,13 +455,14 @@ const Game = ({ gameId, userId }: IProps) => {
                 </Button>
                 <Button
                   disabled={loading}
-                  onClick={async () => {
-                    const { service_game_summary: newGame } =
-                      await HttpClient.userContinueAI(gameId, {
-                        player_id: userId,
-                      });
-
-                    setServiceGame(newGame);
+                  onClick={() => {
+                    HttpClient.userContinueAI(gameId, {
+                      player_id: userId,
+                    }).subscribe({
+                      next: ({ service_game_summary: newGame }) => {
+                        setServiceGame(newGame);
+                      },
+                    });
                   }}
                 >
                   Continue AI
@@ -478,7 +483,7 @@ const Game = ({ gameId, userId }: IProps) => {
               <form style={{ display: "inline-block" }}>
                 <Space direction="vertical">
                   <Text>
-                    Ai:{" "}
+                    AI:{" "}
                     <label style={{ marginRight: "10px" }}>
                       Enabled
                       <input

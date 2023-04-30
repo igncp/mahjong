@@ -184,7 +184,7 @@ impl<'a> GameWrapper<'a> {
     pub async fn handle_sort_hands(&mut self) -> HttpResponse {
         for player in self.service_game.game.players.iter() {
             let hand = self.service_game.game.table.hands.get_mut(player).unwrap();
-            hand.sort_default(&self.service_game.game.deck);
+            hand.sort_default();
         }
 
         self.save_and_return(&self.service_game.game.table.hands, "Error sorting hands")
@@ -517,7 +517,7 @@ impl<'a> GameWrapper<'a> {
             .get_mut(player_id)
             .unwrap();
 
-        hand.sort_default(&self.service_game.game.deck);
+        hand.sort_default();
         self.service_game.game.update_version();
 
         let response: UserPostSortHandResponse =

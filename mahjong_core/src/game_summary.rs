@@ -1,7 +1,7 @@
 use crate::{
     game::GameVersion,
     meld::{PlayerDiff, PossibleMeld},
-    Deck, Game, GameId, GamePhase, Hand, HandTile, PlayerId, Score, TileId, Wind,
+    Game, GameId, GamePhase, Hand, HandTile, PlayerId, Score, TileId, Wind,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -23,7 +23,6 @@ pub struct OtherPlayerHand {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameSummary {
     pub board: Vec<TileId>,
-    pub deck: Deck,
     pub draw_wall_count: usize,
     pub hand: Hand,
     pub id: GameId,
@@ -40,7 +39,6 @@ impl GameSummary {
     pub fn from_game(game: &Game, player_id: &PlayerId) -> Option<Self> {
         let players = game.players.clone();
         let hand = game.table.hands.get(player_id).unwrap().clone();
-        let deck = game.deck.clone();
         let phase = game.phase.clone();
         let score = game.score.clone();
 
@@ -89,7 +87,6 @@ impl GameSummary {
 
         Some(Self {
             board,
-            deck,
             draw_wall_count,
             hand,
             id: game.id.clone(),
@@ -134,7 +131,7 @@ impl GameSummary {
             player_diff = Some(player_index as i32 - current_player_index as i32);
         }
 
-        let raw_melds = tested_hand.get_possible_melds(player_diff, claimed_tile, &self.deck);
+        let raw_melds = tested_hand.get_possible_melds(player_diff, claimed_tile);
 
         for raw_meld in raw_melds {
             let possible_meld = PossibleMeld {

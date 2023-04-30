@@ -2,8 +2,9 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { MouseEventHandler, useEffect, useState } from "react";
 
-import { HttpClient } from "../lib/http-client";
-import { TAdminGetGamesResponse } from "../lib/mahjong-service";
+import { TAdminGetGamesResponse } from "mahjong_sdk/src/core";
+import { HttpClient } from "mahjong_sdk/src/http-server";
+
 import { SiteUrls } from "../lib/site/urls";
 
 const DashboardAdmin = () => {
@@ -11,24 +12,24 @@ const DashboardAdmin = () => {
   const router = useRouter();
 
   useEffect(() => {
-    (async () => {
-      const games = await HttpClient.adminGetGames();
-
-      setPage(games);
-    })();
+    HttpClient.adminGetGames().subscribe({
+      next: (games) => {
+        setPage(games);
+      },
+    });
   }, []);
 
   if (!page) return null;
 
-  const handleNewAdminGame: MouseEventHandler<HTMLAnchorElement> = async (
-    ev
-  ) => {
+  const handleNewAdminGame: MouseEventHandler<HTMLAnchorElement> = (ev) => {
     ev.preventDefault();
     ev.stopPropagation();
 
-    const serviceGame = await HttpClient.adminNewGame();
-
-    router.push(SiteUrls.adminGame(serviceGame.game.id));
+    HttpClient.adminNewGame().subscribe({
+      next: (serviceGame) => {
+        router.push(SiteUrls.adminGame(serviceGame.game.id));
+      },
+    });
   };
 
   return (
