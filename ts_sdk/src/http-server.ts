@@ -1,5 +1,5 @@
 import qs from "qs";
-import { from } from "rxjs";
+import { BehaviorSubject, from } from "rxjs";
 
 import { getAuthTokenHeader, tokenObserver } from "./auth";
 import {
@@ -23,8 +23,11 @@ import {
   TAdminPostSayMahjongRequest,
   TAdminPostSayMahjongResponse,
   TAdminPostSortHandsResponse,
-  TSocketMessage,
+  TGetDeckResponse,
+  TSocketMessageFromClient,
+  TSocketMessageFromServer,
   TSocketQuery,
+  TSocketWrapper,
   TUserGetGamesQuery,
   TUserGetGamesResponse,
   TUserGetInfoResponse,
@@ -175,7 +178,7 @@ export const HttpClient = {
   connectToSocket(opts: {
     gameId: GameId;
     playerId?: PlayerId;
-    onMessage: (message: TSocketMessage) => void;
+    onMessage: (message: TSocketMessageFromServer) => void;
   }) {
     const { gameId, playerId, onMessage } = opts;
     let isIntentional = false;
@@ -189,7 +192,7 @@ export const HttpClient = {
     const socket = new WebSocket(`${sockerUrl}/v1/ws?${qs.stringify(query)}`);
 
     socket.onmessage = (event) => {
-      const data: TSocketMessage = JSON.parse(event.data);
+      const data: TSocketMessageFromServer = JSON.parse(event.data);
       onMessage(data);
     };
 
@@ -197,19 +200,40 @@ export const HttpClient = {
       console.log("Socket onerrror", error);
     };
 
+    let retryUnsubscribe = () => {};
+
+    const socketWrapper: TSocketWrapper = {
+      close: () => {
+        isIntentional = true;
+        retryUnsubscribe();
+        socket.close();
+      },
+      send: (message: TSocketMessageFromClient) => {
+        socket.send(JSON.stringify(message));
+      },
+    };
+
+    const socketProvider = new BehaviorSubject<TSocketWrapper>(socketWrapper);
+
     socket.onclose = () => {
       if (!isIntentional) {
         setTimeout(() => {
           console.log("Trying to reconnect onclose");
-          HttpClient.connectToSocket(opts);
+          const subscription = HttpClient.connectToSocket(opts).subscribe({
+            next: (newSocketWrapper) => {
+              socketProvider.next(newSocketWrapper);
+            },
+          });
+          retryUnsubscribe = () => subscription.unsubscribe();
         }, 10_000);
       }
     };
 
-    return () => {
-      isIntentional = true;
-      socket.close();
-    };
+    return socketProvider;
+  },
+
+  getDeck() {
+    return from(fetchJson<TGetDeckResponse>(`/v1/deck`));
   },
 
   getHealth: async (): Promise<void> =>

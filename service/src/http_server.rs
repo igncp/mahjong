@@ -11,6 +11,7 @@ use actix_web::{
     get, patch, post, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
 };
 use actix_web_actors::ws;
+use mahjong_core::deck::DEFAULT_DECK;
 use mahjong_core::GameId;
 use service_contracts::{
     AdminGetGamesResponse, AdminPostAIContinueRequest, AdminPostBreakMeldRequest,
@@ -75,6 +76,11 @@ async fn admin_get_games(storage: StorageData, req: HttpRequest) -> impl Respond
         }
         Err(_) => HttpResponse::InternalServerError().body("Error getting games"),
     }
+}
+
+#[get("/v1/deck")]
+async fn get_deck() -> impl Responder {
+    HttpResponse::Ok().json(&DEFAULT_DECK.clone())
 }
 
 #[get("/v1/user/game")]
@@ -938,6 +944,7 @@ impl MahjongServer {
                 .service(admin_post_game_say_mahjong)
                 .service(admin_post_game_sort_hands)
                 .service(admin_post_game_swap_tiles)
+                .service(get_deck)
                 .service(get_health)
                 .service(get_ws)
                 .service(user_get_game_load)

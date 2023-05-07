@@ -1,5 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
+import { first } from "rxjs";
 
 import {
   GameId,
@@ -11,11 +12,11 @@ import {
   TileId,
 } from "mahjong_sdk/src/core";
 import { HttpClient } from "mahjong_sdk/src/http-server";
-import Header from "src/containers/common/header";
 import {
   ModelServiceGameSummary,
   ModelState,
-} from "src/lib/models/service-game-summary";
+} from "mahjong_sdk/src/service-game-summary";
+import Header from "src/containers/common/header";
 import { SiteUrls } from "src/lib/site/urls";
 import Alert from "src/ui/common/alert";
 import Button from "src/ui/common/button";
@@ -73,10 +74,10 @@ const Game = ({ gameId, userId }: IProps) => {
   const [loading] = loadingState;
 
   useEffect(() => {
-    const disconnect = HttpClient.connectToSocket({
+    const socket$ = HttpClient.connectToSocket({
       gameId,
       onMessage: (data) => {
-        if (data.GameSummaryUpdate) {
+        if ("GameSummaryUpdate" in data) {
           setServiceGame(data.GameSummaryUpdate);
         }
       },
@@ -85,19 +86,23 @@ const Game = ({ gameId, userId }: IProps) => {
 
     HttpClient.userLoadGame(gameId, {
       player_id: userId,
-    }).subscribe({
-      error: (error) => {
-        console.log("debug: player.tsx: error", error);
-        router.push(SiteUrls.index);
+    })
+      .pipe(first())
+      .subscribe({
+        error: (error) => {
+          console.log("debug: player.tsx: error", error);
+          router.push(SiteUrls.index);
 
-        return [];
-      },
-      next: (game) => {
-        setServiceGame(game);
-      },
-    });
+          return [];
+        },
+        next: (game) => {
+          setServiceGame(game);
+        },
+      });
 
-    return disconnect;
+    return () => {
+      socket$.value.close();
+    };
   }, [gameId]);
 
   if (!serviceGameSummary) return null;

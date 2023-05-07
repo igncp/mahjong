@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "main": "src/index.ts",
   "private": true,
+  "scripts": {
+    "sync_all": "cd ../web_client && npm run sync_sdk && cd ../mobile_apps && npm run sync_sdk"
+  },
   "dependencies": {
     "qs": "^6.11.1",
     "rxjs": "^7.8.0"
@@ -16,6 +19,7 @@
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-react": "^7.32.2",
     "prettier": "^2.8.7",
+    "react": "18.2.0",
     "typescript": "5.0.2"
   }
 }

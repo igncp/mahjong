@@ -1,5 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   Button,
   SafeAreaView,
@@ -12,37 +11,12 @@ import {
   useColorScheme,
 } from "react-native";
 import { Colors } from "react-native/Libraries/NewAppScreen";
-import { first, from, tap } from "rxjs";
+import { first } from "rxjs";
 
 import { tokenObserver } from "mahjong_sdk/src/auth";
-import { HttpClient, setBaseUrl } from "mahjong_sdk/src/http-server";
+import { HttpClient } from "mahjong_sdk/src/http-server";
 
-const TOKEN_KEY = "mahjong_rust_token";
-
-const setupApp = () => {
-  setBaseUrl("https://mahjong-rust.com/api");
-
-  from(AsyncStorage.getItem(TOKEN_KEY))
-    .pipe(
-      first(),
-      tap((token) => {
-        if (token) {
-          tokenObserver.next(token);
-        }
-
-        tokenObserver.subscribe((newToken) => {
-          if (newToken) {
-            AsyncStorage.setItem(TOKEN_KEY, newToken);
-          } else {
-            AsyncStorage.removeItem(TOKEN_KEY);
-          }
-        });
-      })
-    )
-    .subscribe();
-};
-
-const AuthForm = () => {
+export const AuthScreen = () => {
   const isDarkMode = useColorScheme() === "dark";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -137,48 +111,9 @@ const AuthForm = () => {
   );
 };
 
-const LoadingScreen = () => <Text>Loading</Text>;
-
-const Dashboard = () => <Text>Dashboard</Text>;
-
-const App = () => {
-  const isDarkMode = useColorScheme() === "dark";
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    setupApp();
-
-    tokenObserver.subscribe({
-      next: (newToken) => {
-        setIsLoggedIn(!!newToken);
-      },
-    });
-  }, []);
-
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  };
-
-  if (isLoggedIn === null) {
-    return <LoadingScreen />;
-  }
-
-  return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        backgroundColor={backgroundStyle.backgroundColor}
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
-      />
-      {isLoggedIn ? <Dashboard /> : <AuthForm />}
-    </SafeAreaView>
-  );
-};
-
 const styles = StyleSheet.create({
   input: {
     borderColor: "gray",
     borderWidth: 1,
   },
 });
-
-export default App;

@@ -20,10 +20,10 @@ const Game = ({ gameId }: IProps) => {
   );
 
   useEffect(() => {
-    const disconnect = HttpClient.connectToSocket({
+    const socket$ = HttpClient.connectToSocket({
       gameId,
       onMessage: (data) => {
-        if (data.GameUpdate) {
+        if ("GameUpdate" in data) {
           setServiceGame(data.GameUpdate);
         }
       },
@@ -39,7 +39,9 @@ const Game = ({ gameId }: IProps) => {
       },
     });
 
-    return disconnect;
+    return () => {
+      socket$.value.close();
+    };
   }, [gameId]);
 
   if (!serviceGame) return null;

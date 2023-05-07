@@ -88,7 +88,7 @@ type Hand = HandTile[];
 type Hands = Record<PlayerId, Hand>;
 type Score = Record<PlayerId, number>;
 type Board = TileId[];
-export type Deck = Record<TileId, Tile>;
+export type Deck = Map<TileId, Tile>;
 
 export type Game = {
   id: GameId;
@@ -152,6 +152,9 @@ export type ServiceGameSummary = {
   players: Record<PlayerId, ServicePlayerSummary>;
 };
 
+export type TGetDeckRequest = void;
+export type TGetDeckResponse = Deck;
+
 export type TAdminPostBreakMeldRequest = {
   player_id: PlayerId;
   set_id: string;
@@ -209,9 +212,21 @@ export type PossibleMeld = {
   tiles: TileId[];
 };
 
-export type TSocketMessage = {
-  GameUpdate: ServiceGame;
-  GameSummaryUpdate: ServiceGameSummary;
+export type TSocketMessageFromServer =
+  | {
+      GameUpdate: ServiceGame;
+    }
+  | {
+      GameSummaryUpdate: ServiceGameSummary;
+    };
+
+export type TSocketMessageFromClient = {
+  type: "GetDeck";
+};
+
+export type TSocketWrapper = {
+  close: () => void;
+  send: (message: TSocketMessageFromClient) => void;
 };
 
 export type TUserGetGamesQuery = {

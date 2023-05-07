@@ -5,7 +5,7 @@ import { setBaseUrl } from "mahjong_sdk/src/http-server";
 import { env } from "src/lib/env";
 import "src/styles/global.css";
 
-const setupApp = () => {
+const setupApp = async () => {
   const TOKEN_KEY = "mahjongAuthToken";
 
   if (typeof window !== "undefined") {
@@ -19,6 +19,13 @@ const setupApp = () => {
   }
 
   setBaseUrl(env.SERVICE_URL);
+
+  // This has an issue when building due to wasm
+  const { setupServiceGameSummary } = await import(
+    "src/lib/models/service-game-summary"
+  ).catch(() => ({ setupServiceGameSummary: () => {} }));
+
+  setupServiceGameSummary();
 };
 
 setupApp();

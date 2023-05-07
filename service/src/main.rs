@@ -1,6 +1,7 @@
 #![deny(clippy::use_self, clippy::shadow_unrelated)]
 #![allow(clippy::await_holding_lock)]
 use auth::AuthHandler;
+use dotenv::dotenv;
 use http_server::MahjongServer;
 use sqlite_storage::SQLiteStorage;
 use std::process;
@@ -24,6 +25,7 @@ mod user_wrapper;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv().ok();
     setup_logs();
 
     let is_setup_ok = AuthHandler::verify_setup();
