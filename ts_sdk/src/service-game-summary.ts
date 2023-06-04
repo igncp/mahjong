@@ -1,8 +1,8 @@
-import { first } from "rxjs";
+import { Subject, first } from "rxjs";
 
 import {
   Deck,
-  GameSettings,
+  GameSettingsSummary,
   PossibleMeld,
   ServiceGameSummary,
   Tile,
@@ -31,11 +31,16 @@ export const setGetPossibleMeldsSummary = (
   get_possible_melds_summary = newGetPossibleMeldsSummary;
 };
 
+export enum ModelServiceGameSummaryError {
+  INVALID_SAY_MAHJONG = "INVALID_SAY_MAHJONG",
+}
+
 export class ModelServiceGameSummary {
   public isLoading = false;
 
   public gameState!: ModelState<ServiceGameSummary>;
   public loadingState!: ModelState<boolean>;
+  public errorEmitter$ = new Subject<ModelServiceGameSummaryError>();
 
   public updateStates(
     gameState: ModelState<ServiceGameSummary>,
@@ -66,6 +71,12 @@ export class ModelServiceGameSummary {
           this.gameState[1](newGame);
         },
       });
+  }
+
+  getPlayerHandWithoutMelds() {
+    const { hand } = this.gameState[0].game_summary;
+
+    return hand.filter((tile) => !tile.set_id);
   }
 
   claimTile() {
@@ -183,6 +194,10 @@ export class ModelServiceGameSummary {
     HttpClient.userSayMahjong(this.gameState[0].game_summary.id, {
       player_id: this.gameState[0].game_summary.player_id,
     }).subscribe({
+      error: (error) => {
+        console.log("debug: service-game-summary.ts: error", error);
+        this.handleError(ModelServiceGameSummaryError.INVALID_SAY_MAHJONG);
+      },
       next: (newGame) => {
         this.loadingState[1](false);
         this.gameState[1](newGame);
@@ -190,7 +205,7 @@ export class ModelServiceGameSummary {
     });
   }
 
-  sortHands() {
+  sortHands(tiles?: TileId[]) {
     if (this.loadingState[0]) {
       return;
     }
@@ -200,6 +215,7 @@ export class ModelServiceGameSummary {
     HttpClient.userSortHand(this.gameState[0].game_summary.id, {
       game_version: this.gameState[0].game_summary.version,
       player_id: this.gameState[0].game_summary.player_id,
+      tiles,
     })
       .pipe(first())
       .subscribe({
@@ -213,7 +229,7 @@ export class ModelServiceGameSummary {
       });
   }
 
-  setGameSettings(gameSettings: GameSettings) {
+  setGameSettings(gameSettings: GameSettingsSummary) {
     if (this.loadingState[0]) {
       return;
     }
@@ -239,7 +255,11 @@ export class ModelServiceGameSummary {
     return deck.get(tileId) as Tile;
   }
 
-  private handleError = () => {
+  private handleError = (error?: ModelServiceGameSummaryError) => {
+    if (error) {
+      this.errorEmitter$.next(error);
+    }
+
     this.loadingState[1](false);
   };
 }

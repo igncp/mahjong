@@ -1,4 +1,6 @@
-use crate::{deck::DEFAULT_DECK, HandTile, PlayerId, SetId, SuitTile, Tile, TileClaimed, TileId};
+use crate::{
+    deck::DEFAULT_DECK, round::TileClaimed, HandTile, PlayerId, SetId, SuitTile, Tile, TileId,
+};
 use serde::{Deserialize, Serialize};
 
 pub type PlayerDiff = Option<i32>;
@@ -65,8 +67,8 @@ pub fn get_is_chow(opts: &SetCheckOpts) -> bool {
 
     let mut suit_tiles: Vec<SuitTile> = vec![];
 
-    for tile_id in opts.sub_hand.clone() {
-        let tile = DEFAULT_DECK.0.get(&tile_id);
+    for tile_id in opts.sub_hand {
+        let tile = DEFAULT_DECK.0.get(tile_id);
 
         if tile.is_none() {
             return false;
@@ -146,7 +148,7 @@ pub fn get_is_kong(opts: &SetCheckOpts) -> bool {
             }
         }
 
-        last_tile_id = tile.get_id();
+        last_tile_id = tile_id;
     }
 
     true
@@ -170,8 +172,6 @@ pub fn get_tile_claimed_id_for_user(
 
     None
 }
-
-pub type Meld = Vec<TileId>;
 
 pub struct RemoveMeldOpts {
     hand: Vec<HandTile>,
@@ -207,9 +207,10 @@ pub fn get_is_pair(hand: &Vec<&Tile>) -> bool {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct PossibleMeld {
+    pub discard_tile: Option<TileId>,
+    pub is_mahjong: bool,
     pub player_id: PlayerId,
     pub tiles: Vec<TileId>,
-    pub discard_tile: Option<TileId>,
 }
 
 impl PossibleMeld {

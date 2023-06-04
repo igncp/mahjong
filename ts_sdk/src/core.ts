@@ -84,10 +84,10 @@ type HandTile = {
   id: TileId;
   set_id: SetId;
 };
-type Hand = HandTile[];
-type Hands = Record<PlayerId, Hand>;
-type Score = Record<PlayerId, number>;
-type Board = TileId[];
+export type Hand = HandTile[];
+export type Hands = Record<PlayerId, Hand>;
+export type Score = Record<PlayerId, number>;
+export type Board = TileId[];
 export type Deck = Map<TileId, Tile>;
 
 export type Game = {
@@ -117,6 +117,7 @@ export type ServicePlayerSummary = {
 export type ServiceGame = {
   game: Game;
   players: Record<PlayerId, ServicePlayer>;
+  settings: GameSettings;
 };
 
 export type HandSummary = {
@@ -130,6 +131,13 @@ export type GameSettings = {
   fixed_settings: boolean;
 };
 
+export type GameSettingsSummary = {
+  ai_enabled: boolean;
+  auto_sort: boolean;
+  discard_wait_ms: number | null;
+  fixed_settings: boolean;
+};
+
 export type GameSummary = {
   board: Board;
   draw_wall_count: number;
@@ -139,15 +147,17 @@ export type GameSummary = {
   players: PlayerId[];
   player_id: PlayerId;
   round: {
+    dealer_player_index: number;
     discarded_tile: TileId | null;
     player_index: number;
+    wind: Wind;
   };
   score: Score;
   version: GameVersion;
 };
 
 export type ServiceGameSummary = {
-  settings: GameSettings;
+  settings: GameSettingsSummary;
   game_summary: GameSummary;
   players: Record<PlayerId, ServicePlayerSummary>;
 };
@@ -272,13 +282,14 @@ export type TUserPostSayMahjongResponse = ServiceGameSummary;
 
 export type TUserPostSetGameSettingsRequest = {
   player_id: PlayerId;
-  settings: GameSettings;
+  settings: GameSettingsSummary;
 };
 export type TUserPostSetGameSettingsResponse = ServiceGameSummary;
 
 export type TUserPostSortHandRequest = {
   game_version: GameVersion;
   player_id: PlayerId;
+  tiles?: TileId[];
 };
 export type TUserPostSortHandResponse = ServiceGameSummary;
 
@@ -289,6 +300,7 @@ export type TUserPostCreateMeldRequest = {
 export type TUserPostCreateMeldResponse = ServiceGameSummary;
 
 export type TUserPostCreateGameRequest = {
+  ai_player_names?: string[];
   player_id: PlayerId;
 };
 export type TUserPostCreateGameResponse = ServiceGameSummary;
@@ -303,9 +315,11 @@ export type TUserPostSetAuthRequest = {
   password: string;
   username: string;
 };
-export type TUserPostSetAuthResponse = {
-  token: string;
-};
+export type TUserPostSetAuthResponse =
+  | {
+      token: string;
+    }
+  | "E_INVALID_USER_PASS";
 
 export type TUserPostContinueAIRequest = {
   player_id: PlayerId;

@@ -3,24 +3,26 @@ use mahjong_core::{
     game::GameVersion, game_summary::GameSummary, hand::SetIdContent, Game, GameId, Hand, Hands,
     PlayerId, TileId,
 };
+use rustc_hash::{FxHashMap, FxHashSet};
 use serde::{Deserialize, Serialize};
 pub use service_player::{ServicePlayer, ServicePlayerSummary};
-use std::collections::{HashMap, HashSet};
 
 mod service_player;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameSettings {
     pub ai_enabled: bool,
-    pub discard_wait_ms: Option<u32>,
+    pub discard_wait_ms: Option<i32>,
     pub fixed_settings: bool,
-    pub last_discard_time: u128,
+    pub last_discard_time: i128,
+    pub auto_sort_players: FxHashSet<PlayerId>,
 }
 
 impl Default for GameSettings {
     fn default() -> Self {
         Self {
             ai_enabled: true,
+            auto_sort_players: FxHashSet::default(),
             discard_wait_ms: Some(1000),
             fixed_settings: false,
             last_discard_time: 0,
@@ -31,24 +33,62 @@ impl Default for GameSettings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceGame {
     pub game: Game,
-    pub players: HashMap<PlayerId, ServicePlayer>,
+    pub players: FxHashMap<PlayerId, ServicePlayer>,
     pub settings: GameSettings,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GameSettingsSummary {
+    pub ai_enabled: bool,
+    pub discard_wait_ms: Option<i32>,
+    pub fixed_settings: bool,
+    pub last_discard_time: i128,
+    pub auto_sort: bool,
+}
+
+impl GameSettingsSummary {
+    pub fn from_game_settings(settings: &GameSettings, player_id: &PlayerId) -> Self {
+        Self {
+            ai_enabled: settings.ai_enabled,
+            auto_sort: settings.auto_sort_players.iter().any(|p| p == player_id),
+            discard_wait_ms: settings.discard_wait_ms,
+            fixed_settings: settings.fixed_settings,
+            last_discard_time: settings.last_discard_time,
+        }
+    }
+
+    pub fn to_game_settings(&self, player_id: &PlayerId, settings: &GameSettings) -> GameSettings {
+        let mut new_settings = settings.clone();
+
+        if self.auto_sort {
+            new_settings.auto_sort_players.insert(player_id.clone());
+        } else {
+            new_settings.auto_sort_players.remove(player_id);
+        }
+
+        new_settings.ai_enabled = self.ai_enabled;
+        new_settings.discard_wait_ms = self.discard_wait_ms;
+        new_settings.fixed_settings = self.fixed_settings;
+        new_settings.last_discard_time = self.last_discard_time;
+
+        new_settings
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceGameSummary {
     pub game_summary: GameSummary,
-    pub players: HashMap<PlayerId, ServicePlayerSummary>,
-    pub settings: GameSettings,
+    pub players: FxHashMap<PlayerId, ServicePlayerSummary>,
+    pub settings: GameSettingsSummary,
 }
 
 impl ServiceGame {
-    pub fn get_ai_players(&self) -> HashSet<PlayerId> {
+    pub fn get_ai_players(&self) -> FxHashSet<PlayerId> {
         self.players
             .iter()
             .filter(|(_, player)| player.is_ai)
             .map(|(id, _)| id.clone())
-            .collect::<HashSet<PlayerId>>()
+            .collect::<FxHashSet<PlayerId>>()
     }
 }
 
@@ -56,9 +96,11 @@ impl ServiceGameSummary {
     pub fn from_service_game(game: &ServiceGame, player_id: &PlayerId) -> Option<Self> {
         let game_summary = GameSummary::from_game(&game.game, player_id);
 
-        game_summary?;
+        game_summary.as_ref()?;
 
-        let players: HashMap<PlayerId, ServicePlayerSummary> = game
+        let game_summary = game_summary.unwrap();
+
+        let players: FxHashMap<PlayerId, ServicePlayerSummary> = game
             .players
             .clone()
             .into_iter()
@@ -74,9 +116,9 @@ impl ServiceGameSummary {
             .collect();
 
         Some(Self {
-            game_summary: GameSummary::from_game(&game.game, player_id).unwrap(),
+            game_summary,
             players,
-            settings: game.settings.clone(),
+            settings: GameSettingsSummary::from_game_settings(&game.settings, player_id),
         })
     }
 }
@@ -113,7 +155,7 @@ pub type AdminPostDrawTileResponse = Hand;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdminPostCreateMeldRequest {
     pub player_id: String,
-    pub tiles: HashSet<TileId>,
+    pub tiles: FxHashSet<TileId>,
 }
 pub type AdminPostCreateMeldResponse = Hand;
 
@@ -142,6 +184,7 @@ pub type UserPostDrawTileResponse = ServiceGameSummary;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserPostCreateGameRequest {
+    pub ai_player_names: Option<Vec<String>>,
     pub player_id: PlayerId,
 }
 pub type UserPostCreateGameResponse = ServiceGameSummary;
@@ -174,13 +217,14 @@ pub type UserPostMovePlayerResponse = ServiceGameSummary;
 pub struct UserPostSortHandRequest {
     pub game_version: GameVersion,
     pub player_id: PlayerId,
+    pub tiles: Option<Vec<TileId>>,
 }
 pub type UserPostSortHandResponse = ServiceGameSummary;
 
 #[derive(Deserialize, Serialize)]
 pub struct UserPostCreateMeldRequest {
     pub player_id: PlayerId,
-    pub tiles: HashSet<TileId>,
+    pub tiles: FxHashSet<TileId>,
 }
 pub type UserPostCreateMeldResponse = ServiceGameSummary;
 
@@ -239,7 +283,7 @@ pub type UserPostSayMahjongResponse = ServiceGameSummary;
 #[derive(Deserialize, Serialize)]
 pub struct UserPostSetGameSettingsRequest {
     pub player_id: PlayerId,
-    pub settings: GameSettings,
+    pub settings: GameSettingsSummary,
 }
 pub type UserPostSetGameSettingsResponse = ServiceGameSummary;
 

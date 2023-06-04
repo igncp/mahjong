@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 mahjong_core = { path = "../mahjong_core" }
+rustc-hash = "1.1.0"
 serde = { version = "1.0.157", features = ["derive"] }

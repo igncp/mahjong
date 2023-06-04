@@ -1,0 +1,12 @@
+@import "../styles.scss";
+
+.content {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: $common-gap;
+  height: 100vh;
+  margin: auto;
+  max-width: 1060px;
+  padding-top: 80px;
+}

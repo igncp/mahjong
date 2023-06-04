@@ -9,12 +9,12 @@ pub struct AIWrapper<'a> {
 }
 
 impl<'a> AIWrapper<'a> {
-    pub fn new(service_game: &'a mut ServiceGame, draw: Option<bool>) -> Self {
+    pub fn new(service_game: &'a mut ServiceGame, draw_tile_for_real_player: Option<bool>) -> Self {
         let ai_players = service_game.get_ai_players();
         let mut standard_ai = StandardAI::new(&mut service_game.game, ai_players);
 
-        if let Some(draw) = draw {
-            standard_ai.draw = draw;
+        if let Some(draw_tile_for_real_player) = draw_tile_for_real_player {
+            standard_ai.draw_tile_for_real_player = draw_tile_for_real_player;
         }
 
         Self {
@@ -29,12 +29,20 @@ impl<'a> AIWrapper<'a> {
         let now_time = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
-            .as_millis();
+            .as_millis() as i128;
 
         self.standard_ai.can_pass_turn = discard_wait_ms.is_none()
             || last_discard_time == 0
-            || now_time <= last_discard_time
-            || (now_time - last_discard_time) >= discard_wait_ms.unwrap() as u128;
+            || (discard_wait_ms.unwrap() != -1 && {
+                now_time <= last_discard_time
+                    || (now_time - last_discard_time) >= discard_wait_ms.unwrap() as i128
+            });
+
+        let current_player = self.standard_ai.game.get_current_player();
+        self.standard_ai.sort_on_draw = self
+            .game_settings
+            .auto_sort_players
+            .contains(&current_player);
 
         let result = self.standard_ai.play_action();
 

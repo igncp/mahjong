@@ -1,5 +1,4 @@
-use crate::base::{App, AppEvent, Mode};
-use crate::view::draw_view;
+use crate::base::App;
 use crossterm::event::{
     self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyModifiers,
 };
@@ -8,10 +7,13 @@ use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
 use mahjong_core::{HandTile, PlayerId, TileId};
-use std::collections::HashSet;
+use rustc_hash::FxHashSet;
 use std::io;
 use std::time::Duration;
 use tui::{backend::CrosstermBackend, Terminal};
+
+use super::view::draw_view;
+use super::{PlayEvent, PlayMode};
 
 const PAGE_UP_DOWN_SCROLL: u16 = 20;
 
@@ -23,7 +25,7 @@ pub enum UIScreen {
 
 enum UIEvent {
     Input(KeyEvent),
-    Message(AppEvent),
+    Message(PlayEvent),
 }
 
 pub struct UIState {
@@ -52,12 +54,12 @@ impl UIState {
     }
 }
 
-pub struct UI {
+pub struct PlayUI {
     terminal: Terminal<CrosstermBackend<io::Stdout>>,
     state: UIState,
 }
 
-impl UI {
+impl PlayUI {
     pub fn new() -> Self {
         let stdout = io::stdout();
         let backend = CrosstermBackend::new(stdout);
@@ -90,7 +92,7 @@ impl UI {
             return;
         }
 
-        app.admin_start_game().await;
+        app.play.admin_start_game().await;
 
         self.state.screen = UIScreen::Game;
     }
@@ -107,8 +109,8 @@ impl UI {
         None
     }
 
-    async fn wait_for_message_event(&mut self, app: &mut App) -> Option<AppEvent> {
-        let response = app.wait_for_message().await;
+    async fn wait_for_message_event(&mut self, app: &mut App) -> Option<PlayEvent> {
+        let response = app.play.wait_for_message().await;
 
         if response.is_err() {
             return None;
@@ -143,7 +145,7 @@ impl UI {
         }
     }
 
-    fn extract_create_meld_args(&mut self, app: &App) -> Option<(PlayerId, HashSet<TileId>)> {
+    fn extract_create_meld_args(&mut self, app: &App) -> Option<(PlayerId, FxHashSet<TileId>)> {
         let args = self.state.input.split_whitespace().collect::<Vec<&str>>();
         if args.len() < 4 {
             return None;
@@ -152,7 +154,7 @@ impl UI {
         if player_index.is_err() || player_index.clone().unwrap() > 3 {
             return None;
         }
-        let game = &app.service_game.clone().unwrap().game;
+        let game = &app.play.service_game.clone().unwrap().game;
         let player_id = game.players.clone()[player_index.unwrap()].clone();
         let player_hand = &game.table.hands[&player_id];
         let tiles = args[2..]
@@ -165,7 +167,7 @@ impl UI {
                 let tile_id = player_hand.0[tile_index.unwrap()].id;
                 Some(tile_id)
             })
-            .collect::<HashSet<TileId>>();
+            .collect::<FxHashSet<TileId>>();
 
         if tiles.len() < 2 {
             return None;
@@ -186,6 +188,7 @@ impl UI {
 
         let player_index = player_index.unwrap();
         let player = app
+            .play
             .service_game
             .as_ref()
             .unwrap()
@@ -207,7 +210,7 @@ impl UI {
         if player_index.is_err() || player_index.clone().unwrap() > 3 {
             return None;
         }
-        let game = &app.service_game.clone().unwrap().game;
+        let game = &app.play.service_game.clone().unwrap().game;
         let player_id = game.players.clone()[player_index.unwrap()].clone();
         Some(player_id)
     }
@@ -222,8 +225,8 @@ impl UI {
             return None;
         }
         let tile_index = tile_index.unwrap();
-        for player in &app.service_game.as_ref().unwrap().game.players {
-            let player_hand = &app.service_game.as_ref().unwrap().game.table.hands[player];
+        for player in &app.play.service_game.as_ref().unwrap().game.players {
+            let player_hand = &app.play.service_game.as_ref().unwrap().game.table.hands[player];
             if player_hand.0.iter().len() == 14 {
                 let filtered_hand = player_hand
                     .0
@@ -252,6 +255,7 @@ impl UI {
             return None;
         }
         let draw_wall_len = app
+            .play
             .service_game
             .as_ref()
             .unwrap()
@@ -263,6 +267,7 @@ impl UI {
         let tile_index_b = tile_index_b.unwrap_or(draw_wall_len - 1);
 
         let tile_id_a = app
+            .play
             .service_game
             .as_ref()
             .unwrap()
@@ -271,6 +276,7 @@ impl UI {
             .draw_wall
             .get(tile_index_a);
         let tile_id_b = app
+            .play
             .service_game
             .as_ref()
             .unwrap()
@@ -286,11 +292,18 @@ impl UI {
         Some((*tile_id_a.unwrap(), *tile_id_b.unwrap()))
     }
 
-    pub async fn run(&mut self, app: &mut App) {
+    pub async fn run_play(&mut self, app: &mut App) {
+        let health = app.play.service_client.check_health().await;
+
+        if health.is_err() {
+            println!("Error: {}", health.err().unwrap());
+            std::process::exit(1);
+        }
+
         self.prepare();
 
-        if (app.mode == Some(Mode::Admin) && app.service_game.is_some())
-            || (app.mode == Some(Mode::User) && app.service_game_summary.is_some())
+        if (app.play.mode == Some(PlayMode::Admin) && app.play.service_game.is_some())
+            || (app.play.mode == Some(PlayMode::User) && app.play.service_game_summary.is_some())
         {
             self.state.screen = UIScreen::Game;
             self.state.display_hand = true;
@@ -312,7 +325,7 @@ impl UI {
 
             match event {
                 UIEvent::Input(key) => {
-                    if app.waiting {
+                    if app.play.waiting {
                         continue;
                     }
 
@@ -367,29 +380,32 @@ impl UI {
                                             self.create_game(app).await;
                                         }
                                         "gg" => {
-                                            app.get_games().await;
+                                            app.play.get_games().await;
                                             self.state.display_games = true;
                                         }
                                         _ => {}
                                     },
                                     UIScreen::Game => match input_fragment {
                                         "ai" => {
-                                            app.admin_ai_continue().await;
+                                            app.play.admin_ai_continue().await;
                                             self.state.display_hand = true;
                                         }
                                         "claim" => {
                                             let parsed_input = self.extract_claim_tile_args(app);
                                             if let Some(player_id) = parsed_input {
-                                                app.admin_claim_tile(&player_id).await;
+                                                app.play.admin_claim_tile(&player_id).await;
                                             }
                                             self.state.display_hand = true;
                                         }
                                         "cm" => {
                                             let parsed_input = self.extract_create_meld_args(app);
                                             if let Some((player_id, tiles)) = parsed_input {
-                                                let new_hand =
-                                                    app.admin_create_meld(&player_id, &tiles).await;
-                                                app.service_game
+                                                let new_hand = app
+                                                    .play
+                                                    .admin_create_meld(&player_id, &tiles)
+                                                    .await;
+                                                app.play
+                                                    .service_game
                                                     .as_mut()
                                                     .unwrap()
                                                     .game
@@ -400,14 +416,14 @@ impl UI {
                                             }
                                         }
                                         "di" => {
-                                            if app.is_current_player() {
+                                            if app.play.is_current_player() {
                                                 let parsed_input =
                                                     self.extract_discard_tile_args(app);
                                                 if let Some(tile_id) = parsed_input {
-                                                    if app.mode == Some(Mode::Admin) {
-                                                        app.admin_discard_tile(&tile_id).await;
+                                                    if app.play.mode == Some(PlayMode::Admin) {
+                                                        app.play.admin_discard_tile(&tile_id).await;
                                                     } else {
-                                                        app.user_discard_tile(&tile_id).await;
+                                                        app.play.user_discard_tile(&tile_id).await;
                                                     }
                                                 }
                                             }
@@ -418,41 +434,42 @@ impl UI {
                                             self.state.display_draw_wall_index = true;
                                         }
                                         "draw" => {
-                                            app.admin_draw_tile().await;
+                                            app.play.admin_draw_tile().await;
                                             self.state.display_hand = true;
                                         }
                                         "hd" => {
                                             self.state.display_hand = true;
                                         }
                                         "n" => {
-                                            app.admin_move_player_combined().await;
+                                            app.play.admin_move_player_combined().await;
                                             self.state.display_hand = true;
                                         }
                                         "next" => {
-                                            app.admin_move_player().await;
+                                            app.play.admin_move_player().await;
                                             self.state.display_hand = true;
                                         }
                                         "sm" => {
                                             let parsed_input = self.extract_say_mahjong_args(app);
                                             if let Some(player_id) = parsed_input {
-                                                app.admin_say_mahjong(&player_id).await;
+                                                app.play.admin_say_mahjong(&player_id).await;
                                             }
                                             self.state.display_hand = true;
                                         }
                                         "sh" => {
-                                            app.admin_sort_hands().await;
+                                            app.play.admin_sort_hands().await;
                                             self.state.display_hand = true;
                                         }
                                         "sw" => {
                                             let parsed_input = self.extract_swap_tiles_args(app);
                                             if let Some((tile_id_a, tile_id_b)) = parsed_input {
-                                                app.admin_swap_wall_tiles(tile_id_a, tile_id_b)
+                                                app.play
+                                                    .admin_swap_wall_tiles(tile_id_a, tile_id_b)
                                                     .await;
                                             }
                                             self.state.display_hand = true;
                                         }
                                         "oo" => {
-                                            app.admin_send_foo().await;
+                                            app.play.admin_send_foo().await;
                                         }
                                         _ => {}
                                     },

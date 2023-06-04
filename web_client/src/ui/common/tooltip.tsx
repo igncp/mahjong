@@ -5,6 +5,6 @@ type Props = {
   title: string;
 };
 
-const Card = (props: Props) => <AntdTooltip {...props} />;
+const Tooltip = (props: Props) => <AntdTooltip {...props} />;
 
-export default Card;
+export default Tooltip;

@@ -1,8 +1,10 @@
 import { Card as AntdCard } from "antd";
 
 type Props = {
-  children: React.ReactNode;
   bodyStyle?: React.CSSProperties;
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
   title?: React.ReactNode;
 };
 

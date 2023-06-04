@@ -33,6 +33,16 @@ impl Tile {
         }
     }
 
+    pub fn is_same_type(&self, tile_b: &Self) -> bool {
+        match self {
+            Self::Suit(_) => matches!(tile_b, Self::Suit(_)),
+            Self::Dragon(_) => matches!(tile_b, Self::Dragon(_)),
+            Self::Wind(_) => matches!(tile_b, Self::Wind(_)),
+            Self::Season(_) => matches!(tile_b, Self::Season(_)),
+            Self::Flower(_) => matches!(tile_b, Self::Flower(_)),
+        }
+    }
+
     pub fn is_same_content(&self, tile_b: &Self) -> bool {
         match self {
             Self::Suit(tile_a) => match tile_b {

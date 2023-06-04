@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 
 import { tokenObserver } from "mahjong_sdk/src/auth";
 import AuthForm from "src/containers/auth-form";
-import Header from "src/containers/common/header";
 import Dashboard from "src/containers/dashboard";
 import { getIsLoggedIn } from "src/lib/auth";
 
@@ -17,12 +16,7 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  return (
-    <main>
-      <Header />
-      {isLoggedIn ? <Dashboard /> : <AuthForm />}
-    </main>
-  );
+  return <>{isLoggedIn ? <Dashboard /> : <AuthForm />}</>;
 };
 
 export default Index;

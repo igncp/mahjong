@@ -39,6 +39,7 @@ pub struct DieselGame {
     pub round_claimed_from: Option<PlayerId>,
     pub round_claimed_id: Option<i32>,
     pub round_dealer_index: i32,
+    pub round_index: i32,
     pub round_player_index: i32,
     pub round_wall_tile_drawn: Option<i32>,
     pub round_wind: String,
@@ -92,6 +93,7 @@ pub struct DieselGameHand {
 #[diesel(table_name = game_settings)]
 pub struct DieselGameSettings {
     pub ai_enabled: i32,
+    pub auto_sort_players: String,
     pub discard_wait_ms: Option<i32>,
     pub fixed_settings: i32,
     pub game_id: GameId,

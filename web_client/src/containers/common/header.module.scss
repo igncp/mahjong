@@ -1,0 +1,7 @@
+@import "../../ui/styles.scss";
+
+.githubButton {
+  @include mobile {
+    display: none;
+  }
+}

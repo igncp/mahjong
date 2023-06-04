@@ -1,0 +1,22 @@
+@import "../ui/styles.scss";
+
+.list {
+  background-color: white;
+  max-width: 400px;
+  width: 100%;
+}
+
+.listItem {
+  align-items: center;
+  display: flex;
+  padding: 10px 0;
+  justify-content: center;
+}
+
+.newGameButton {
+  display: inline-block;
+
+  @include mobile {
+    margin: 0 auto;
+  }
+}

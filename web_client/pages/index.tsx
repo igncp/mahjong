@@ -1,5 +1,6 @@
 import Head from "next/head";
 import { useRouter } from "next/router";
+import { useTranslation } from "react-i18next";
 
 import { GameScreen, IndexScreen } from "src/screens/list";
 
@@ -9,11 +10,17 @@ const Home = () => {
   const mainPath = routes[1] || "";
   const paths = mainPath.split("/");
 
+  // This hook has issues in the page level
+  const { t } =
+    typeof window === "undefined" ? { t: () => null } : useTranslation();
+
   return (
     <>
-      <Head>
-        <title>Mahjong Web Client</title>
-      </Head>
+      {typeof window !== "undefined" && (
+        <Head>
+          <title>{t("page.title", "Mahjong Web Client")}</title>
+        </Head>
+      )}
       {(() => {
         switch (true) {
           case paths[1] === "game":

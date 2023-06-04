@@ -6,22 +6,21 @@ use crate::{
 };
 use actix_web::{web, HttpResponse};
 use mahjong_core::{game::GameVersion, Game, PlayerId, TileId};
+use rustc_hash::FxHashMap;
 use service_contracts::{
     AdminPostAIContinueRequest, AdminPostAIContinueResponse, AdminPostBreakMeldRequest,
     AdminPostBreakMeldResponse, AdminPostClaimTileResponse, AdminPostCreateMeldRequest,
     AdminPostCreateMeldResponse, AdminPostDiscardTileResponse, AdminPostDrawTileResponse,
     AdminPostMovePlayerResponse, AdminPostSayMahjongResponse, AdminPostSwapDrawTilesResponse,
-    GameSettings, ServiceGame, ServiceGameSummary, ServicePlayer, SocketMessage,
-    UserPostAIContinueRequest, UserPostAIContinueResponse, UserPostBreakMeldRequest,
+    GameSettings, GameSettingsSummary, ServiceGame, ServiceGameSummary, ServicePlayer,
+    SocketMessage, UserPostAIContinueRequest, UserPostAIContinueResponse, UserPostBreakMeldRequest,
     UserPostBreakMeldResponse, UserPostCreateGameResponse, UserPostCreateMeldRequest,
     UserPostCreateMeldResponse, UserPostDiscardTileResponse, UserPostDrawTileResponse,
     UserPostMovePlayerResponse, UserPostSayMahjongResponse, UserPostSetGameSettingsResponse,
     UserPostSortHandResponse,
 };
-use std::{
-    collections::HashMap,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
+use tracing::debug;
 use uuid::Uuid;
 
 pub struct GameWrapper<'a> {
@@ -66,17 +65,20 @@ impl<'a> GameWrapper<'a> {
         storage: &'a StorageData,
         socket_server: SocketServer,
         player_id: Option<PlayerId>,
+        ai_player_names: &Option<Vec<String>>,
     ) -> Result<GameWrapper<'a>, String> {
         let service_player = if player_id.is_some() {
             let player = storage.get_player(&player_id.unwrap()).await;
 
             if player.is_err() {
+                debug!("Player not found with error");
                 return Err("Player not found".to_string());
             }
 
             let player_content = player.unwrap();
 
             if player_content.is_none() {
+                debug!("Player not found with none");
                 return Err("Player not found".to_string());
             }
 
@@ -84,7 +86,7 @@ impl<'a> GameWrapper<'a> {
         } else {
             None
         };
-        let service_game = create_game(&service_player);
+        let service_game = create_game(&service_player, ai_player_names);
 
         Ok(Self {
             storage,
@@ -154,12 +156,15 @@ impl<'a> GameWrapper<'a> {
         A: serde::Serialize,
     {
         let save_result = self.storage.save_game(&self.service_game).await;
+
+        if save_result.is_err() {
+            debug!("Error saving game");
+            return HttpResponse::InternalServerError().body(err_msg);
+        }
+
         self.sync_game();
 
-        match save_result {
-            Ok(_) => HttpResponse::Ok().json(data),
-            Err(_) => HttpResponse::InternalServerError().body(err_msg),
-        }
+        HttpResponse::Ok().json(data)
     }
 
     pub async fn handle_admin_new_game(&self) -> HttpResponse {
@@ -194,13 +199,15 @@ impl<'a> GameWrapper<'a> {
     pub async fn handle_user_set_game_settings(
         &mut self,
         player_id: &PlayerId,
-        settings: &GameSettings,
+        settings: &GameSettingsSummary,
     ) -> HttpResponse {
         if settings.fixed_settings {
             return HttpResponse::BadRequest().body("Cannot change fixed settings");
         }
 
-        self.service_game.settings = settings.clone();
+        let existing_settings = self.service_game.settings.clone();
+        self.service_game.settings = settings.to_game_settings(player_id, &existing_settings);
+
         let game_summary: UserPostSetGameSettingsResponse =
             ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
 
@@ -232,7 +239,12 @@ impl<'a> GameWrapper<'a> {
             return HttpResponse::BadRequest().body("Not your turn");
         }
 
-        self.service_game.game.draw_tile_from_wall();
+        let tile_drawn = self.service_game.game.draw_tile_from_wall();
+
+        if tile_drawn.is_none() {
+            return HttpResponse::BadRequest().body("Error when drawing tile");
+        }
+
         self.service_game.game.update_version();
 
         let response: UserPostDrawTileResponse =
@@ -344,8 +356,13 @@ impl<'a> GameWrapper<'a> {
 
     pub async fn handle_user_move_player(&mut self, player_id: &PlayerId) -> HttpResponse {
         let current_player = self.service_game.game.get_current_player();
+        let are_more_real = self.service_game.game.players.iter().any(|p_id| {
+            let id = p_id.to_owned();
+            let player = self.service_game.players.get(&id).unwrap();
+            !player.is_ai && p_id != player_id
+        });
 
-        if &current_player != player_id {
+        if are_more_real && current_player != player_id.clone() {
             return HttpResponse::BadRequest().body("Not your turn");
         }
 
@@ -377,7 +394,7 @@ impl<'a> GameWrapper<'a> {
         let mut game = self.service_game.clone();
 
         game.game.update_version();
-        game.settings.last_discard_time = now_time;
+        game.settings.last_discard_time = now_time as i128;
 
         if is_admin {
             let response: AdminPostDiscardTileResponse = game;
@@ -508,7 +525,11 @@ impl<'a> GameWrapper<'a> {
         }
     }
 
-    pub async fn handle_user_sort_hand(&mut self, player_id: &PlayerId) -> HttpResponse {
+    pub async fn handle_user_sort_hand(
+        &mut self,
+        player_id: &PlayerId,
+        tiles: &Option<Vec<TileId>>,
+    ) -> HttpResponse {
         let hand = self
             .service_game
             .game
@@ -517,7 +538,16 @@ impl<'a> GameWrapper<'a> {
             .get_mut(player_id)
             .unwrap();
 
-        hand.sort_default();
+        if tiles.is_none() {
+            hand.sort_default();
+        } else {
+            let did_try_to_sort = hand.sort_by_tiles(tiles.as_ref().unwrap());
+
+            if !did_try_to_sort {
+                debug!("Failed to sort hand");
+            }
+        }
+
         self.service_game.game.update_version();
 
         let response: UserPostSortHandResponse =
@@ -559,8 +589,14 @@ impl<'a> GameWrapper<'a> {
     }
 }
 
-fn create_game(player: &Option<ServicePlayer>) -> ServiceGame {
+fn create_game(
+    player: &Option<ServicePlayer>,
+    ai_player_names: &Option<Vec<String>>,
+) -> ServiceGame {
     let mut players: Vec<PlayerId> = vec![];
+
+    debug!("Going to create players");
+
     for player_index in 0..4 {
         if player_index == 0 && player.is_some() {
             players.push(player.as_ref().unwrap().id.clone());
@@ -578,17 +614,22 @@ fn create_game(player: &Option<ServicePlayer>) -> ServiceGame {
     };
 
     game.set_players(&players);
-    let mut players_set = HashMap::<String, ServicePlayer>::new();
+    let mut players_set = FxHashMap::<String, ServicePlayer>::default();
+
+    debug!("Going to add players to game");
+    let empty_player_names = vec![];
+    let player_names = ai_player_names.as_ref().unwrap_or(&empty_player_names);
 
     for (index, game_player) in game.players.iter().enumerate() {
         if index == 0 && player.is_some() {
             let player_clone = player.as_ref().unwrap().clone();
             players_set.insert(player_clone.id.clone(), player_clone);
         } else {
+            let default_name = format!("Player {}", index);
             let service_player = ServicePlayer {
                 id: game_player.clone(),
                 is_ai: true,
-                name: format!("Player {}", index),
+                name: player_names.get(index).unwrap_or(&default_name).clone(),
             };
             players_set.insert(game_player.clone(), service_player);
         }

@@ -18,6 +18,7 @@ diesel::table! {
         round_claimed_from -> Nullable<Text>,
         round_claimed_id -> Nullable<Integer>,
         round_dealer_index -> Integer,
+        round_index -> Integer,
         round_player_index -> Integer,
         round_wall_tile_drawn -> Nullable<Integer>,
         round_wind -> Text,
@@ -71,6 +72,7 @@ diesel::table! {
 diesel::table! {
     game_settings (game_id) {
         ai_enabled -> Integer,
+        auto_sort_players -> Text,
         discard_wait_ms -> Nullable<Integer>,
         fixed_settings -> Integer,
         game_id -> Text,

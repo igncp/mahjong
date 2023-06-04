@@ -1,0 +1,150 @@
+{
+  "auth": {
+    "button": {
+      "submit": "Submit"
+    },
+    "error": {
+      "invalidUserPass": "Invalid username or password",
+      "unknown": "Unknown error"
+    },
+    "intro1": "Enter the username and password.",
+    "intro2": "If the user doesn't exist, it will be created.",
+    "label": {
+      "pass": "Password:",
+      "user": "Username:"
+    },
+    "warning": "Keep in mind that this application is still in early development and the database will be cleared periodically."
+  },
+  "dashboard": {
+    "cancel": "Cancel",
+    "defaultPlayerName": "Player {{number}}",
+    "editName": "Edit the name",
+    "newAdminGame": "New admin game",
+    "newGame": "Create a new game",
+    "playerNum1": "1",
+    "playerNum2": "2",
+    "playerNum3": "3",
+    "playerNum4": "4",
+    "save": "Save",
+    "userPoints_one": "{{count}} points",
+    "userPoints_other": "{{count}} points"
+  },
+  "game": {
+    "actions": "Actions",
+    "AI": {
+      "disabled": "Disabled",
+      "enabled": "Enabled",
+      "title": "AI"
+    },
+    "autoSort": "Auto sort when drawing tile",
+    "blockTime": {
+      "desc": "Block time for next turn pass after discard"
+    },
+    "board": "Board",
+    "breakMeld": "Break meld",
+    "claimTile": "Claim tile",
+    "continueAI": "Continue AI",
+    "createMeld": "Create meld",
+    "currentDealer": "current dealer:",
+    "currentTurn": "Current turn",
+    "currentWind": "Current wind:",
+    "discardInfo": "You can discard by dragging one of your tiles to the board when it is your turn",
+    "drawTile": "Draw tile",
+    "error": {
+      "invalidDraw": "You can't draw a tile now. You can only draw a tile when it is your turn and you didn't draw yet. With the AI enabled, it will draw automatically.",
+      "invalidMahjong": "You can't say Mahjong now"
+    },
+    "hand": "Your hand",
+    "itsYou": "it's you",
+    "meld": {
+      "concealed": "concealed",
+      "open": "open",
+      "title": "Meld"
+    },
+    "otherPlayers": "Other players",
+    "passTurn": "Pass turn",
+    "points_one": "{{count}} points",
+    "points_other": "{{count}} points",
+    "possibleMeld": "Possible meld",
+    "sayMahjong": "Say Mahjong",
+    "settings": {
+      "title": "Settings"
+    },
+    "sort": {
+      "no": "No",
+      "yes": "Yes"
+    },
+    "sortHand": "Sort hand",
+    "visibleMeld": "Meld of {{player}}",
+    "wait": {
+      "10sec": "10 seconds",
+      "1min": "1 minute",
+      "1sec": "1 second",
+      "block": "Block",
+      "none": "None"
+    },
+    "wind": {
+      "east": "East",
+      "north": "North",
+      "south": "South",
+      "west": "West"
+    }
+  },
+  "header": {
+    "logout": "Log out",
+    "title": "Mahjong"
+  },
+  "list": {
+    "empty": "No data"
+  },
+  "page": {
+    "title": "Mahjong Web Client"
+  },
+  "tile": {
+    "autumn": "Autumn (Season)",
+    "bamboo": "Bamboo (Flower)",
+    "bamboo1": "1 (Bamboo)",
+    "bamboo2": "2 (Bamboo)",
+    "bamboo3": "3 (Bamboo)",
+    "bamboo4": "4 (Bamboo)",
+    "bamboo5": "5 (Bamboo)",
+    "bamboo6": "6 (Bamboo)",
+    "bamboo7": "7 (Bamboo)",
+    "bamboo8": "8 (Bamboo)",
+    "bamboo9": "9 (Bamboo)",
+    "chars1": "1 (Characters)",
+    "chars2": "2 (Characters)",
+    "chars3": "3 (Characters)",
+    "chars4": "4 (Characters)",
+    "chars5": "5 (Characters)",
+    "chars6": "6 (Characters)",
+    "chars7": "7 (Characters)",
+    "chars8": "8 (Characters)",
+    "chars9": "9 (Characters)",
+    "chrys": "Chrysanthemum (Flower)",
+    "dots1": "1 (Dots)",
+    "dots2": "2 (Dots)",
+    "dots3": "3 (Dots)",
+    "dots4": "4 (Dots)",
+    "dots5": "5 (Dots)",
+    "dots6": "6 (Dots)",
+    "dots7": "7 (Dots)",
+    "dots8": "8 (Dots)",
+    "dots9": "9 (Dots)",
+    "east": "East (Wind)",
+    "green": "Green (Dragon)",
+    "north": "North (Wind)",
+    "orchid": "Orchid (Flower)",
+    "plum": "Plum (Flower)",
+    "red": "Red (Dragon)",
+    "south": "South (Wind)",
+    "spring": "Spring (Season)",
+    "summer": "Summer (Season)",
+    "west": "West (Wind)",
+    "white": "White (Dragon)",
+    "winter": "Winter (Season)"
+  },
+  "ui": {
+    "copied": "copied"
+  }
+}

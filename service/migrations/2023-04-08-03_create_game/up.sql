@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS game (
   round_claimed_from TEXT NULL,
   round_claimed_id INT NULL,
   round_dealer_index INT NOT NULL,
+  round_index INT NOT NULL,
   round_player_index INT NOT NULL,
   round_wall_tile_drawn INT NULL,
   round_wind TEXT NOT NULL,

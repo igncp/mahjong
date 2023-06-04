@@ -5,9 +5,9 @@ use crate::{
 };
 use async_trait::async_trait;
 use mahjong_core::{Game, GameId, PlayerId};
+use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 use service_contracts::{GameSettings, ServiceGame, ServicePlayer};
-use std::collections::HashMap;
 use tracing::debug;
 
 pub struct FileStorage {
@@ -16,10 +16,10 @@ pub struct FileStorage {
 
 #[derive(Serialize, Deserialize)]
 struct FileContent {
-    auth: Option<HashMap<Username, AuthInfo>>,
-    games: Option<HashMap<GameId, Game>>,
-    players: Option<HashMap<PlayerId, ServicePlayer>>,
-    settings: Option<HashMap<GameId, GameSettings>>,
+    auth: Option<FxHashMap<Username, AuthInfo>>,
+    games: Option<FxHashMap<GameId, Game>>,
+    players: Option<FxHashMap<PlayerId, ServicePlayer>>,
+    settings: Option<FxHashMap<GameId, GameSettings>>,
 }
 
 #[async_trait]
@@ -53,13 +53,13 @@ impl Storage for FileStorage {
     async fn save_game(&self, service_game: &ServiceGame) -> Result<(), String> {
         let mut file_content = self.get_file();
         if file_content.games.is_none() {
-            file_content.games = Some(HashMap::new());
+            file_content.games = Some(FxHashMap::default());
         }
         if file_content.players.is_none() {
-            file_content.players = Some(HashMap::new());
+            file_content.players = Some(FxHashMap::default());
         }
         if file_content.settings.is_none() {
-            file_content.settings = Some(HashMap::new());
+            file_content.settings = Some(FxHashMap::default());
         }
 
         let games = file_content.games.as_mut().unwrap();
@@ -80,13 +80,13 @@ impl Storage for FileStorage {
     async fn get_game(&self, id: &GameId) -> Result<Option<ServiceGame>, String> {
         let mut file_content = self.get_file();
         if file_content.games.is_none() {
-            file_content.games = Some(HashMap::new());
+            file_content.games = Some(FxHashMap::default());
         }
         if file_content.players.is_none() {
-            file_content.players = Some(HashMap::new());
+            file_content.players = Some(FxHashMap::default());
         }
         if file_content.settings.is_none() {
-            file_content.settings = Some(HashMap::new());
+            file_content.settings = Some(FxHashMap::default());
         }
 
         let games = file_content.games.as_mut().unwrap();
@@ -99,7 +99,7 @@ impl Storage for FileStorage {
             return Ok(None);
         }
 
-        let players: HashMap<PlayerId, ServicePlayer> = game
+        let players: FxHashMap<PlayerId, ServicePlayer> = game
             .unwrap()
             .players
             .iter()

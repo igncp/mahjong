@@ -13,7 +13,7 @@ pub fn format_tile(tile: JsValue) -> String {
 #[wasm_bindgen]
 pub fn get_possible_melds(game: String) -> JsValue {
     let service_game: ServiceGame = serde_json::from_str(&game).unwrap();
-    let possible_melds = service_game.game.get_possible_melds();
+    let possible_melds = service_game.game.get_possible_melds(false);
 
     serde_wasm_bindgen::to_value(&possible_melds).unwrap()
 }

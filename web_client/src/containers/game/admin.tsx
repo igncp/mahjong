@@ -3,11 +3,12 @@ import { Fragment, useEffect, useState } from "react";
 
 import { SetId, TAdminGetGameResponse } from "mahjong_sdk/src/core";
 import { HttpClient } from "mahjong_sdk/src/http-server";
-import Header from "src/containers/common/header";
 import { ModelServiceGame } from "src/lib/models/service-game";
 import { SiteUrls } from "src/lib/site/urls";
 import Button from "src/ui/common/button";
 import CopyToClipboard from "src/ui/common/copy-to-clipboard";
+
+import PageContent from "../page-content";
 
 interface IProps {
   gameId: string;
@@ -51,8 +52,7 @@ const Game = ({ gameId }: IProps) => {
   const possibleMelds = serviceGameM.getPossibleMelds();
 
   return (
-    <main>
-      <Header />
+    <PageContent>
       <p>
         Game ID: <CopyToClipboard text={gameId} />
       </p>
@@ -291,7 +291,7 @@ const Game = ({ gameId }: IProps) => {
           </Button>
         </li>
       </ul>
-    </main>
+    </PageContent>
   );
 };
 

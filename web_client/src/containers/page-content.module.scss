@@ -1,0 +1,43 @@
+@import "../ui/styles.scss";
+
+.githubButton {
+  display: none;
+
+  @include mobile {
+    display: inline-block;
+  }
+}
+
+.headerWrapper {
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.pageInner {
+  display: grid;
+  flex: 1;
+  gap: $common-gap;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr 80px;
+  padding: 0 $common-gap;
+
+  main {
+    display: flex;
+    flex-direction: column;
+    gap: $common-gap;
+  }
+
+  footer {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: $common-gap;
+    justify-content: center;
+  }
+
+  @include tablet-above {
+    grid-template-rows: 1fr 0px;
+  }
+}

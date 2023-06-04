@@ -2,8 +2,8 @@
 pub use deck::Deck;
 pub use game::{Game, GameId, GamePhase};
 pub use hand::{Hand, HandTile, SetId};
+use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 pub use tile::{Tile, TileId};
 
 pub mod ai;
@@ -17,6 +17,7 @@ pub mod score;
 mod test_deck;
 mod test_game;
 mod test_game_summary;
+mod test_hand;
 mod test_meld;
 mod test_round;
 pub mod tile;
@@ -97,7 +98,7 @@ pub struct SeasonTile {
 }
 
 pub type Board = Vec<TileId>;
-pub type Hands = HashMap<PlayerId, Hand>;
+pub type Hands = FxHashMap<PlayerId, Hand>;
 pub type DrawWall = Vec<TileId>;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -108,22 +109,4 @@ pub struct Table {
 }
 
 pub type ScoreItem = u32;
-pub type Score = HashMap<PlayerId, ScoreItem>;
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct RoundTileClaimed {
-    pub by: Option<PlayerId>,
-    pub from: PlayerId,
-    pub id: TileId,
-}
-
-pub type TileClaimed = Option<RoundTileClaimed>;
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Round {
-    pub dealer_player_index: usize,
-    pub player_index: usize,
-    pub tile_claimed: TileClaimed,
-    pub wall_tile_drawn: Option<TileId>,
-    pub wind: Wind,
-}
+pub type Score = FxHashMap<PlayerId, ScoreItem>;

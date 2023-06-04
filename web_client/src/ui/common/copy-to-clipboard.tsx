@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 type TProps = {
   text: string;
@@ -6,6 +7,7 @@ type TProps = {
 
 const CopyToClipboard = ({ text }: TProps) => {
   const [copied, setCopied] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (copied) {
@@ -33,7 +35,7 @@ const CopyToClipboard = ({ text }: TProps) => {
       >
         {text}
       </span>
-      <span>{copied ? " (copied)" : ""}</span>
+      <span>{copied ? ` (${t("ui.copied", "copied")})` : ""}</span>
     </>
   );
 };

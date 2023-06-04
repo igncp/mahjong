@@ -1,77 +1,115 @@
+import { InfoCircleOutlined } from "@ant-design/icons";
+import { message } from "antd";
 import { useRouter } from "next/router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { first } from "rxjs";
 
 import {
+  Board,
   GameId,
   GameSettings,
   PlayerId,
   ServiceGameSummary,
   SetId,
   TUserLoadGameResponse,
-  TileId,
+  Wind,
 } from "mahjong_sdk/src/core";
 import { HttpClient } from "mahjong_sdk/src/http-server";
 import {
   ModelServiceGameSummary,
+  ModelServiceGameSummaryError,
   ModelState,
 } from "mahjong_sdk/src/service-game-summary";
-import Header from "src/containers/common/header";
 import { SiteUrls } from "src/lib/site/urls";
+import { getTileInfo } from "src/lib/tile-info";
 import Alert from "src/ui/common/alert";
 import Button from "src/ui/common/button";
 import Card from "src/ui/common/card";
 import { lightGreen } from "src/ui/common/colors";
 import CopyToClipboard from "src/ui/common/copy-to-clipboard";
 import List, { ListItem } from "src/ui/common/list";
-import PageContent from "src/ui/common/page-content";
 import Select, { SelectOption } from "src/ui/common/select";
-import Space from "src/ui/common/space";
 import Text from "src/ui/common/text";
+import Tooltip from "src/ui/common/tooltip";
 import UserAvatar from "src/ui/common/user-avatar";
+import {
+  DROP_BG,
+  DROP_BORDER,
+  DROP_HEIGHT,
+  DROP_WIDTH,
+  useGameUI,
+} from "src/ui/game/use-game-ui";
 import TileImg from "src/ui/tile-img";
+
+import PageContent from "../page-content";
+import styles from "./player.module.scss";
 
 interface IProps {
   gameId: GameId;
   userId: PlayerId;
 }
 
-const discardWaitMsOptions: SelectOption[] = [
-  {
-    label: "None",
-    value: "none",
-  },
-  {
-    label: "1 second",
-    value: "1s",
-  },
-  {
-    label: "10 seconds",
-    value: "10s",
-  },
-  {
-    label: "1 minute",
-    value: "1m",
-  },
-];
-
 const convertDiscardWaitMsValue = (value: GameSettings["discard_wait_ms"]) => {
   if (value === null) return "none";
   if (value === 1000) return "1s";
   if (value === 10000) return "10s";
   if (value === 60000) return "1m";
+  if (value === -1) return "block";
   return "none";
 };
 
 const Game = ({ gameId, userId }: IProps) => {
+  const { t, i18n } = useTranslation();
   const gameState = useState<TUserLoadGameResponse | null>(null);
   const loadingState = useState(false);
+  const [messageApi, contextHolder] = message.useMessage();
 
   const serviceGameMRef = useRef<ModelServiceGameSummary | null>(null);
   const router = useRouter();
 
   const [serviceGameSummary, setServiceGame] = gameState;
   const [loading] = loadingState;
+
+  const autoSortOptions: SelectOption[] = useMemo(
+    () => [
+      {
+        label: t("game.sort.yes", "Yes"),
+        value: "yes",
+      },
+      {
+        label: t("game.sort.no", "No"),
+        value: "no",
+      },
+    ],
+    [t]
+  );
+
+  const discardWaitMsOptions: SelectOption[] = useMemo(
+    () => [
+      {
+        label: t("game.wait.none", "None"),
+        value: "none",
+      },
+      {
+        label: t("game.wait.1sec", "1 second"),
+        value: "1s",
+      },
+      {
+        label: t("game.wait.10sec", "10 seconds"),
+        value: "10s",
+      },
+      {
+        label: t("game.wait.1min", "1 minute"),
+        value: "1m",
+      },
+      {
+        label: t("game.wait.block", "Block"),
+        value: "block",
+      },
+    ],
+    [t]
+  );
 
   useEffect(() => {
     const socket$ = HttpClient.connectToSocket({
@@ -105,20 +143,65 @@ const Game = ({ gameId, userId }: IProps) => {
     };
   }, [gameId]);
 
-  if (!serviceGameSummary) return null;
-
   serviceGameMRef.current =
     serviceGameMRef.current || new ModelServiceGameSummary();
-
   const serviceGameM = serviceGameMRef.current;
+
+  useEffect(() => {
+    if (!serviceGameM) return;
+
+    const subscription = serviceGameM.errorEmitter$.subscribe({
+      next: (error) => {
+        setTimeout(() => {
+          if (error === ModelServiceGameSummaryError.INVALID_SAY_MAHJONG) {
+            messageApi.open({
+              content: t(
+                "game.error.invalidMahjong",
+                "You can't say Mahjong now"
+              ),
+              type: "error",
+            });
+          }
+        }, 100);
+      },
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [serviceGameM, messageApi]);
+
+  const getCanDiscardTile = () => {
+    if (!serviceGameSummary) return false;
+
+    const { hand } = serviceGameSummary.game_summary;
+
+    // This should be from API
+    return hand.length === 14;
+  };
+
   serviceGameM.updateStates(
     gameState as ModelState<ServiceGameSummary>,
     loadingState
   );
 
+  const { boardDropRef, handTilesProps, canDropInBoard } = useGameUI({
+    getCanDiscardTile,
+    serviceGameM,
+    serviceGameSummary,
+  });
+
+  const windToText: Record<Wind, string> = {
+    [Wind.East]: t("game.wind.east", "East"),
+    [Wind.North]: t("game.wind.north", "North"),
+    [Wind.South]: t("game.wind.south", "South"),
+    [Wind.West]: t("game.wind.west", "West"),
+  };
+
+  if (!serviceGameSummary) return null;
+
   const { hand } = serviceGameSummary.game_summary;
-  const canDiscardTile = hand.length === 14;
-  const handWithoutMelds = hand.filter((tile) => !tile.set_id);
+  const handWithoutMelds = serviceGameM.getPlayerHandWithoutMelds();
 
   const setsIds = hand.reduce((acc, tile) => {
     if (tile.set_id) {
@@ -150,6 +233,8 @@ const Game = ({ gameId, userId }: IProps) => {
           return 10000;
         case "1m":
           return 60000;
+        case "block":
+          return -1;
         default:
           return null;
       }
@@ -161,31 +246,41 @@ const Game = ({ gameId, userId }: IProps) => {
     });
   };
 
+  const onAutoSortChange = (value: string) => {
+    const boolValue = value === "yes";
+
+    serviceGameM.setGameSettings({
+      ...serviceGameSummary.settings,
+      auto_sort: boolValue,
+    });
+  };
+
+  const dealerPlayerId =
+    serviceGameSummary.game_summary.players[
+      serviceGameSummary.game_summary.round.dealer_player_index
+    ];
+  const dealerPlayer = serviceGameSummary.players[dealerPlayerId];
+
   return (
-    <main style={{ width: "100vw" }}>
-      <Header />
-      <PageContent style={{ paddingTop: "20px" }}>
-        <Text>
-          <b>{player.name}</b> ({serviceGameSummary.game_summary.score[userId]}{" "}
-          points) <CopyToClipboard text={userId} />
-        </Text>
-        <Space>
-          <Alert
-            message={
-              <>
-                Current turn:{" "}
-                <b>
-                  {turnPlayer.name}
-                  {turnPlayer.id === player.id ? " (it's you)" : ""}
-                </b>
-              </>
-            }
-            type="info"
-          />
-        </Space>
+    <PageContent>
+      <Text style={{ marginTop: "20px" }}>
+        <b style={{ fontSize: "20px" }}>{player.name}</b> (
+        {t("game.points", "{{count}} points", {
+          count: serviceGameSummary.game_summary.score[userId],
+        })}
+        ) <CopyToClipboard text={userId} />
+      </Text>
+      <Text>
+        {t("game.currentWind", "Current wind:")}{" "}
+        <b>{windToText[serviceGameSummary.game_summary.round.wind]}</b>,{" "}
+        {t("game.currentDealer", "current dealer:")} <b>{dealerPlayer.name}</b>
+      </Text>
+      <span ref={boardDropRef}>
         <Card
           bodyStyle={{ background: lightGreen, minHeight: "150px" }}
-          title={`Board (${serviceGameSummary.game_summary.board.length} / ${
+          title={`${t("game.board", "Board")} (${
+            serviceGameSummary.game_summary.board.length
+          } / ${
             serviceGameSummary.game_summary.draw_wall_count +
             serviceGameSummary.game_summary.board.length
           })`}
@@ -199,6 +294,7 @@ const Game = ({ gameId, userId }: IProps) => {
           >
             <span
               style={{
+                alignItems: "center",
                 display: "inline-flex",
                 flexDirection: "row",
                 flexWrap: "wrap",
@@ -232,304 +328,394 @@ const Game = ({ gameId, userId }: IProps) => {
                   );
                 }
               )}
+              {canDropInBoard && (
+                <span
+                  style={{
+                    background: DROP_BG,
+                    border: DROP_BORDER,
+                    height: DROP_HEIGHT,
+                    marginLeft: "10px",
+                    opacity: 0.8,
+                    width: DROP_WIDTH,
+                  }}
+                />
+              )}
             </span>
           </Text>
         </Card>
-        <Space>
-          <Card title={<>Hand: ({hand.length})</>}>
-            <Text
-              style={{
-                alignItems: "center",
-                display: "flex",
-                flexWrap: "wrap",
+      </span>
+      <div className={styles.topInfo}>
+        <Alert
+          message={
+            <>
+              {t("game.currentTurn")}:{" "}
+              <b>
+                {turnPlayer.name}
+                {turnPlayer.id === player.id
+                  ? ` (${t("game.itsYou", "it's you")})`
+                  : ""}
+              </b>
+            </>
+          }
+          style={{ display: "inline-block" }}
+          type="info"
+        />
+        {(() => {
+          const board = gameState[0]?.game_summary.board as Board;
+          const lastTile = board[board?.length - 1];
+          const tile = serviceGameM.getTile(lastTile);
+          const claimTileTitle = tile ? getTileInfo(tile, i18n)?.[1] : null;
+          const disabled = !gameState[0]?.game_summary.round.discarded_tile;
+          return (
+            <div className={styles.boardButtons}>
+              <Button
+                disabled={disabled}
+                onClick={() => {
+                  HttpClient.userMovePlayer(gameId, {
+                    player_id: userId,
+                  }).subscribe({
+                    next: (newGame) => {
+                      setServiceGame(newGame);
+                    },
+                  });
+                }}
+                type="primary"
+              >
+                {t("game.passTurn", "Pass turn")}
+              </Button>
+              <Button
+                disabled={disabled}
+                onClick={() => {
+                  serviceGameM.claimTile();
+                }}
+                type="primary"
+              >
+                {t("game.claimTile", "Claim tile")}
+                {claimTileTitle ? `: ${claimTileTitle}` : ""}
+              </Button>
+            </div>
+          );
+        })()}
+      </div>
+      <div>
+        <Card
+          title={
+            <>
+              <Tooltip title={t("game.discardInfo")}>
+                {t("game.hand", "Your hand")}: {hand.length}{" "}
+                <InfoCircleOutlined />
+              </Tooltip>
+            </>
+          }
+        >
+          <div className={styles.handTiles}>
+            {handWithoutMelds.map((handTile, handTileIndex) => {
+              const handTileProps = handTilesProps[handTileIndex];
+
+              return <TileImg key={handTile.id} {...handTileProps} />;
+            })}
+          </div>
+        </Card>
+      </div>
+      <div className={styles.smallGrid}>
+        {Array.from(setsIds).map((setId) => {
+          const setTiles = hand.filter((tile) => tile.set_id === setId);
+          const isConcealed = setTiles.every((tile) => tile.concealed);
+
+          return (
+            <Card
+              className={styles.cardSmall}
+              key={setId}
+              title={
+                <>
+                  {t("game.meld.title")}:
+                  <b>{` ${
+                    isConcealed ? t("game.meld.concealed") : t("game.meld.open")
+                  } `}</b>
+                </>
+              }
+            >
+              <div className={styles.meldTile}>
+                <div>
+                  {setTiles.map((tile) => (
+                    <span key={tile.id}>
+                      <TileImg tile={serviceGameM.getTile(tile.id)} />
+                    </span>
+                  ))}
+                </div>
+                {isConcealed && (
+                  <Button
+                    disabled={loading}
+                    onClick={() => {
+                      serviceGameM.breakMeld(setId);
+                    }}
+                  >
+                    {t("game.breakMeld", "Break meld")}
+                  </Button>
+                )}
+              </div>
+            </Card>
+          );
+        })}
+        {possibleMelds.map((possibleMeld, index) => (
+          <Card
+            className={styles.cardSmall}
+            key={index}
+            title={
+              <Text>
+                <b>{t("game.possibleMeld", "Possible meld")}</b>
+              </Text>
+            }
+          >
+            <div className={styles.possibleMeld}>
+              <div>
+                {possibleMeld.tiles.map((tileId) => {
+                  const tile = serviceGameM.getTile(tileId);
+
+                  return (
+                    <span key={tileId}>
+                      <TileImg tile={tile} />
+                    </span>
+                  );
+                })}
+              </div>
+              <Button
+                disabled={
+                  loading ||
+                  possibleMeld.tiles.filter(
+                    (tileId) =>
+                      serviceGameSummary.game_summary.hand.find(
+                        (handTile) => handTile.id === tileId
+                      ) === undefined
+                  ).length !== 0
+                }
+                onClick={() => {
+                  serviceGameM.createMeld(possibleMeld.tiles);
+                }}
+                type="primary"
+              >
+                {t("game.createMeld", "Create meld")}
+              </Button>
+            </div>
+          </Card>
+        ))}
+        {gameState[0]?.game_summary.players.reduce((acc, playerId) => {
+          const playerHand = gameState[0]?.game_summary.other_hands[playerId];
+
+          if (!playerHand?.visible) {
+            return acc;
+          }
+
+          const sets = new Set(playerHand.visible.map((tile) => tile.set_id));
+          const otherPlayer = gameState[0]?.players[playerId];
+
+          Array.from(sets)
+            .sort()
+            .forEach((setId) => {
+              const tiles = playerHand.visible
+                .filter((tile) => tile.set_id === setId)
+                .map((tile) => tile.id);
+
+              acc.push(
+                <Card
+                  className={styles.cardSmall}
+                  key={setId}
+                  title={
+                    <Text>
+                      <b>
+                        {t("game.visibleMeld", "Meld of {{player}}", {
+                          player: otherPlayer?.name,
+                        })}
+                      </b>
+                    </Text>
+                  }
+                >
+                  <div className={styles.possibleMeld}>
+                    <div>
+                      {tiles.map((tileId) => {
+                        const tile = serviceGameM.getTile(tileId);
+
+                        return (
+                          <span key={tileId}>
+                            <TileImg tile={tile} />
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </Card>
+              );
+            });
+
+          return acc;
+        }, [] as React.ReactElement[])}
+        <Card
+          className={styles.cardSmall}
+          title={
+            <Text>
+              <b>{t("game.actions", "Actions")}</b>
+            </Text>
+          }
+        >
+          <div className={styles.actionsPanel}>
+            <Button
+              disabled={loading}
+              onClick={() => {
+                const sendErrorMessage = () => {
+                  // TODO: Move to the error emitter
+                  messageApi.open({
+                    content: t(
+                      "game.error.invalidDraw",
+                      "You can't draw a tile now. You can only draw a tile when it is your turn and you didn't draw yet. With the AI enabled, it will draw automatically."
+                    ),
+                    type: "error",
+                  });
+                };
+
+                HttpClient.userDrawTile(gameId, {
+                  game_version: serviceGameSummary.game_summary.version,
+                  player_id: userId,
+                }).subscribe({
+                  error: () => {
+                    sendErrorMessage();
+                  },
+                  next: (gameSummary) => {
+                    setServiceGame(gameSummary);
+                  },
+                });
               }}
             >
-              {handWithoutMelds.map((handTile) => (
-                <span
-                  key={handTile.id}
-                  onClick={() => {
-                    if (canDiscardTile) {
-                      serviceGameM.discardTile(handTile.id);
-                    }
-                  }}
-                  style={{
-                    color: canDiscardTile ? "black" : "gray",
-                    cursor: canDiscardTile ? "pointer" : "default",
-                  }}
-                >
-                  <TileImg tile={serviceGameM.getTile(handTile.id)} />
-                </span>
-              ))}
+              {t("game.drawTile", "Draw tile")}
+            </Button>
+            <Button
+              disabled={loading}
+              onClick={() => {
+                serviceGameM.sortHands();
+              }}
+            >
+              {t("game.sortHand", "Sort hand")}
+            </Button>
+            <Button
+              disabled={loading}
+              onClick={() => {
+                HttpClient.userContinueAI(gameId, {
+                  player_id: userId,
+                }).subscribe({
+                  next: ({ service_game_summary: newGame }) => {
+                    setServiceGame(newGame);
+                  },
+                });
+              }}
+            >
+              {t("game.continueAI", "Continue AI")}
+            </Button>
+            <Button
+              disabled={loading}
+              onClick={() => {
+                serviceGameM.sayMahjong();
+              }}
+            >
+              {t("game.sayMahjong", "Say Mahjong")}
+            </Button>
+          </div>
+        </Card>
+
+        <Card
+          className={`${styles.cardSmall} ${styles.cardOtherPlayers}`}
+          title={
+            <Text>
+              <b>{t("game.otherPlayers", "Other players")}</b>
             </Text>
-          </Card>
-        </Space>
-        {!!Array.from(setsIds).length && (
-          <Space>
-            <List
-              bordered
-              dataSource={Array.from(setsIds).sort((a, b) =>
-                a.localeCompare(b)
-              )}
-              renderItem={(setId) => {
-                const setTiles = hand.filter((tile) => tile.set_id === setId);
-                const isConcealed = setTiles.every((tile) => tile.concealed);
-
-                return (
-                  <ListItem
-                    style={{
-                      alignItems: "center",
-                      display: "flex",
-                      gap: "5px",
-                      justifyContent: "start",
-                    }}
-                  >
-                    <Text>
-                      Meld:<b>{` ${isConcealed ? "concealed" : "open"} `}</b>
-                    </Text>
-                    {setTiles.map((tile) => (
-                      <span key={tile.id}>
-                        <TileImg tile={serviceGameM.getTile(tile.id)} />
-                      </span>
-                    ))}
-                    {isConcealed && (
-                      <Button
-                        disabled={loading}
-                        onClick={() => {
-                          serviceGameM.breakMeld(setId);
-                        }}
-                      >
-                        Break meld
-                      </Button>
-                    )}
-                  </ListItem>
-                );
-              }}
-            />
-          </Space>
-        )}
-        {!!possibleMelds.length && (
-          <Space>
-            <List
-              bordered
-              dataSource={possibleMelds}
-              renderItem={(possibleMeld) => (
-                <ListItem
-                  style={{
-                    alignItems: "center",
-                    display: "flex",
-                    gap: "10px",
-                    justifyContent: "start",
-                  }}
-                >
-                  Possible meld:{" "}
-                  <Space>
-                    {possibleMeld.tiles.map((tileId) => {
-                      const tile = serviceGameM.getTile(tileId);
-
-                      return <TileImg key={tileId} tile={tile} />;
-                    })}
-                  </Space>
-                  <Button
-                    disabled={
-                      loading ||
-                      possibleMeld.tiles.filter(
-                        (tileId) =>
-                          serviceGameSummary.game_summary.hand.find(
-                            (handTile) => handTile.id === tileId
-                          ) === undefined
-                      ).length !== 0
-                    }
-                    onClick={() => {
-                      serviceGameM.createMeld(possibleMeld.tiles);
-                    }}
-                  >
-                    Create meld
-                  </Button>
-                </ListItem>
-              )}
-            />
-          </Space>
-        )}
-        <div
-          style={{
-            alignItems: "start",
-            display: "flex",
-            flexDirection: "row",
-            flexWrap: "wrap",
-            gap: "10px",
-          }}
+          }
         >
-          <Space>
-            <List
-              bordered
-              dataSource={serviceGameSummary.game_summary.players.filter(
-                (p) => p !== userId
-              )}
-              header={
-                <Text>
-                  <b>Other players</b>
-                </Text>
-              }
-              renderItem={(playerId) => {
-                const player = serviceGameSummary.players[playerId];
+          <List
+            dataSource={serviceGameSummary.game_summary.players.filter(
+              (p) => p !== userId
+            )}
+            renderItem={(playerId) => {
+              const player = serviceGameSummary.players[playerId];
 
-                const playerHand =
-                  serviceGameSummary.game_summary.other_hands[playerId];
-                const melds = playerHand.visible.reduce((meldsInner, tile) => {
-                  if (tile.set_id) {
-                    meldsInner[tile.set_id] = meldsInner[tile.set_id] || [];
-                    meldsInner[tile.set_id].push(tile.id);
-                  }
-
-                  return meldsInner;
-                }, {} as Record<string, TileId[]>);
-                const meldsSets = Object.keys(melds).sort();
-
-                return (
-                  <ListItem>
-                    <Space style={{ minWidth: "150px" }}>
-                      <UserAvatar />
-                      <Text>
-                        {player.name} (
-                        {serviceGameSummary.game_summary.score[playerId]}{" "}
-                        points)
-                      </Text>
-                      {meldsSets.length > 0 && (
-                        <ul>
-                          {meldsSets.map((meldSetId) => {
-                            const meldTiles = melds[meldSetId];
-
-                            return (
-                              <li key={meldSetId}>
-                                Visible meld:{" "}
-                                {meldTiles.map((tileId) => (
-                                  <span key={tileId}>
-                                    {serviceGameM.getTileString(tileId)}
-                                  </span>
-                                ))}
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      )}
-                    </Space>
-                  </ListItem>
-                );
-              }}
-            />
-          </Space>
-          <Space>
-            <Card title="Actions">
-              <Space wrap>
-                <Button
-                  disabled={loading}
-                  onClick={() => {
-                    HttpClient.userDrawTile(gameId, {
-                      game_version: serviceGameSummary.game_summary.version,
-                      player_id: userId,
-                    }).subscribe({
-                      next: (gameSummary) => {
-                        setServiceGame(gameSummary);
-                      },
-                    });
-                  }}
-                >
-                  Draw tile
-                </Button>
-                <Button
-                  disabled={loading}
-                  onClick={() => {
-                    HttpClient.userMovePlayer(gameId, {
-                      player_id: userId,
-                    }).subscribe({
-                      next: (newGame) => {
-                        setServiceGame(newGame);
-                      },
-                    });
-                  }}
-                >
-                  Next turn
-                </Button>
-                <Button
-                  disabled={loading}
-                  onClick={() => {
-                    serviceGameM.sortHands();
-                  }}
-                >
-                  Sort hand
-                </Button>
-                <Button
-                  disabled={loading}
-                  onClick={() => {
-                    HttpClient.userContinueAI(gameId, {
-                      player_id: userId,
-                    }).subscribe({
-                      next: ({ service_game_summary: newGame }) => {
-                        setServiceGame(newGame);
-                      },
-                    });
-                  }}
-                >
-                  Continue AI
-                </Button>
-                <Button
-                  disabled={loading}
-                  onClick={() => {
-                    serviceGameM.sayMahjong();
-                  }}
-                >
-                  Say Mahjong
-                </Button>
-              </Space>
-            </Card>
-          </Space>
-          <Space>
-            <Card title="Settings">
-              <form style={{ display: "inline-block" }}>
-                <Space direction="vertical">
-                  <Text>
-                    AI:{" "}
-                    <label style={{ marginRight: "10px" }}>
-                      Enabled
-                      <input
-                        checked={serviceGameSummary.settings.ai_enabled}
-                        name="ai_enabled"
-                        onChange={onAIEnabledChanged}
-                        type="radio"
-                        value={"enabled"}
-                      />
-                    </label>
-                    <label>
-                      Disabled
-                      <input
-                        checked={!serviceGameSummary.settings.ai_enabled}
-                        name="ai_enabled"
-                        onChange={onAIEnabledChanged}
-                        type="radio"
-                        value={"disabled"}
-                      />
-                    </label>
-                  </Text>
-                  <br />
-                  <Text>Block time for next turn pass after discard: </Text>
-                  <Select
-                    defaultValue={
-                      convertDiscardWaitMsValue(
-                        serviceGameSummary.settings.discard_wait_ms
-                      ) || "none"
-                    }
-                    disabled={!serviceGameSummary.settings.ai_enabled}
-                    onChange={onDiscardWaitMsChanged}
-                    options={discardWaitMsOptions}
-                    style={{ width: 120 }}
+              return (
+                <ListItem>
+                  <div className={styles.otherPlayer}>
+                    <UserAvatar />
+                    <Text
+                      style={{
+                        alignItems: "center",
+                        display: "flex",
+                        marginLeft: "10px",
+                      }}
+                    >
+                      {player.name} ({" "}
+                      {t("game.points", "{{count}} points", {
+                        count: serviceGameSummary.game_summary.score[playerId],
+                      })}
+                      )
+                    </Text>
+                  </div>
+                </ListItem>
+              );
+            }}
+            style={{ background: "white" }}
+          />
+        </Card>
+        <Card
+          className={styles.cardSmall}
+          title={t("game.settings.title", "Settings")}
+        >
+          <form className={styles.cardContentSettings}>
+            <div className={styles.settingsFormInner}>
+              <Text>
+                <b>{t("game.AI.title", "AI")}</b>:{" "}
+                <label style={{ marginRight: "10px" }}>
+                  {t("game.AI.enabled", "Enabled")}
+                  <input
+                    checked={serviceGameSummary.settings.ai_enabled}
+                    name="ai_enabled"
+                    onChange={onAIEnabledChanged}
+                    type="radio"
+                    value={"enabled"}
                   />
-                </Space>
-              </form>
-            </Card>
-          </Space>
-        </div>
-      </PageContent>
-    </main>
+                </label>
+                <label>
+                  {t("game.AI.disabled", "Disabled")}
+                  <input
+                    checked={!serviceGameSummary.settings.ai_enabled}
+                    name="ai_enabled"
+                    onChange={onAIEnabledChanged}
+                    type="radio"
+                    value={"disabled"}
+                  />
+                </label>
+              </Text>
+              <Text>{t("game.blockTime.desc")}: </Text>
+              <Select
+                defaultValue={
+                  convertDiscardWaitMsValue(
+                    serviceGameSummary.settings.discard_wait_ms
+                  ) || "none"
+                }
+                disabled={!serviceGameSummary.settings.ai_enabled}
+                onChange={onDiscardWaitMsChanged}
+                options={discardWaitMsOptions}
+                style={{ width: 120 }}
+              />
+              <Text>{t("game.autoSort", "Auto sort when drawing tile")}</Text>
+              <Select
+                defaultValue={
+                  serviceGameSummary.settings.auto_sort ? "yes" : "no"
+                }
+                disabled={false}
+                onChange={onAutoSortChange}
+                options={autoSortOptions}
+                style={{ width: 120 }}
+              />
+            </div>
+          </form>
+        </Card>
+      </div>
+      {contextHolder}
+    </PageContent>
   );
 };
 

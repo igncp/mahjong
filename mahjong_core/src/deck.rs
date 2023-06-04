@@ -1,15 +1,15 @@
 use lazy_static::lazy_static;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 use crate::{
     Dragon, DragonTile, Flower, FlowerTile, Hand, HandTile, Hands, PlayerId, Season, SeasonTile,
     Suit, SuitTile, Table, Tile, TileId, Wind, WindTile,
 };
 
-pub type DeckContent = HashMap<TileId, Tile>;
+pub type DeckContent = FxHashMap<TileId, Tile>;
 
 fn create_deck_content() -> DeckContent {
     let suits_set = vec![Suit::Bamboo, Suit::Dots, Suit::Characters];
@@ -72,7 +72,7 @@ fn create_deck_content() -> DeckContent {
         }
     }
 
-    let mut deck: DeckContent = HashMap::new();
+    let mut deck: DeckContent = FxHashMap::default();
 
     deck_list.iter().enumerate().for_each(|(index, tile)| {
         let mut tile = tile.clone();

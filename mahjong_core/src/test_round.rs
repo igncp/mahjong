@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
+    use rustc_hash::FxHashMap;
 
-    use crate::{GamePhase, Hand, HandTile, Hands, Round, Wind};
+    use crate::{round::Round, GamePhase, Hand, HandTile, Hands, Wind};
 
     fn compare_rounds(round: &Round, expected_round: &Round, test_index: usize) {
         assert_eq!(
@@ -31,32 +31,32 @@ mod test {
                 Round {
                     dealer_player_index: 2,
                     player_index: 2,
-                    tile_claimed: None,
                     wind: Wind::West,
                     wall_tile_drawn: Some(3),
+                    ..Round::default()
                 },
                 Round {
                     dealer_player_index: 2,
                     player_index: 3,
-                    tile_claimed: None,
                     wind: Wind::West,
                     wall_tile_drawn: None,
+                    ..Round::default()
                 },
             ),
             (
                 Round {
                     dealer_player_index: 3,
                     player_index: 3,
-                    tile_claimed: None,
                     wind: Wind::West,
                     wall_tile_drawn: Some(3),
+                    ..Round::default()
                 },
                 Round {
                     dealer_player_index: 3,
                     player_index: 0,
-                    tile_claimed: None,
                     wind: Wind::West,
                     wall_tile_drawn: None,
+                    ..Round::default()
                 },
             ),
         ];
@@ -70,7 +70,7 @@ mod test {
             get_continue_round_fixtures().iter().enumerate()
         {
             let mut round = round.clone();
-            let mut hands: Hands = HashMap::new();
+            let mut hands: Hands = FxHashMap::default();
 
             hands.insert("0".to_string(), Hand(vec![]));
 
@@ -95,16 +95,15 @@ mod test {
                 Round {
                     dealer_player_index: 2,
                     player_index: 2,
-                    tile_claimed: None,
                     wind: Wind::West,
                     wall_tile_drawn: Some(2),
+                    ..Round::default()
                 },
                 Round {
                     dealer_player_index: 3,
                     player_index: 3,
-                    tile_claimed: None,
                     wind: Wind::West,
-                    wall_tile_drawn: None,
+                    ..Round::default()
                 },
                 GamePhase::Playing,
             ),
@@ -112,16 +111,15 @@ mod test {
                 Round {
                     dealer_player_index: 0,
                     player_index: 3,
-                    tile_claimed: None,
                     wind: Wind::South,
                     wall_tile_drawn: Some(2),
+                    ..Round::default()
                 },
                 Round {
                     dealer_player_index: 2,
                     player_index: 2,
-                    tile_claimed: None,
                     wind: Wind::West,
-                    wall_tile_drawn: None,
+                    ..Round::default()
                 },
                 GamePhase::Playing,
             ),
@@ -129,16 +127,15 @@ mod test {
                 Round {
                     dealer_player_index: 2,
                     player_index: 1,
-                    tile_claimed: None,
                     wind: Wind::North,
                     wall_tile_drawn: Some(1),
+                    ..Round::default()
                 },
                 Round {
                     dealer_player_index: 3,
                     player_index: 3,
-                    tile_claimed: None,
                     wind: Wind::North,
-                    wall_tile_drawn: None,
+                    ..Round::default()
                 },
                 GamePhase::End,
             ),

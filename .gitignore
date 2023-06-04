@@ -8,3 +8,6 @@ mahjong_prod.db
 node_modules
 .idea
 *.tgz
+*.svg
+perf.data
+perf.data.*

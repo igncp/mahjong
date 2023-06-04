@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { first } from "rxjs";
 
 import { tokenObserver } from "mahjong_sdk/src/auth";
@@ -7,26 +8,26 @@ import Alert from "src/ui/common/alert";
 import Button from "src/ui/common/button";
 import Card from "src/ui/common/card";
 import Input from "src/ui/common/input";
-import PageContent from "src/ui/common/page-content";
 import Space from "src/ui/common/space";
 import Text from "src/ui/common/text";
 
+import styles from "./auth-form.module.scss";
+import PageContent from "./page-content";
+
 const AuthForm = () => {
+  const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
   return (
-    <PageContent style={{ marginTop: "20px" }}>
-      <Text>Enter the username and password.</Text>
-      <Text>If the user doesn{"'"}t exist, it will be created.</Text>
+    <PageContent>
+      <Text>{t("auth.intro1")}</Text>
+      <Text>{t("auth.intro2")}</Text>
       <Space style={{ maxWidth: 500 }}>
-        <Alert
-          message="Keep in mind that this application is still in early development and the database will be cleared periodically."
-          type="info"
-        />
+        <Alert message={t("auth.warning")} type="info" />
       </Space>
-      <Space>
+      <div className={styles.formWrapper}>
         <Card>
           <Space direction="vertical">
             {error && (
@@ -34,7 +35,7 @@ const AuthForm = () => {
                 <Alert message={error} type="error" />
               </Space>
             )}
-            <Text>Username:</Text>
+            <Text>{t("auth.label.user")}</Text>
             <Input
               onChange={(e) => {
                 setError(null);
@@ -43,7 +44,7 @@ const AuthForm = () => {
               type="text"
               value={username}
             />
-            <Text>Password:</Text>
+            <Text>{t("auth.label.pass")}</Text>
             <Input
               onChange={(e) => {
                 setError(null);
@@ -63,11 +64,19 @@ const AuthForm = () => {
                   .subscribe({
                     error: (err) => {
                       console.log("debug: auth-form.tsx: err", err);
-                      setError("Unknown error");
+                      setError(t("auth.error.unknown"));
                     },
                     next: (response) => {
                       if (typeof response === "string") {
-                        setError(response);
+                        const error =
+                          {
+                            ["E_INVALID_USER_PASS"]: t(
+                              "auth.error.invalidUserPass"
+                            ),
+                          }[response] || t("auth.error.unknown");
+                        setError(error);
+
+                        return;
                       }
 
                       if (response.token) {
@@ -78,11 +87,11 @@ const AuthForm = () => {
               }}
               type="primary"
             >
-              Submit
+              {t("auth.button.submit")}
             </Button>
           </Space>
         </Card>
-      </Space>
+      </div>
     </PageContent>
   );
 };

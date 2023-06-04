@@ -6,13 +6,11 @@ use super::schema;
 use crate::auth::AuthInfo;
 use diesel::prelude::*;
 use diesel::SqliteConnection;
-use mahjong_core::{
-    Board, DrawWall, Game, GameId, Hand, HandTile, Hands, PlayerId, Round, RoundTileClaimed, Score,
-    TileId,
-};
+use mahjong_core::round::{Round, RoundTileClaimed};
+use mahjong_core::{Board, DrawWall, Game, GameId, Hand, HandTile, Hands, PlayerId, Score, TileId};
+use rustc_hash::FxHashMap;
 use schema::player::dsl as player_dsl;
 use service_contracts::{GameSettings, ServiceGame, ServicePlayer};
-use std::collections::HashMap;
 
 pub fn wait_common() {
     std::thread::sleep(std::time::Duration::from_millis(1));
@@ -58,7 +56,7 @@ impl DieselPlayer {
     pub fn read_from_ids(
         connection: &mut SqliteConnection,
         ids: &Vec<PlayerId>,
-    ) -> HashMap<PlayerId, ServicePlayer> {
+    ) -> FxHashMap<PlayerId, ServicePlayer> {
         loop {
             if let Ok(data) = player_dsl::player
                 .filter(player_dsl::id.eq_any(ids))
@@ -70,7 +68,7 @@ impl DieselPlayer {
         }
         .into_iter()
         .map(|player| (player.id.clone(), player.into_raw()))
-        .collect::<HashMap<PlayerId, ServicePlayer>>()
+        .collect::<FxHashMap<PlayerId, ServicePlayer>>()
     }
 
     pub fn update_from_game(connection: &mut SqliteConnection, service_game: &ServiceGame) {
@@ -164,6 +162,7 @@ impl DieselGame {
         let round = Round {
             dealer_player_index: self.round_dealer_index as usize,
             player_index: self.round_player_index as usize,
+            round_index: self.round_index as u32,
             tile_claimed: self.round_claimed_id.map(|id| RoundTileClaimed {
                 by: self.round_claimed_by,
                 from: self.round_claimed_from.unwrap(),
@@ -249,6 +248,7 @@ impl DieselGame {
             round_claimed_from: raw.round.tile_claimed.clone().map(|t| t.from),
             round_claimed_id: raw.round.tile_claimed.clone().map(|t| t.id as i32),
             round_dealer_index: raw.round.dealer_player_index as i32,
+            round_index: raw.round.round_index as i32,
             round_player_index: raw.round.player_index as i32,
             round_wall_tile_drawn: raw.round.wall_tile_drawn.map(|tile_id| tile_id as i32),
             round_wind: serde_json::to_string(&raw.round.wind).unwrap(),
@@ -569,7 +569,7 @@ impl DieselGameHand {
 
     pub fn read_from_game(connection: &mut SqliteConnection, game_id: &GameId) -> Hands {
         use schema::game_hand::dsl as game_hand_dsl;
-        let mut hands = Hands::new();
+        let mut hands = Hands::default();
 
         loop {
             if let Ok(data) = game_hand_dsl::game_hand
@@ -616,6 +616,14 @@ impl DieselGameSettings {
             wait_common();
         }
 
+        let auto_sort_players = service_game
+            .settings
+            .auto_sort_players
+            .clone()
+            .into_iter()
+            .collect::<Vec<_>>()
+            .join(&','.to_string());
+
         let settings = Self {
             last_discard_time: service_game.settings.last_discard_time as i64,
             ai_enabled: if service_game.settings.ai_enabled {
@@ -623,13 +631,14 @@ impl DieselGameSettings {
             } else {
                 0
             },
-            discard_wait_ms: service_game.settings.discard_wait_ms.map(|x| x as i32),
+            discard_wait_ms: service_game.settings.discard_wait_ms,
             game_id: service_game.game.id.clone(),
             fixed_settings: if service_game.settings.fixed_settings {
                 1
             } else {
                 0
             },
+            auto_sort_players,
         };
 
         loop {
@@ -663,9 +672,14 @@ impl DieselGameSettings {
         .get(0)
         .map(|game_settings| GameSettings {
             ai_enabled: game_settings.ai_enabled == 1,
-            discard_wait_ms: game_settings.discard_wait_ms.map(|x| x as u32),
+            discard_wait_ms: game_settings.discard_wait_ms,
             fixed_settings: game_settings.fixed_settings == 1,
-            last_discard_time: game_settings.last_discard_time as u128,
+            last_discard_time: game_settings.last_discard_time as i128,
+            auto_sort_players: game_settings
+                .auto_sort_players
+                .split(',')
+                .map(|s| s.to_string())
+                .collect(),
         })
     }
 }

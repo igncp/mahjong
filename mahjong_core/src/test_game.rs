@@ -1,13 +1,13 @@
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
+    use rustc_hash::FxHashMap;
 
-    use crate::{Game, Hand, HandTile, RoundTileClaimed};
+    use crate::{round::RoundTileClaimed, Game, Hand, HandTile};
 
     #[test]
     fn test_draw_tile_from_wall_moves_tile() {
         let draw_wall = vec![3, 4, 5];
-        let mut hands = HashMap::new();
+        let mut hands = FxHashMap::default();
         let mut game = Game::default();
         game.table.draw_wall = draw_wall;
         hands.insert(game.players[0].clone(), Hand(vec![HandTile::from_id(1)]));
@@ -20,7 +20,7 @@ mod test {
         assert_eq!(drawn_tile, Some(5));
         assert_eq!(game.round.wall_tile_drawn, Some(5));
         assert_eq!(game.table.hands, {
-            let mut expected_hands = HashMap::new();
+            let mut expected_hands = FxHashMap::default();
             expected_hands.insert(
                 game.players[0].clone(),
                 Hand(vec![HandTile::from_id(1), HandTile::from_id(5)]),
@@ -34,7 +34,7 @@ mod test {
     fn test_draw_tile_from_wall_returns_null() {
         let draw_wall = vec![];
         let mut game = Game::default();
-        let mut hands = HashMap::new();
+        let mut hands = FxHashMap::default();
         hands.insert(game.players[0].clone(), Hand(vec![HandTile::from_id(1)]));
         hands.insert(game.players[1].clone(), Hand(vec![HandTile::from_id(2)]));
         game.table.draw_wall = draw_wall;
@@ -45,7 +45,7 @@ mod test {
         assert_eq!(drawn_tile, None);
         assert_eq!(game.round.wall_tile_drawn, None);
         assert_eq!(game.table.hands, {
-            let mut expected_hands = HashMap::new();
+            let mut expected_hands = FxHashMap::default();
             expected_hands.insert(game.players[0].clone(), Hand(vec![HandTile::from_id(1)]));
             expected_hands.insert(game.players[1].clone(), Hand(vec![HandTile::from_id(2)]));
             expected_hands
@@ -57,7 +57,7 @@ mod test {
         let mut game = Game::default();
         game.table.board = vec![16, 17, 18];
         game.table.hands = {
-            let mut hands = HashMap::new();
+            let mut hands = FxHashMap::default();
             let mut player_a_tiles = vec![];
             for i in 1..15 {
                 player_a_tiles.push(HandTile::from_id(i));
@@ -71,7 +71,7 @@ mod test {
 
         assert_eq!(game.table.board, vec![16, 17, 18, 2]);
         assert_eq!(game.table.hands, {
-            let mut hands = HashMap::new();
+            let mut hands = FxHashMap::default();
             let mut player_a_tiles = vec![];
             for i in 1..15 {
                 if i != 2 {

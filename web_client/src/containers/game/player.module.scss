@@ -1,0 +1,135 @@
+@import "../../ui/styles.scss";
+
+$small-width: 400px;
+
+$card-height-normal: 125px;
+$card-height-desktop: 140px;
+
+$card-row-offset: 55px;
+
+.actionsPanel {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: $common-gap;
+  justify-content: flex-start;
+  padding: $common-gap;
+}
+
+.boardButtons {
+  display: flex;
+  gap: $common-gap;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.cardContentSettings {
+  padding: $common-gap;
+}
+
+.cardSmall {
+  :global(.ant-card-body) {
+    border-radius: 0 0 8px 8px;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    flex: 1;
+    height: $card-height-normal;
+    overflow: auto;
+    padding: 0;
+
+    @include desktop-above {
+      height: $card-height-desktop;
+    }
+
+    @media (max-width: $small-width) {
+      height: unset;
+    }
+  }
+}
+
+.discardInfo {
+  @include mobile {
+    display: none;
+  }
+}
+
+.handTiles {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+
+  img {
+    cursor: pointer;
+    margin-bottom: $common-gap;
+  }
+}
+
+.meldTile {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: $common-gap;
+  justify-content: center;
+  flex: 1;
+  padding: $common-gap 0;
+}
+
+.smallGrid {
+  display: grid;
+  gap: $common-gap;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-rows: $card-height-normal + $card-row-offset;
+
+  @include desktop-above {
+    grid-template-rows: $card-height-desktop + $card-row-offset;
+  }
+
+  @media (max-width: $bp-desktop-max) {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  @media (max-width: $bp-tablet-max) {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  @media (max-width: $small-width) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.otherPlayer {
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  padding: 0 $common-gap;
+  gap: $common-gap;
+}
+
+.possibleMeld {
+  align-items: center;
+  background-color: white;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: $common-gap;
+  justify-content: center;
+  padding: $common-gap 0;
+}
+
+.settingsFormInner {
+  display: flex;
+  flex-direction: column;
+  gap: $common-gap;
+  padding: $common-gap;
+}
+
+.topInfo {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: $common-gap;
+
+  @include mobile {
+    justify-content: center;
+  }
+}

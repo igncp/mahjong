@@ -1,4 +1,24 @@
-use crate::{GamePhase, Hands, Round, Wind, WINDS_ROUND_ORDER};
+use crate::{GamePhase, Hands, PlayerId, TileId, Wind, WINDS_ROUND_ORDER};
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RoundTileClaimed {
+    pub by: Option<PlayerId>,
+    pub from: PlayerId,
+    pub id: TileId,
+}
+
+pub type TileClaimed = Option<RoundTileClaimed>;
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Round {
+    pub dealer_player_index: usize,
+    pub player_index: usize,
+    pub round_index: u32,
+    pub tile_claimed: TileClaimed,
+    pub wall_tile_drawn: Option<TileId>,
+    pub wind: Wind,
+}
 
 impl Default for Round {
     fn default() -> Self {
@@ -6,6 +26,7 @@ impl Default for Round {
         Self {
             dealer_player_index: 0,
             player_index: 0,
+            round_index: 0,
             tile_claimed: None,
             wall_tile_drawn: None,
             wind: Wind::East,
@@ -40,6 +61,7 @@ impl Round {
         self.wall_tile_drawn = None;
         self.tile_claimed = None;
 
+        self.round_index += 1;
         self.dealer_player_index += 1;
         if self.dealer_player_index == 4 {
             self.dealer_player_index = 0;
@@ -64,5 +86,22 @@ impl Round {
         }
 
         self.player_index = self.dealer_player_index;
+    }
+
+    pub fn move_after_draw(&mut self) {
+        self.wall_tile_drawn = None;
+        self.tile_claimed = None;
+        self.round_index += 1;
+        self.player_index = self.dealer_player_index;
+    }
+
+    pub fn get_claimable_tile(&self, player_id: &PlayerId) -> Option<TileId> {
+        let tile_claimed = self.tile_claimed.clone()?;
+
+        if tile_claimed.by.is_some() || tile_claimed.from == *player_id {
+            return None;
+        }
+
+        Some(tile_claimed.id)
     }
 }

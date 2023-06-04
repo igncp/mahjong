@@ -13,6 +13,7 @@ use actix_web::{
 use actix_web_actors::ws;
 use mahjong_core::deck::DEFAULT_DECK;
 use mahjong_core::GameId;
+use rustc_hash::FxHashMap;
 use service_contracts::{
     AdminGetGamesResponse, AdminPostAIContinueRequest, AdminPostBreakMeldRequest,
     AdminPostClaimTileRequest, AdminPostCreateMeldRequest, AdminPostDiscardTileRequest,
@@ -23,22 +24,21 @@ use service_contracts::{
     UserPostMovePlayerRequest, UserPostSayMahjongRequest, UserPostSetAuthRequest,
     UserPostSetGameSettingsRequest, UserPostSortHandRequest, WebSocketQuery,
 };
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
-use tracing::{debug, trace, warn};
+use tracing::{debug, warn};
 
 pub type StorageData = web::Data<Arc<Box<dyn Storage>>>;
 pub type SocketServer = web::Data<Arc<Mutex<Addr<MahjongWebsocketServer>>>>;
 
 pub struct GamesManager {
-    games_locks: HashMap<GameId, Arc<Mutex<()>>>,
+    games_locks: FxHashMap<GameId, Arc<Mutex<()>>>,
 }
 
 impl GamesManager {
     fn new() -> Self {
         Self {
-            games_locks: HashMap::new(),
+            games_locks: FxHashMap::default(),
         }
     }
 
@@ -125,7 +125,7 @@ async fn admin_post_game(
         return AuthHandler::get_unauthorized();
     }
 
-    let game_wrapper = GameWrapper::from_new_game(&storage, srv, None).await;
+    let game_wrapper = GameWrapper::from_new_game(&storage, srv, None, &None).await;
 
     if game_wrapper.is_err() {
         return HttpResponse::InternalServerError().body("Error creating game");
@@ -512,19 +512,29 @@ async fn user_post_game_create(
 ) -> impl Responder {
     let auth_handler = AuthHandler::new(&storage, &req);
 
+    debug!("Authenticating user: {:?}", &body.player_id);
+
     if !auth_handler.verify_user(&body.player_id) {
         return AuthHandler::get_unauthorized();
     }
 
-    let game_wrapper =
-        GameWrapper::from_new_game(&storage, srv, Some(body.player_id.clone())).await;
+    debug!("Creating game for user: {:?}", &body.player_id);
+    let game_wrapper = GameWrapper::from_new_game(
+        &storage,
+        srv,
+        Some(body.player_id.clone()),
+        &body.ai_player_names,
+    )
+    .await;
 
     if game_wrapper.is_err() {
+        debug!("Error preparing game");
         return HttpResponse::InternalServerError().body("Error preparing game");
     }
 
     let game_wrapper = game_wrapper.unwrap();
 
+    debug!("Saving game for user: {:?}", &body.player_id);
     game_wrapper.handle_user_new_game(&body.player_id).await
 }
 
@@ -606,7 +616,11 @@ async fn user_post_game_sort_hand(
         GameWrapper::from_storage(&storage, &game_id, srv, Some(&body.game_version)).await;
 
     match game_wrapper {
-        Ok(mut game_wrapper) => game_wrapper.handle_user_sort_hand(&body.player_id).await,
+        Ok(mut game_wrapper) => {
+            game_wrapper
+                .handle_user_sort_hand(&body.player_id, &body.tiles)
+                .await
+        }
         Err(err) => err,
     }
 }
@@ -764,7 +778,7 @@ async fn user_post_auth(
     let user = user.unwrap();
 
     if user.is_none() {
-        trace!("Creating new username: {username}");
+        debug!("Creating new username: {username}");
         let result = auth_handler
             .create_user(
                 &username,
@@ -789,7 +803,7 @@ async fn user_post_auth(
 
         return HttpResponse::Ok().json(data.unwrap());
     } else {
-        trace!("Handling existing user: {username}");
+        debug!("Handling existing user: {username}");
     }
 
     let is_valid = user.unwrap();
@@ -805,8 +819,8 @@ async fn user_post_auth(
 
         HttpResponse::Ok().json(data.unwrap())
     } else {
-        trace!("Invalid password for username: {username}");
-        HttpResponse::Unauthorized().json("Invalid username or password")
+        debug!("Invalid password for username: {username}");
+        HttpResponse::Unauthorized().json("E_INVALID_USER_PASS")
     }
 }
 

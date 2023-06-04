@@ -1,6 +1,6 @@
 // http://mahjongtime.com/hong-kong-mahjong-scoring.html
 
-use std::collections::HashSet;
+use rustc_hash::FxHashSet;
 
 use crate::{deck::DEFAULT_DECK, Flower, Game, PlayerId, Season, Tile};
 
@@ -23,7 +23,7 @@ impl Game {
             }
         }
 
-        let scoring_rules = self.get_scoring_rules();
+        let scoring_rules = self.get_scoring_rules(winner_player);
         let round_points = Self::get_scoring_rules_points(&scoring_rules);
 
         let current_player_score = self.score.get(winner_player).unwrap();
@@ -49,14 +49,9 @@ impl Game {
         round_points
     }
 
-    fn get_scoring_rules(&self) -> Vec<ScoringRule> {
+    fn get_scoring_rules(&self, winner_player: &PlayerId) -> Vec<ScoringRule> {
         let mut rules = Vec::new();
         rules.push(ScoringRule::BasePoint);
-        let winner_player = self
-            .players
-            .iter()
-            .find(|p| self.table.hands.get(*p).unwrap().0.len() == 14)
-            .unwrap();
         let winner_hand = self.table.hands.get(winner_player).unwrap().clone();
 
         if self.table.draw_wall.is_empty() {
@@ -67,8 +62,8 @@ impl Game {
             rules.push(ScoringRule::SelfDraw);
         }
 
-        let mut flowers: HashSet<Flower> = HashSet::new();
-        let mut seasons: HashSet<Season> = HashSet::new();
+        let mut flowers: FxHashSet<Flower> = FxHashSet::default();
+        let mut seasons: FxHashSet<Season> = FxHashSet::default();
 
         for tile in winner_hand.0 {
             let tile = DEFAULT_DECK.0.get(&tile.id).unwrap();

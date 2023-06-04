@@ -1,0 +1,39 @@
+$common-gap: 10px;
+
+$bp-mobile-max: 480px;
+$bp-tablet-max: 768px;
+$bp-desktop-max: 1024px;
+$bp-desktop-hd-max: 1440px;
+
+$color-darkgreen: #006400;
+$color-lightgreen: #73bc73;
+
+@mixin desktop-above() {
+  @media (min-width: $bp-tablet-max) {
+    @content;
+  }
+}
+
+@mixin mobile() {
+  @media (max-width: $bp-mobile-max) {
+    @content;
+  }
+}
+
+@mixin tablet-above() {
+  @media (min-width: $bp-mobile-max) {
+    @content;
+  }
+}
+
+@mixin tablet-mobile() {
+  @media (max-width: $bp-tablet-max) {
+    @content;
+  }
+}
+
+@mixin tablet-only() {
+  @media (max-width: $bp-tablet-max) and (min-width: $bp-mobile-max) {
+    @content;
+  }
+}

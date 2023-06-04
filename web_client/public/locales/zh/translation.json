@@ -1,0 +1,148 @@
+{
+  "auth": {
+    "button": {
+      "submit": "提交"
+    },
+    "error": {
+      "invalidUserPass": "無效的用戶名或密碼",
+      "unknown": "未知錯誤"
+    },
+    "intro1": "輸入用戶名和密碼。",
+    "intro2": "如果用戶不存在，將創建它。",
+    "label": {
+      "pass": "密碼:",
+      "user": "用戶名:"
+    },
+    "warning": "請記住，此應用程序仍處於早期開發階段，數據庫將定期清除。"
+  },
+  "dashboard": {
+    "cancel": "取消",
+    "defaultPlayerName": "玩家 {{number}}",
+    "editName": "編輯名稱",
+    "newAdminGame": "創建一個新的管理遊戲",
+    "newGame": "創建一個新遊戲",
+    "playerNum1": "一",
+    "playerNum2": "二",
+    "playerNum3": "三",
+    "playerNum4": "四",
+    "save": "保存",
+    "userPoints_other": "{{count}}分"
+  },
+  "game": {
+    "actions": "動作",
+    "AI": {
+      "disabled": "禁用",
+      "enabled": "啟用",
+      "title": "人工智能"
+    },
+    "autoSort": "繪製圖塊時自動排序",
+    "blockTime": {
+      "desc": "棄牌後下一回合的格擋時間"
+    },
+    "board": "遊戲板",
+    "breakMeld": "打破融合",
+    "claimTile": "認領瓷磚",
+    "continueAI": "繼續人工智能",
+    "createMeld": "創造融合",
+    "currentDealer": "當前經銷商:",
+    "currentTurn": "當前回合",
+    "currentWind": "當前風:",
+    "discardInfo": "輪到您時，您可以通過將其中一塊瓷磚拖到板上來丟棄",
+    "drawTile": "繪製瓷磚",
+    "error": {
+      "invalidDraw": "你現在不能畫瓷磚。 你只能在輪到你的時候畫一張牌，而你還沒有畫。 啟用AI後，它將自動繪製。",
+      "invalidMahjong": "你現在不能說麻將"
+    },
+    "hand": "你的手牌",
+    "itsYou": "是你",
+    "meld": {
+      "concealed": "隱",
+      "open": "可見的",
+      "title": "牌組合"
+    },
+    "otherPlayers": "其他玩家",
+    "passTurn": "轉彎",
+    "points_other": "{{count}}分",
+    "possibleMeld": "可能的融合",
+    "sayMahjong": "說麻將",
+    "settings": {
+      "title": "設置"
+    },
+    "sort": {
+      "no": "不",
+      "yes": "是的"
+    },
+    "sortHand": "排序手牌",
+    "visibleMeld": "{{player}}的牌融合",
+    "wait": {
+      "10sec": "10秒",
+      "1min": "1分鐘",
+      "1sec": "1秒",
+      "block": "阻塞時間",
+      "none": "沒有任何"
+    },
+    "wind": {
+      "east": "東",
+      "north": "北",
+      "south": "南",
+      "west": "西"
+    }
+  },
+  "header": {
+    "logout": "登出",
+    "title": "麻將"
+  },
+  "list": {
+    "empty": "沒有數據"
+  },
+  "page": {
+    "title": "麻將網頁客戶端"
+  },
+  "tile": {
+    "autumn": "秋天（季）",
+    "bamboo": "竹子（花）",
+    "bamboo1": "一（索子）",
+    "bamboo2": "二（索子）",
+    "bamboo3": "三（索子）",
+    "bamboo4": "四（索子）",
+    "bamboo5": "五（索子）",
+    "bamboo6": "六（索子）",
+    "bamboo7": "七（索子）",
+    "bamboo8": "八（索子）",
+    "bamboo9": "九（索子）",
+    "chars1": "一（萬子）",
+    "chars2": "二（萬子）",
+    "chars3": "三（萬子）",
+    "chars4": "四（萬子）",
+    "chars5": "五（萬子）",
+    "chars6": "六（萬子）",
+    "chars7": "七（萬子）",
+    "chars8": "八（萬子）",
+    "chars9": "九（萬子）",
+    "chrys": "菊花（花）",
+    "dots1": "一（筒子）",
+    "dots2": "二（筒子）",
+    "dots3": "三（筒子）",
+    "dots4": "四（筒子）",
+    "dots5": "五（筒子）",
+    "dots6": "六（筒子）",
+    "dots7": "七（筒子）",
+    "dots8": "八（筒子）",
+    "dots9": "九（筒子）",
+    "east": "東（風）",
+    "green": "綠（箭）",
+    "north": "北（風）",
+    "orchid": "蘭花（花）",
+    "plum": "梅花（花）",
+    "red": "紅（箭）",
+    "south": "南（風）",
+    "spring": "春天（季）",
+    "summer": "夏天（季）",
+    "west": "西（風）",
+    "white": "白（箭）",
+    "winter": "冬天（季）"
+  },
+  "ui": {
+    "copied": "複製到剪貼板"
+  }
+}

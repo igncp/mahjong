@@ -11,9 +11,9 @@ use async_trait::async_trait;
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
 use mahjong_core::{Game, GameId, PlayerId};
+use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 use service_contracts::{ServiceGame, ServicePlayer};
-use std::collections::HashMap;
 use tracing::debug;
 
 use self::models::{DieselGameBoard, DieselGameDrawWall, DieselGameHand, DieselGameSettings};
@@ -28,9 +28,9 @@ pub struct SQLiteStorage {
 
 #[derive(Serialize, Deserialize)]
 struct FileContent {
-    auth: Option<HashMap<Username, AuthInfo>>,
-    games: Option<HashMap<GameId, Game>>,
-    players: Option<HashMap<PlayerId, ServicePlayer>>,
+    auth: Option<FxHashMap<Username, AuthInfo>>,
+    games: Option<FxHashMap<GameId, Game>>,
+    players: Option<FxHashMap<PlayerId, ServicePlayer>>,
 }
 
 #[async_trait]

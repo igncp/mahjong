@@ -1,7 +1,7 @@
 use super::formatter::{format_hand, format_player, get_board, get_user_hand_str};
 use super::help::get_help_text;
 use crate::base::App;
-use crate::ui::{UIScreen, UIState};
+use crate::play::{UIScreen, UIState};
 use tui::backend::Backend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::style::{Color, Style};
@@ -50,10 +50,11 @@ pub fn draw_user_view<B: Backend>(f: &mut Frame<B>, app: &App, ui_state: &mut UI
             }
 
             if ui_state.display_games {
-                let games_ids = app.games_ids.clone().unwrap();
+                let games_ids = app.play.games_ids.clone().unwrap();
                 let mut paragraph_text = vec![Spans::from(format!("Games ({}):", games_ids.len()))];
 
-                app.games_ids
+                app.play
+                    .games_ids
                     .clone()
                     .unwrap()
                     .iter()
@@ -68,7 +69,7 @@ pub fn draw_user_view<B: Backend>(f: &mut Frame<B>, app: &App, ui_state: &mut UI
             }
         }
         UIScreen::Game => {
-            let game = app.service_game_summary.as_ref().unwrap();
+            let game = app.play.service_game_summary.as_ref().unwrap();
 
             let paragraph_text = vec![
                 Spans::from(format!("- Input: {}", ui_state.input)),

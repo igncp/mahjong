@@ -1,4 +1,4 @@
-use std::{collections::HashSet, env};
+use std::env;
 
 use futures_util::{
     stream::{SplitSink, SplitStream},
@@ -6,6 +6,7 @@ use futures_util::{
 };
 use mahjong_core::{GameId, Hands, PlayerId, TileId};
 use reqwest::Error;
+use rustc_hash::FxHashSet;
 use service_contracts::{
     AdminGetGamesResponse, AdminPostAIContinueRequest, AdminPostAIContinueResponse,
     AdminPostClaimTileRequest, AdminPostClaimTileResponse, AdminPostCreateMeldRequest,
@@ -312,7 +313,7 @@ impl ServiceHTTPClient {
         &self,
         game_id: &GameId,
         player_id: &PlayerId,
-        tiles: &HashSet<TileId>,
+        tiles: &FxHashSet<TileId>,
     ) -> Result<AdminPostCreateMeldResponse, String> {
         let url = format!("{}/v1/admin/game/{game_id}/create-meld", self.url);
         let request_body = AdminPostCreateMeldRequest {

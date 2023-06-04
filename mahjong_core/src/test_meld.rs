@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod test {
-    use crate::meld::{get_is_chow, get_is_kong, get_is_pung, Meld, PlayerDiff, SetCheckOpts};
+    use crate::hand::HandPossibleMeld;
+    use crate::meld::{get_is_chow, get_is_kong, get_is_pung, PlayerDiff, SetCheckOpts};
     use crate::tile::TileId;
     use crate::{Deck, Flower, FlowerTile, Hand, HandTile, Suit, SuitTile, Tile, Wind, WindTile};
 
@@ -291,7 +292,7 @@ mod test {
         }
     }
 
-    type GetPossibleMeldsFixture = (Hand, PlayerDiff, Vec<Meld>);
+    type GetPossibleMeldsFixture = (Hand, PlayerDiff, Vec<HandPossibleMeld>);
     fn get_possible_melds_fixtures() -> Vec<GetPossibleMeldsFixture> {
         fn get_hand_tile(tile: &Tile) -> HandTile {
             HandTile {
@@ -324,11 +325,14 @@ mod test {
                 get_hand_tile(&third_tile),
             ]),
             Some(0),
-            vec![vec![
-                first_tile.get_id(),
-                second_tile.get_id(),
-                third_tile.get_id(),
-            ]],
+            vec![HandPossibleMeld {
+                is_mahjong: false,
+                tiles: vec![
+                    first_tile.get_id(),
+                    second_tile.get_id(),
+                    third_tile.get_id(),
+                ],
+            }],
         )]
     }
 
@@ -337,7 +341,7 @@ mod test {
         for (index, (hand, player_diff, expected_meld)) in
             get_possible_melds_fixtures().iter().enumerate()
         {
-            let possible_melds = hand.get_possible_melds(*player_diff, None);
+            let possible_melds = hand.get_possible_melds(*player_diff, None, false);
             assert_eq!(possible_melds, *expected_meld, "index: {index}");
         }
     }

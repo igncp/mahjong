@@ -36,6 +36,7 @@ export const AuthScreen = () => {
         next: (response) => {
           if (typeof response === "string") {
             setError(response);
+            return;
           }
 
           if (response.token) {

@@ -1,4 +1,11 @@
+## Roadmap
+
+- [Roadmap](./TODO.md)
+
+## Readings
+
 - Main wikipedia article: https://en.wikipedia.org/wiki/Mahjong
+- Tiles: https://zh.wikipedia.org/zh-hant/%E9%BA%BB%E9%9B%80%E7%89%8C
 - Hong Kong mahjong: https://en.wikipedia.org/wiki/Hong_Kong_mahjong_scoring_rules
 - Scoring:
     - http://mahjongtime.com/Chinese-Official-Mahjong-Scoring.html

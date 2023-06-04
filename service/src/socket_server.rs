@@ -1,7 +1,7 @@
 use actix::prelude::*;
 use rand::{self, rngs::ThreadRng, Rng};
+use rustc_hash::{FxHashMap, FxHashSet};
 use service_contracts::SocketMessage;
-use std::collections::{HashMap, HashSet};
 
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -39,22 +39,22 @@ impl actix::Message for ListRooms {
 pub struct ListSessions;
 
 impl actix::Message for ListSessions {
-    type Result = HashMap<RoomName, usize>;
+    type Result = FxHashMap<RoomName, usize>;
 }
 
 #[derive(Debug)]
 pub struct MahjongWebsocketServer {
-    sessions: HashMap<usize, Recipient<SocketMessageStr>>,
-    rooms: HashMap<String, HashSet<usize>>,
+    sessions: FxHashMap<usize, Recipient<SocketMessageStr>>,
+    rooms: FxHashMap<String, FxHashSet<usize>>,
     rng: ThreadRng,
 }
 
 impl MahjongWebsocketServer {
     pub fn new() -> Self {
-        let rooms = HashMap::new();
+        let rooms = FxHashMap::default();
 
         Self {
-            sessions: HashMap::new(),
+            sessions: FxHashMap::default(),
             rooms,
             rng: rand::thread_rng(),
         }
@@ -91,7 +91,7 @@ impl Handler<Connect> for MahjongWebsocketServer {
 
         self.rooms
             .entry(msg.room)
-            .or_insert_with(HashSet::new)
+            .or_insert_with(FxHashSet::default)
             .insert(id);
 
         id
@@ -150,7 +150,7 @@ impl Handler<ListSessions> for MahjongWebsocketServer {
     type Result = MessageResult<ListSessions>;
 
     fn handle(&mut self, _: ListSessions, _: &mut Context<Self>) -> Self::Result {
-        let mut sessions = HashMap::new();
+        let mut sessions = FxHashMap::default();
 
         for key in self.rooms.keys() {
             let sessions_num = self.rooms.get(key).unwrap().len();

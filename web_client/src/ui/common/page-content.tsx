@@ -1,4 +1,4 @@
-import Space from "./space";
+import styles from "./page-content.module.scss";
 
 type Props = {
   children: React.ReactNode;
@@ -6,11 +6,7 @@ type Props = {
 };
 
 const PageContent = (props: Props) => (
-  <Space
-    {...props}
-    direction="vertical"
-    style={{ padding: "0 10px", width: "calc(100% - 20px)", ...props.style }}
-  />
+  <div {...props} className={styles.content} />
 );
 
 export default PageContent;

@@ -3,8 +3,8 @@ use crate::{
     meld::{PlayerDiff, PossibleMeld},
     Game, GameId, GamePhase, Hand, HandTile, PlayerId, Score, TileId, Wind,
 };
+use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoundSummary {
@@ -26,7 +26,7 @@ pub struct GameSummary {
     pub draw_wall_count: usize,
     pub hand: Hand,
     pub id: GameId,
-    pub other_hands: HashMap<PlayerId, OtherPlayerHand>,
+    pub other_hands: FxHashMap<PlayerId, OtherPlayerHand>,
     pub phase: GamePhase,
     pub player_id: PlayerId,
     pub players: Vec<PlayerId>,
@@ -131,13 +131,20 @@ impl GameSummary {
             player_diff = Some(player_index as i32 - current_player_index as i32);
         }
 
-        let raw_melds = tested_hand.get_possible_melds(player_diff, claimed_tile);
+        let mut raw_melds = tested_hand.get_possible_melds(player_diff, claimed_tile, true);
+        tested_hand
+            .get_possible_melds(player_diff, claimed_tile, false)
+            .iter()
+            .for_each(|m| {
+                raw_melds.push(m.clone());
+            });
 
         for raw_meld in raw_melds {
             let possible_meld = PossibleMeld {
                 discard_tile: None,
+                is_mahjong: raw_meld.is_mahjong,
                 player_id: self.player_id.clone(),
-                tiles: raw_meld.clone(),
+                tiles: raw_meld.tiles.clone(),
             };
 
             possible_melds.push(possible_meld);

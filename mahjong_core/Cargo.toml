@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 lazy_static = "1.4.0"
 rand = "0.8.5"
+rustc-hash = "1.1.0"
 serde = { version = "1.0.155", features = ["derive"] }
 uuid = { version = "1.3.0", features = ["v4", "fast-rng", "macro-diagnostics", "js"] }
 wasm-bindgen = "0.2.84"

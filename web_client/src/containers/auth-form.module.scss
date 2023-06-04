@@ -1,0 +1,10 @@
+@import "../ui/styles.scss";
+
+.formWrapper {
+  display: inline-block;
+  width: fit-content;
+
+  @include mobile {
+    width: unset;
+  }
+}

@@ -1,15 +1,20 @@
-use crate::game_summary::GameSummary;
+use crate::meld::PossibleMeld;
 use crate::{Game, PlayerId, TileId};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use std::collections::HashSet;
+use rustc_hash::FxHashSet;
+
+mod best_drops;
+mod test_ai;
 
 // Naive AI as a placeholder which can be extended later
 pub struct StandardAI<'a> {
-    game: &'a mut Game,
-    ai_players: HashSet<PlayerId>,
+    ai_players: FxHashSet<PlayerId>,
+    pub game: &'a mut Game,
     pub can_pass_turn: bool,
-    pub draw: bool,
+    pub can_draw_round: bool,
+    pub draw_tile_for_real_player: bool,
+    pub sort_on_draw: bool,
 }
 
 pub struct PlayActionResult {
@@ -17,13 +22,25 @@ pub struct PlayActionResult {
     pub tile_discarded: Option<bool>,
 }
 
+pub fn sort_by_is_mahjong(a: &PossibleMeld, b: &PossibleMeld) -> std::cmp::Ordering {
+    if a.is_mahjong && !b.is_mahjong {
+        std::cmp::Ordering::Less
+    } else if !a.is_mahjong && b.is_mahjong {
+        std::cmp::Ordering::Greater
+    } else {
+        std::cmp::Ordering::Equal
+    }
+}
+
 impl<'a> StandardAI<'a> {
-    pub fn new(game: &'a mut Game, ai_players: HashSet<PlayerId>) -> Self {
+    pub fn new(game: &'a mut Game, ai_players: FxHashSet<PlayerId>) -> Self {
         Self {
             ai_players,
             can_pass_turn: true,
-            draw: true,
+            can_draw_round: false,
+            draw_tile_for_real_player: true,
             game,
+            sort_on_draw: false,
         }
     }
 
@@ -40,10 +57,54 @@ impl<'a> StandardAI<'a> {
         // let possible_melds_with_discard = self.game.get_possible_melds_by_discard();
 
         // Check if any meld can be created with existing cards
-        let melds = self.game.get_possible_melds();
+        let mut melds = self.game.get_possible_melds(true);
+
+        // Suffle melds
+        let mut rng = thread_rng();
+        melds.shuffle(&mut rng);
+        melds.sort_by(sort_by_is_mahjong);
+
         for meld in melds {
-            if self.ai_players.contains(&meld.player_id) && meld.discard_tile.is_none() {
-                let tiles = meld.tiles.iter().cloned().collect::<HashSet<TileId>>();
+            if self.ai_players.contains(&meld.player_id) {
+                if meld.is_mahjong {
+                    let mahjong_success = self.game.say_mahjong(&meld.player_id);
+
+                    if mahjong_success {
+                        return PlayActionResult {
+                            changed: true,
+                            tile_discarded: None,
+                        };
+                    }
+                }
+
+                let player_hand = self.game.table.hands.get(&meld.player_id).unwrap();
+                let missing_tile = meld
+                    .tiles
+                    .iter()
+                    .find(|tile| !player_hand.get_has_tile(tile));
+
+                if let Some(missing_tile) = missing_tile {
+                    if let Some(claimable_type) =
+                        self.game.round.get_claimable_tile(&meld.player_id)
+                    {
+                        if claimable_type == *missing_tile {
+                            let was_tile_claimed = self.game.claim_tile(&meld.player_id);
+
+                            if was_tile_claimed {
+                                return PlayActionResult {
+                                    changed: true,
+                                    tile_discarded: None,
+                                };
+                            }
+                        }
+                    }
+                }
+
+                if meld.discard_tile.is_some() {
+                    continue;
+                }
+
+                let tiles = meld.tiles.iter().cloned().collect::<FxHashSet<TileId>>();
                 let meld_created = self.game.create_meld(&meld.player_id, &tiles);
 
                 if meld_created {
@@ -63,6 +124,12 @@ impl<'a> StandardAI<'a> {
                 let tile_drawn = self.game.draw_tile_from_wall();
 
                 if tile_drawn.is_some() {
+                    if self.sort_on_draw {
+                        let mut hand = self.game.table.hands.get(&current_player).unwrap().clone();
+                        hand.sort_default();
+                        self.game.table.hands.insert(current_player, hand);
+                    }
+
                     return PlayActionResult {
                         changed: true,
                         tile_discarded: Some(false),
@@ -106,7 +173,7 @@ impl<'a> StandardAI<'a> {
             let is_tile_claimed = self.game.round.tile_claimed.is_some();
 
             if !is_tile_claimed {
-                if !self.draw {
+                if !self.draw_tile_for_real_player {
                     return PlayActionResult {
                         changed: false,
                         tile_discarded: None,
@@ -116,6 +183,12 @@ impl<'a> StandardAI<'a> {
                 let tile_drawn = self.game.draw_tile_from_wall();
 
                 if tile_drawn.is_some() {
+                    if self.sort_on_draw {
+                        let mut hand = self.game.table.hands.get(&current_player).unwrap().clone();
+                        hand.sort_default();
+                        self.game.table.hands.insert(current_player, hand);
+                    }
+
                     return PlayActionResult {
                         changed: false,
                         tile_discarded: Some(false),
@@ -136,6 +209,17 @@ impl<'a> StandardAI<'a> {
             }
         }
 
+        if self.game.table.draw_wall.is_empty() && self.can_draw_round {
+            let round_passed = self.game.pass_null_round();
+
+            if round_passed {
+                return PlayActionResult {
+                    changed: true,
+                    tile_discarded: None,
+                };
+            }
+        }
+
         PlayActionResult {
             changed: false,
             tile_discarded: None,
@@ -147,45 +231,5 @@ impl<'a> StandardAI<'a> {
         let current_hand = self.game.table.hands.get(&current_player).unwrap();
 
         current_hand.0.len() == 13 && self.game.round.tile_claimed.is_some()
-    }
-
-    // This can become complex if it takes into account different scoring rules.
-    // For now it should only take into account the possibility to create a meld.
-    // In future it should review which tiles have been claimed by other players.
-    // Should have some unit tests.
-    // TODO: finalise
-    pub fn get_best_drops(&self, player_id: &PlayerId) -> Option<Vec<TileId>> {
-        let game_clone = self.game.clone();
-        let game_summary = GameSummary::from_game(&game_clone, player_id)?;
-
-        if game_summary.hand.0.len() != 14 {
-            return None;
-        }
-
-        struct TileDrop {
-            id: TileId,
-            score: usize,
-        }
-
-        let mut drops: Vec<TileDrop> = vec![];
-
-        for tile in game_summary.hand.0.iter() {
-            if tile.set_id.is_some() {
-                drops.push(TileDrop {
-                    id: tile.id,
-                    score: 0,
-                });
-            }
-
-            // - Check how possible is it to build a meld with this tile (score can also be one if
-            // one tile left)
-        }
-
-        // Best drops sorted from left to right
-        drops.sort_by(|a, b| a.score.cmp(&b.score));
-
-        let best_drops = drops.iter().map(|drop| drop.id).collect::<Vec<TileId>>();
-
-        Some(best_drops)
     }
 }
