@@ -1,9 +1,9 @@
+import { tokenObserver } from "mahjong_sdk/dist/auth";
+import { HttpClient } from "mahjong_sdk/dist/http-client";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { first } from "rxjs";
 
-import { tokenObserver } from "mahjong_sdk/src/auth";
-import { HttpClient } from "mahjong_sdk/src/http-server";
 import Alert from "src/ui/common/alert";
 import Button from "src/ui/common/button";
 import Card from "src/ui/common/card";
@@ -37,6 +37,7 @@ const AuthForm = () => {
             )}
             <Text>{t("auth.label.user")}</Text>
             <Input
+              data-name="username"
               onChange={(e) => {
                 setError(null);
                 setUsername(e.target.value);
@@ -46,6 +47,7 @@ const AuthForm = () => {
             />
             <Text>{t("auth.label.pass")}</Text>
             <Input
+              data-name="password"
               onChange={(e) => {
                 setError(null);
                 setPassword(e.target.value);
@@ -54,6 +56,7 @@ const AuthForm = () => {
               value={password}
             />
             <Button
+              data-name="auth-submit"
               disabled={!username || !password}
               onClick={() => {
                 HttpClient.setAuth({

@@ -1,5 +1,3 @@
-import { getI18n } from "react-i18next";
-
 import {
   Dragon,
   Flower,
@@ -8,7 +6,8 @@ import {
   Suit,
   Tile,
   Wind,
-} from "mahjong_sdk/src/core";
+} from "mahjong_sdk/dist/core";
+import { getI18n } from "react-i18next";
 
 const prefix = "https://upload.wikimedia.org/wikipedia/commons/";
 

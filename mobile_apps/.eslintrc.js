@@ -10,6 +10,7 @@ module.exports = {
     "plugin:@typescript-eslint/recommended",
     "@react-native-community",
   ],
+  plugins: [...common.plugins, "jest"],
   root: true,
   rules: {
     ...common.rules,

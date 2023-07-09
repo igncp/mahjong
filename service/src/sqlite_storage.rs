@@ -1,5 +1,5 @@
 use crate::{
-    auth::{AuthInfo, Username},
+    auth::{AuthInfo, GetAuthInfo, Username},
     common::Storage,
     env::ENV_SQLITE_DB_KEY,
     sqlite_storage::{
@@ -35,24 +35,40 @@ struct FileContent {
 
 #[async_trait]
 impl Storage for SQLiteStorage {
-    async fn get_auth_info(&self, username: &Username) -> Result<Option<AuthInfo>, String> {
+    async fn get_auth_info(&self, get_auth_info: GetAuthInfo) -> Result<Option<AuthInfo>, String> {
         use schema::auth_info::dsl;
         let mut connection = SqliteConnection::establish(&self.db_path).unwrap();
 
         let auth_info: Option<AuthInfo> = loop {
-            if let Ok(data) = dsl::auth_info
-                .filter(dsl::username.eq(username))
-                .limit(1)
-                .load::<DieselAuthInfo>(&mut connection)
-            {
+            let data_load = match get_auth_info.to_owned() {
+                GetAuthInfo::Username(username) => dsl::auth_info
+                    .filter(dsl::username.eq(&username))
+                    .limit(1)
+                    .load::<DieselAuthInfo>(&mut connection),
+                GetAuthInfo::PlayerId(player_id) => dsl::auth_info
+                    .filter(dsl::user_id.eq(&player_id))
+                    .limit(1)
+                    .load::<DieselAuthInfo>(&mut connection),
+            };
+
+            if let Ok(data) = data_load {
                 break data;
             }
+
             wait_common();
         }
         .get(0)
         .map(|auth_info| auth_info.clone().into_raw());
 
         Ok(auth_info)
+    }
+
+    async fn get_player_total_score(&self, player_id: &PlayerId) -> Result<i32, String> {
+        let mut connection = SqliteConnection::establish(&self.db_path).unwrap();
+
+        let total_score = DieselGameScore::read_total_from_player(&mut connection, player_id);
+
+        Ok(total_score)
     }
 
     async fn save_auth_info(&self, auth_info: &AuthInfo) -> Result<(), String> {
@@ -154,6 +170,20 @@ impl Storage for SQLiteStorage {
         let mut connection = SqliteConnection::establish(&self.db_path).unwrap();
 
         DieselPlayer::save(&mut connection, player);
+
+        Ok(())
+    }
+
+    async fn delete_games(&self, ids: &[GameId]) -> Result<(), String> {
+        let mut connection = SqliteConnection::establish(&self.db_path).unwrap();
+
+        DieselGamePlayer::delete_games(&mut connection, ids);
+        DieselGameScore::delete_games(&mut connection, ids);
+        DieselGameBoard::delete_games(&mut connection, ids);
+        DieselGameDrawWall::delete_games(&mut connection, ids);
+        DieselGameHand::delete_games(&mut connection, ids);
+        DieselGameSettings::delete_games(&mut connection, ids);
+        DieselGame::delete_games(&mut connection, ids);
 
         Ok(())
     }

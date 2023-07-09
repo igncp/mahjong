@@ -1,11 +1,10 @@
 import { API_URL } from "@env";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { tokenObserver } from "mahjong_sdk/dist/auth";
+import { Deck, Tile } from "mahjong_sdk/dist/core";
+import { HttpClient, setBaseUrl } from "mahjong_sdk/dist/http-client";
+import { setDeck } from "mahjong_sdk/dist/service-game-summary";
 import { first, from, tap } from "rxjs";
-
-import { tokenObserver } from "mahjong_sdk/src/auth";
-import { Deck, Tile } from "mahjong_sdk/src/core";
-import { HttpClient, setBaseUrl } from "mahjong_sdk/src/http-server";
-import { setDeck } from "mahjong_sdk/src/service-game-summary";
 
 const TOKEN_KEY = "mahjong_rust_token";
 

@@ -7,9 +7,14 @@ these subpackages:
 
 1. Core library with the game utilities and tests
 1. Service that persists and handles games for clients
-    - Can be communicated via an HTTP API and potentially gRPC
+    - Can be communicated via an HTTP API
+    - It creates a WebSocket per active game, to process the game and communicate with clients
+    - It has a GraphQL endpoint to reduce the number of requests
 1. Scripts to handle different tasks related to the code deployment and tests
-1. Web client using websockets with a better playing experience
+    - For example running linting, tests, and deploying to Docker
+1. Web client to play, both for desktop and mobile web
+    - It uses a drag-n-drop UI to play, and it has translated texts
+    - Includes E2E tests
 1. React Native apps which reuse some code with the web code
 1. A Rust TUI application as a prototype for playing games and running simulations
 

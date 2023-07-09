@@ -1,8 +1,7 @@
+import { Tile } from "mahjong_sdk/dist/core";
+import { getTileInfo } from "mahjong_sdk/dist/tile-content";
 import React from "react";
 import { Text, View } from "react-native";
-
-import { Tile } from "mahjong_sdk/src/core";
-import { getTileInfo } from "mahjong_sdk/src/tile-content";
 
 type Props = {
   tile: Tile;

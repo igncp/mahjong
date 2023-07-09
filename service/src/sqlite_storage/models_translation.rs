@@ -16,6 +16,18 @@ pub fn wait_common() {
     std::thread::sleep(std::time::Duration::from_millis(1));
 }
 
+fn db_loop<A, B, C>(mut func: A)
+where
+    A: FnMut() -> Result<B, C>,
+{
+    loop {
+        if func().is_ok() {
+            break;
+        }
+        wait_common();
+    }
+}
+
 impl DieselAuthInfo {
     pub fn into_raw(self) -> AuthInfo {
         AuthInfo {
@@ -255,6 +267,14 @@ impl DieselGame {
             version: raw.version.clone(),
         }
     }
+
+    pub fn delete_games(connection: &mut SqliteConnection, game_ids: &[GameId]) {
+        db_loop(|| {
+            diesel::delete(schema::game::table)
+                .filter(schema::game::dsl::id.eq_any(game_ids))
+                .execute(connection)
+        });
+    }
 }
 
 impl DieselGamePlayer {
@@ -311,28 +331,25 @@ impl DieselGamePlayer {
     pub fn update(connection: &mut SqliteConnection, diesel_game_players: &Vec<Self>, game: &Game) {
         use schema::game_player::table as game_player_table;
 
-        loop {
-            if diesel::delete(game_player_table)
+        db_loop(|| {
+            diesel::delete(game_player_table)
                 .filter(schema::game_player::dsl::game_id.eq(&game.id))
                 .execute(connection)
-                .is_ok()
-            {
-                break;
-            }
+        });
 
-            wait_common();
-        }
-
-        loop {
-            if diesel::insert_into(game_player_table)
+        db_loop(|| {
+            diesel::insert_into(game_player_table)
                 .values(diesel_game_players)
                 .execute(connection)
-                .is_ok()
-            {
-                break;
-            }
-            wait_common();
-        }
+        });
+    }
+
+    pub fn delete_games(connection: &mut SqliteConnection, game_ids: &[GameId]) {
+        db_loop(|| {
+            diesel::delete(schema::game_player::table)
+                .filter(schema::game_player::dsl::game_id.eq_any(game_ids))
+                .execute(connection)
+        });
     }
 }
 
@@ -394,6 +411,31 @@ impl DieselGameScore {
         })
         .collect::<Score>()
     }
+
+    pub fn read_total_from_player(connection: &mut SqliteConnection, player_id: &PlayerId) -> i32 {
+        use schema::game_score::dsl as game_score_dsl;
+
+        loop {
+            if let Ok(data) = game_score_dsl::game_score
+                .filter(game_score_dsl::player_id.eq(player_id))
+                .load::<Self>(connection)
+            {
+                break data;
+            }
+            wait_common();
+        }
+        .into_iter()
+        .map(|game_score| game_score.score)
+        .sum()
+    }
+
+    pub fn delete_games(connection: &mut SqliteConnection, game_ids: &[GameId]) {
+        db_loop(|| {
+            diesel::delete(schema::game_score::table)
+                .filter(schema::game_score::dsl::game_id.eq_any(game_ids))
+                .execute(connection)
+        });
+    }
 }
 
 impl DieselGameBoard {
@@ -453,6 +495,14 @@ impl DieselGameBoard {
         .map(|game_board| game_board.tile_id as TileId)
         .collect::<Board>()
     }
+
+    pub fn delete_games(connection: &mut SqliteConnection, game_ids: &[GameId]) {
+        db_loop(|| {
+            diesel::delete(schema::game_board::table)
+                .filter(schema::game_board::dsl::game_id.eq_any(game_ids))
+                .execute(connection)
+        });
+    }
 }
 
 impl DieselGameDrawWall {
@@ -511,6 +561,14 @@ impl DieselGameDrawWall {
         .into_iter()
         .map(|game_draw_wall| game_draw_wall.tile_id as TileId)
         .collect::<DrawWall>()
+    }
+
+    pub fn delete_games(connection: &mut SqliteConnection, game_ids: &[GameId]) {
+        db_loop(|| {
+            diesel::delete(schema::game_draw_wall::table)
+                .filter(schema::game_draw_wall::dsl::game_id.eq_any(game_ids))
+                .execute(connection)
+        });
     }
 }
 
@@ -599,6 +657,14 @@ impl DieselGameHand {
 
         hands
     }
+
+    pub fn delete_games(connection: &mut SqliteConnection, game_ids: &[GameId]) {
+        db_loop(|| {
+            diesel::delete(schema::game_hand::table)
+                .filter(schema::game_hand::dsl::game_id.eq_any(game_ids))
+                .execute(connection)
+        });
+    }
 }
 
 impl DieselGameSettings {
@@ -681,5 +747,13 @@ impl DieselGameSettings {
                 .map(|s| s.to_string())
                 .collect(),
         })
+    }
+
+    pub fn delete_games(connection: &mut SqliteConnection, game_ids: &[GameId]) {
+        db_loop(|| {
+            diesel::delete(schema::game_settings::table)
+                .filter(schema::game_settings::dsl::game_id.eq_any(game_ids))
+                .execute(connection)
+        });
     }
 }

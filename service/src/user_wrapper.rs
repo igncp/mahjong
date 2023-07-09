@@ -30,10 +30,15 @@ impl<'a> UserWrapper<'a> {
     }
 
     async fn get_info_data(&self) -> Option<UserGetInfoResponse> {
+        let total_score = self.storage.get_player_total_score(&self.player.id).await;
+
+        if total_score.is_err() {
+            return None;
+        }
+
         let info = UserGetInfoResponse {
             name: self.player.name.clone(),
-            // @TODO
-            total_score: 0,
+            total_score: total_score.unwrap(),
         };
 
         Some(info)

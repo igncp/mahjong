@@ -1,8 +1,8 @@
+import { SetId, TAdminGetGameResponse } from "mahjong_sdk/dist/core";
+import { HttpClient } from "mahjong_sdk/dist/http-client";
 import { useRouter } from "next/router";
 import { Fragment, useEffect, useState } from "react";
 
-import { SetId, TAdminGetGameResponse } from "mahjong_sdk/src/core";
-import { HttpClient } from "mahjong_sdk/src/http-server";
 import { ModelServiceGame } from "src/lib/models/service-game";
 import { SiteUrls } from "src/lib/site/urls";
 import Button from "src/ui/common/button";

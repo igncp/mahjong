@@ -1,12 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Button, ScrollView, StyleSheet, Text, View } from "react-native";
-
-import { ServiceGameSummary, TSocketWrapper } from "mahjong_sdk/src/core";
-import { HttpClient } from "mahjong_sdk/src/http-server";
+import { ServiceGameSummary, TSocketWrapper } from "mahjong_sdk/dist/core";
+import { HttpClient } from "mahjong_sdk/dist/http-client";
 import {
   ModelServiceGameSummary,
   ModelState,
-} from "mahjong_sdk/src/service-game-summary";
+} from "mahjong_sdk/dist/service-game-summary";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Button, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { TileImg } from "../ui/tile-img";
 

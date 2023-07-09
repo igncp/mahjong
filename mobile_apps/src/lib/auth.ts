@@ -1,8 +1,7 @@
 import { decode as atob } from "base-64";
+import { tokenObserver } from "mahjong_sdk/dist/auth";
+import { useUserTokenClaims } from "mahjong_sdk/dist/hooks";
 import { useObservable } from "rxjs-hooks";
-
-import { tokenObserver } from "mahjong_sdk/src/auth";
-import { useUserTokenClaims } from "mahjong_sdk/src/hooks";
 
 export const useUserId = () => {
   const token = useObservable(() => tokenObserver);

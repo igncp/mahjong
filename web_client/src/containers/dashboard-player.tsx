@@ -1,16 +1,17 @@
 import { EditOutlined } from "@ant-design/icons";
+import { tokenObserver } from "mahjong_sdk/dist/auth";
+import {
+  DashboardQueryResponse,
+  queryDashboardUserQuery,
+} from "mahjong_sdk/dist/graphql/dashboard-user-query";
+import { HttpClient } from "mahjong_sdk/dist/http-client";
+import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { first, take, zip } from "rxjs";
+import { first } from "rxjs";
 
-import { tokenObserver } from "mahjong_sdk/src/auth";
-import {
-  TUserGetGamesResponse,
-  TUserGetInfoResponse,
-} from "mahjong_sdk/src/core";
-import { HttpClient } from "mahjong_sdk/src/http-server";
 import Button from "src/ui/common/button";
 import Card from "src/ui/common/card";
 import Input from "src/ui/common/input";
@@ -28,8 +29,8 @@ type TProps = {
 
 const DashboardUser = ({ userId }: TProps) => {
   const { t } = useTranslation();
-  const [gamesIds, setGamesIds] = useState<TUserGetGamesResponse | null>(null);
-  const [userInfo, setUserInfo] = useState<TUserGetInfoResponse | null>(null);
+  const [dashboardQueryResponse, setDashboardQueryResponse] =
+    useState<DashboardQueryResponse | null>(null);
   const [editName, setEditName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -37,30 +38,24 @@ const DashboardUser = ({ userId }: TProps) => {
   const router = useRouter();
 
   useEffect(() => {
-    const subscription = zip(
-      HttpClient.userGetGames({
-        player_id: userId,
-      }),
-      HttpClient.userGetInfo(userId)
-    )
-      .pipe(take(1))
-      .subscribe({
-        error: () => {
-          tokenObserver.next(null);
-          subscription.unsubscribe();
-        },
-        next: ([games, user]) => {
-          setUserInfo(user || null);
-          setGamesIds(games || null);
-        },
-      });
+    const subscription = queryDashboardUserQuery().subscribe({
+      error: () => {
+        tokenObserver.next(null);
+        subscription.unsubscribe();
+      },
+      next: (newQueryResponse) => {
+        setDashboardQueryResponse(newQueryResponse);
+      },
+    });
 
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
-  if (!gamesIds || !userInfo) return null;
+  if (!dashboardQueryResponse) return null;
+
+  const { player, playerGamesIds, playerTotalScore } = dashboardQueryResponse;
 
   const isSaveNameDisabled = !nameInput || isLoading;
 
@@ -79,7 +74,13 @@ const DashboardUser = ({ userId }: TProps) => {
         next: (newUser) => {
           setIsLoading(false);
 
-          setUserInfo(newUser || null);
+          setDashboardQueryResponse({
+            ...dashboardQueryResponse,
+            player: {
+              ...dashboardQueryResponse.player,
+              name: newUser.name,
+            },
+          });
           setEditName(false);
         },
       });
@@ -87,20 +88,27 @@ const DashboardUser = ({ userId }: TProps) => {
 
   return (
     <PageContent>
+      <Head>
+        <title>{t("page.dashboard.title", "Mahjong Dashboard")}</title>
+      </Head>
       {editName ? (
         <Space>
           <Card title={t("dashboard.editName", "Edit the name")}>
             <Space direction="vertical">
               <Input
+                data-name="display-name-input"
                 onChange={(e) => {
                   setNameInput(e.target.value);
                 }}
                 onPressEnter={onSaveNameSubmit}
-                placeholder="The new name"
+                placeholder={
+                  t("dashboard.name.placeholder", "The new name") as string
+                }
                 value={nameInput}
               />
               <Space>
                 <Button
+                  data-name="display-name-button"
                   disabled={isSaveNameDisabled}
                   onClick={onSaveNameSubmit}
                   type="primary"
@@ -121,16 +129,18 @@ const DashboardUser = ({ userId }: TProps) => {
         </Space>
       ) : (
         <Title
+          data-name="display-name"
           level={2}
           onClick={() => {
-            setNameInput(userInfo.name);
+            setNameInput(player.name);
             setEditName(true);
           }}
           style={{ cursor: "pointer", margin: "10px 0" }}
         >
-          {userInfo.name} <EditOutlined style={{ fontSize: "16px" }} /> (
+          <span data-name="display-name-content">{player.name}</span>{" "}
+          <EditOutlined style={{ fontSize: "16px" }} /> (
           {t("dashboard.userPoints", "{{count}} points", {
-            count: userInfo.total_score,
+            count: playerTotalScore,
           })}
           )
         </Title>
@@ -138,15 +148,16 @@ const DashboardUser = ({ userId }: TProps) => {
       <List
         bordered
         className={styles.list}
-        dataSource={gamesIds}
+        dataSource={playerGamesIds}
         renderItem={(gameId) => (
-          <div className={styles.listItem}>
+          <div className={styles.listItem} data-name="existing-game">
             <Link href={SiteUrls.playerGame(gameId, userId)}>{gameId}</Link>
           </div>
         )}
       />
       <div className={styles.newGameButton}>
         <Button
+          data-name="create-game-button"
           onClick={() => {
             const playerNums = [
               t("dashboard.playerNum1", "1"),

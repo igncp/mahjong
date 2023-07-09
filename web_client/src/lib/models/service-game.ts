@@ -1,12 +1,12 @@
-import { format_tile, get_possible_melds } from "pkg";
-
 import {
   PlayerId,
   PossibleMeld,
   ServiceGame,
   TileId,
-} from "mahjong_sdk/src/core";
-import { getDeck } from "mahjong_sdk/src/service-game-summary";
+} from "mahjong_sdk/dist/core";
+import { getDeck } from "mahjong_sdk/dist/service-game-summary";
+
+import { format_tile, get_possible_melds } from "pkg";
 
 export class ModelServiceGame {
   constructor(public data: ServiceGame) {}

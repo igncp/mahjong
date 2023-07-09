@@ -1,6 +1,5 @@
+import { GameId, PlayerId } from "mahjong_sdk/dist/core";
 import dynamic from "next/dynamic";
-
-import { GameId, PlayerId } from "mahjong_sdk/src/core";
 
 const GameAdmin = dynamic(() => import("src/containers/game/admin"), {
   ssr: false,

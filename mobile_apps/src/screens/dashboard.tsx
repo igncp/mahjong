@@ -1,14 +1,13 @@
 import { useFocusEffect } from "@react-navigation/native";
-import React, { useCallback, useState } from "react";
-import { Button, Text, View } from "react-native";
-import { first, take, zip } from "rxjs";
-
-import { tokenObserver } from "mahjong_sdk/src/auth";
+import { tokenObserver } from "mahjong_sdk/dist/auth";
 import {
   TUserGetGamesResponse,
   TUserGetInfoResponse,
-} from "mahjong_sdk/src/core";
-import { HttpClient } from "mahjong_sdk/src/http-server";
+} from "mahjong_sdk/dist/core";
+import { HttpClient } from "mahjong_sdk/dist/http-client";
+import React, { useCallback, useState } from "react";
+import { Button, Text, View } from "react-native";
+import { first, zip } from "rxjs";
 
 import { useUserId } from "../lib/auth";
 
@@ -33,18 +32,16 @@ const useScreenData = () => {
           player_id: userId,
         }),
         HttpClient.userGetInfo(userId)
-      )
-        .pipe(take(1))
-        .subscribe({
-          error: () => {
-            tokenObserver.next(null);
-            subscription.unsubscribe();
-          },
-          next: ([games, user]) => {
-            setUserInfo(user || null);
-            setGamesIds(games || null);
-          },
-        });
+      ).subscribe({
+        error: () => {
+          tokenObserver.next(null);
+          subscription.unsubscribe();
+        },
+        next: ([games, user]) => {
+          setUserInfo(user || null);
+          setGamesIds(games || null);
+        },
+      });
     }, [userId])
   );
 

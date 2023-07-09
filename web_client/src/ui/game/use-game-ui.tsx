@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ServiceGameSummary, TileId } from "mahjong_sdk/dist/core";
+import { ModelServiceGameSummary } from "mahjong_sdk/dist/service-game-summary";
+import { useCallback, useMemo } from "react";
 import { useDrop } from "react-dnd";
 import { Subject } from "rxjs";
-
-import { ServiceGameSummary, TileId } from "mahjong_sdk/src/core";
-import { ModelServiceGameSummary } from "mahjong_sdk/src/service-game-summary";
 
 export const DROP_BG = "#e7e7e7";
 export const DROP_BORDER = "2px solid #333";
@@ -56,6 +55,7 @@ export const useGameUI = ({
           const handWithoutMelds = serviceGameM.getPlayerHandWithoutMelds();
           const handIds = handWithoutMelds.map((t) => t.id);
           const tileIndex = handIds.findIndex((t) => t === tileId);
+
           if (tileIndex === -1) {
             return;
           }
@@ -85,52 +85,7 @@ export const useGameUI = ({
     },
     [isDragging$]
   );
-  const LeftDrops = useMemo(
-    () =>
-      handWithoutMelds.map((_handTile, handTileIndex) => {
-        const LeftDrop = () => {
-          const [{ isOver }] = handDrops[handTileIndex];
-          const [isDragging, setIsDragging] = useState(false);
 
-          const background = (() => {
-            switch (true) {
-              case isOver:
-                return "#ccc";
-              case isDragging:
-                return DROP_BG;
-              default:
-                return "white";
-            }
-          })();
-
-          useEffect(() => {
-            const sub = isDragging$.subscribe((newIsDragging) => {
-              setTimeout(() => {
-                setIsDragging(newIsDragging);
-              });
-            });
-            return () => sub.unsubscribe();
-          }, []);
-
-          return (
-            <span
-              className="hand-drop"
-              ref={handDrops[handTileIndex][1]}
-              style={{
-                background,
-                border: isDragging ? DROP_BORDER : "none",
-                display: "inline-block",
-                height: DROP_HEIGHT,
-                width: isDragging ? "20px" : "0px",
-              }}
-            />
-          );
-        };
-
-        return LeftDrop;
-      }),
-    [handHash]
-  );
   const handTilesMemo = useMemo(
     () => handWithoutMelds.map((handTile) => serviceGameM.getTile(handTile.id)),
     [handHash]
@@ -139,7 +94,8 @@ export const useGameUI = ({
   const handTilesProps = handWithoutMelds.map((_handTile, handTileIndex) => ({
     draggableItem: draggableItems[handTileIndex],
     draggableType: "handTile",
-    LeftDrop: LeftDrops[handTileIndex],
+    dropRef: handDrops[handTileIndex][1],
+    hasItemOver: handDrops[handTileIndex][0].isOver,
     onIsDraggingChange,
     tile: handTilesMemo[handTileIndex],
   }));
@@ -147,6 +103,7 @@ export const useGameUI = ({
   return {
     boardDropRef,
     canDropInBoard,
+    handDrops,
     handTilesProps,
   };
 };

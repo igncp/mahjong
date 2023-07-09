@@ -1,3 +1,5 @@
+import { tokenObserver } from "mahjong_sdk/dist/auth";
+import { HttpClient } from "mahjong_sdk/dist/http-client";
 import React, { useCallback, useState } from "react";
 import {
   Button,
@@ -12,9 +14,6 @@ import {
 } from "react-native";
 import { Colors } from "react-native/Libraries/NewAppScreen";
 import { first } from "rxjs";
-
-import { tokenObserver } from "mahjong_sdk/src/auth";
-import { HttpClient } from "mahjong_sdk/src/http-server";
 
 export const AuthScreen = () => {
   const isDarkMode = useColorScheme() === "dark";

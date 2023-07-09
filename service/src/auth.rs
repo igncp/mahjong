@@ -11,6 +11,12 @@ use uuid::Uuid;
 pub type Username = String;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub enum GetAuthInfo {
+    Username(Username),
+    PlayerId(PlayerId),
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum UserRole {
     Admin,
     Player,
@@ -57,7 +63,8 @@ impl<'a> AuthHandler<'a> {
         username: &String,
         password: &String,
     ) -> Result<Option<bool>, String> {
-        let auth_info = self.storage.get_auth_info(username).await?;
+        let auth_info_opts = GetAuthInfo::Username(username.clone());
+        let auth_info = self.storage.get_auth_info(auth_info_opts).await?;
 
         if auth_info.is_none() {
             debug!("Not found auth_info for username: {username}");
@@ -214,6 +221,12 @@ impl<'a> AuthHandler<'a> {
         let claims = self.get_token_claims(None);
 
         AuthHandler::get_verify_user_claims(claims, player_id)
+    }
+
+    pub fn get_user_from_token(&self) -> Option<String> {
+        let claims = self.get_token_claims(None);
+
+        claims.map(|c| c.sub)
     }
 
     pub fn verify_user_token(&self, player_id: &PlayerId, token: &String) -> bool {

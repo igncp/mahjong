@@ -1,4 +1,4 @@
-import { Subject, first } from "rxjs";
+import { Subject } from "rxjs";
 
 import {
   Deck,
@@ -8,7 +8,7 @@ import {
   Tile,
   TileId,
 } from "./core";
-import { HttpClient } from "./http-server";
+import { HttpClient } from "./http-client";
 
 export type ModelState<A> = [A, (v: A) => void];
 
@@ -23,6 +23,10 @@ export const getDeck = () => deck;
 
 export const setFormatTile = (newFormatTile: typeof format_tile) => {
   format_tile = newFormatTile;
+};
+
+export const getTile = (tileId: TileId) => {
+  return deck.get(tileId) as Tile;
 };
 
 export const setGetPossibleMeldsSummary = (
@@ -60,17 +64,15 @@ export class ModelServiceGameSummary {
     HttpClient.userBreakMeld(this.gameState[0].game_summary.id, {
       player_id: this.gameState[0].game_summary.player_id,
       set_id: setId,
-    })
-      .pipe(first())
-      .subscribe({
-        error: () => {
-          this.handleError();
-        },
-        next: (newGame) => {
-          this.loadingState[1](false);
-          this.gameState[1](newGame);
-        },
-      });
+    }).subscribe({
+      error: () => {
+        this.handleError();
+      },
+      next: (newGame) => {
+        this.loadingState[1](false);
+        this.gameState[1](newGame);
+      },
+    });
   }
 
   getPlayerHandWithoutMelds() {
@@ -216,17 +218,43 @@ export class ModelServiceGameSummary {
       game_version: this.gameState[0].game_summary.version,
       player_id: this.gameState[0].game_summary.player_id,
       tiles,
-    })
-      .pipe(first())
-      .subscribe({
-        error: () => {
-          this.handleError();
-        },
-        next: (newGame) => {
-          this.loadingState[1](false);
-          this.gameState[1](newGame);
+    }).subscribe({
+      error: () => {
+        this.handleError();
+      },
+      next: (newGame) => {
+        this.loadingState[1](false);
+        this.gameState[1](newGame);
+      },
+    });
+
+    if (tiles) {
+      const tileIdToIndex = new Map<TileId, number>();
+      tiles?.forEach((tileId, index) => {
+        tileIdToIndex.set(tileId, index);
+      });
+
+      const newHand = this.gameState[0].game_summary.hand
+        .slice()
+        .sort((a, b) => {
+          const aIndex = tileIdToIndex.get(a.id);
+          const bIndex = tileIdToIndex.get(b.id);
+
+          if (aIndex === undefined || bIndex === undefined) {
+            return 0;
+          }
+
+          return aIndex - bIndex;
+        });
+
+      this.gameState[1]({
+        ...this.gameState[0],
+        game_summary: {
+          ...this.gameState[0].game_summary,
+          hand: newHand,
         },
       });
+    }
   }
 
   setGameSettings(gameSettings: GameSettingsSummary) {
@@ -252,7 +280,7 @@ export class ModelServiceGameSummary {
   }
 
   getTile(tileId: TileId) {
-    return deck.get(tileId) as Tile;
+    return getTile(tileId);
   }
 
   private handleError = (error?: ModelServiceGameSummaryError) => {

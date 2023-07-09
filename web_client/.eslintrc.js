@@ -3,5 +3,11 @@ const common = require("../.eslint-common");
 
 module.exports = {
   ...common,
-  plugins: ["react", "@typescript-eslint", "@next/eslint-plugin-next"],
+  extends: [...common.extends, "plugin:playwright/recommended"],
+  plugins: [
+    "react",
+    "@typescript-eslint",
+    "@next/eslint-plugin-next",
+    "playwright",
+  ],
 };

@@ -1,10 +1,5 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { message } from "antd";
-import { useRouter } from "next/router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { first } from "rxjs";
-
 import {
   Board,
   GameId,
@@ -14,13 +9,18 @@ import {
   SetId,
   TUserLoadGameResponse,
   Wind,
-} from "mahjong_sdk/src/core";
-import { HttpClient } from "mahjong_sdk/src/http-server";
+} from "mahjong_sdk/dist/core";
+import { HttpClient } from "mahjong_sdk/dist/http-client";
 import {
   ModelServiceGameSummary,
   ModelServiceGameSummaryError,
   ModelState,
-} from "mahjong_sdk/src/service-game-summary";
+} from "mahjong_sdk/dist/service-game-summary";
+import { useRouter } from "next/router";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { first } from "rxjs";
+
 import { SiteUrls } from "src/lib/site/urls";
 import { getTileInfo } from "src/lib/tile-info";
 import Alert from "src/ui/common/alert";
@@ -261,6 +261,8 @@ const Game = ({ gameId, userId }: IProps) => {
     ];
   const dealerPlayer = serviceGameSummary.players[dealerPlayerId];
 
+  const isDraggingOther = handTilesProps.some((props) => props.hasItemOver);
+
   return (
     <PageContent>
       <Text style={{ marginTop: "20px" }}>
@@ -268,7 +270,13 @@ const Game = ({ gameId, userId }: IProps) => {
         {t("game.points", "{{count}} points", {
           count: serviceGameSummary.game_summary.score[userId],
         })}
-        ) <CopyToClipboard text={userId} />
+        )
+        {process.env.NODE_ENV !== "production" && (
+          <>
+            {" "}
+            <CopyToClipboard text={userId} />
+          </>
+        )}
       </Text>
       <Text>
         {t("game.currentWind", "Current wind:")}{" "}
@@ -366,6 +374,7 @@ const Game = ({ gameId, userId }: IProps) => {
           const tile = serviceGameM.getTile(lastTile);
           const claimTileTitle = tile ? getTileInfo(tile, i18n)?.[1] : null;
           const disabled = !gameState[0]?.game_summary.round.discarded_tile;
+
           return (
             <div className={styles.boardButtons}>
               <Button
@@ -410,9 +419,18 @@ const Game = ({ gameId, userId }: IProps) => {
         >
           <div className={styles.handTiles}>
             {handWithoutMelds.map((handTile, handTileIndex) => {
-              const handTileProps = handTilesProps[handTileIndex];
+              const { hasItemOver, ...handTileProps } =
+                handTilesProps[handTileIndex];
 
-              return <TileImg key={handTile.id} {...handTileProps} />;
+              return (
+                <Fragment key={`${handTile.id}-${handTileIndex}`}>
+                  <TileImg
+                    {...handTileProps}
+                    isDraggingOther={isDraggingOther}
+                    paddingLeft={hasItemOver ? 10 : 0}
+                  />
+                </Fragment>
+              );
             })}
           </div>
         </Card>

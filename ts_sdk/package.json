@@ -1,18 +1,23 @@
 {
   "name": "mahjong_sdk",
   "version": "0.1.0",
-  "main": "src/index.ts",
+  "main": "dist/index.ts",
   "private": true,
   "scripts": {
+    "build": "rm -rf dist && tsc",
+    "pack-full": "rm -rf *.tgz && npm i && npm run build && npm pack",
     "sync_all": "cd ../web_client && npm run sync_sdk && cd ../mobile_apps && npm run sync_sdk"
   },
   "dependencies": {
+    "graphql": "^16.7.1",
+    "graphql-request": "^6.1.0",
     "qs": "^6.11.1",
     "rxjs": "^7.8.0"
   },
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^4.1.1",
     "@types/qs": "^6.9.7",
+    "@types/react": "^18.2.14",
     "@typescript-eslint/eslint-plugin": "^5.57.0",
     "@typescript-eslint/parser": "^5.57.0",
     "eslint": "^8.37.0",

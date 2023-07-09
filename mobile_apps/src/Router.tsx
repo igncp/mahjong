@@ -1,7 +1,6 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { tokenObserver } from "mahjong_sdk/dist/auth";
 import React, { useEffect, useState } from "react";
-
-import { tokenObserver } from "mahjong_sdk/src/auth";
 
 import { setupApp } from "./lib/setup";
 import { AuthScreen } from "./screens/auth";

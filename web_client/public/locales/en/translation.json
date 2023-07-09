@@ -98,6 +98,9 @@
     "empty": "No data"
   },
   "page": {
+    "dashboard": {
+      "title": "Mahjong Dashboard"
+    },
     "title": "Mahjong Web Client"
   },
   "tile": {

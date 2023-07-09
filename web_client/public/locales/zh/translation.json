@@ -96,6 +96,9 @@
     "empty": "沒有數據"
   },
   "page": {
+    "dashboard": {
+      "title": "麻將儀表板"
+    },
     "title": "麻將網頁客戶端"
   },
   "tile": {

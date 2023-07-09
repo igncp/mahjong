@@ -1,5 +1,5 @@
 use crate::{
-    auth::{AuthInfo, Username},
+    auth::{AuthInfo, GetAuthInfo, Username},
     common::Storage,
     env::ENV_FILE_STORAGE_KEY,
 };
@@ -24,17 +24,25 @@ struct FileContent {
 
 #[async_trait]
 impl Storage for FileStorage {
-    async fn get_auth_info(&self, username: &Username) -> Result<Option<AuthInfo>, String> {
+    async fn get_auth_info(&self, get_auth_info: GetAuthInfo) -> Result<Option<AuthInfo>, String> {
         let file_content = self.get_file();
+        let username = match get_auth_info {
+            GetAuthInfo::Username(username) => username,
+            GetAuthInfo::PlayerId(_) => panic!(),
+        };
         let auth = file_content.auth.unwrap_or_default();
 
-        let auth_info = auth.get(username);
+        let auth_info = auth.get(&username);
 
         if let Some(auth_info) = auth_info {
             Ok(Some(auth_info.clone()))
         } else {
             Ok(None)
         }
+    }
+
+    async fn get_player_total_score(&self, _id: &PlayerId) -> Result<i32, String> {
+        unimplemented!()
     }
 
     async fn save_auth_info(&self, auth_info: &AuthInfo) -> Result<(), String> {
@@ -166,6 +174,10 @@ impl Storage for FileStorage {
         self.save_file(&file_content);
 
         Ok(())
+    }
+
+    async fn delete_games(&self, _ids: &[GameId]) -> Result<(), String> {
+        panic!()
     }
 }
 

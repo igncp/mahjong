@@ -1,10 +1,10 @@
+import { TAdminGetGamesResponse } from "mahjong_sdk/dist/core";
+import { HttpClient } from "mahjong_sdk/dist/http-client";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { MouseEventHandler, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { TAdminGetGamesResponse } from "mahjong_sdk/src/core";
-import { HttpClient } from "mahjong_sdk/src/http-server";
 import List, { ListItem } from "src/ui/common/list";
 
 import { SiteUrls } from "../lib/site/urls";

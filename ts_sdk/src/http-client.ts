@@ -1,5 +1,6 @@
+import { request } from "graphql-request";
 import qs from "qs";
-import { BehaviorSubject, from } from "rxjs";
+import { BehaviorSubject, Observable, from } from "rxjs";
 
 import { getAuthTokenHeader, tokenObserver } from "./auth";
 import {
@@ -230,6 +231,19 @@ export const HttpClient = {
     };
 
     return socketProvider;
+  },
+
+  fetchGraphQLQuery<T>(document: string): Observable<T> {
+    return from(
+      request<T>({
+        url: `${baseUrl}/v1/graphql`,
+        document,
+        requestHeaders: {
+          ...getAuthTokenHeader(),
+          "Content-Type": "application/json",
+        },
+      })
+    );
   },
 
   getDeck() {

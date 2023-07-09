@@ -1,7 +1,9 @@
 use crate::auth::{AuthHandler, UserRole};
 use crate::common::Storage;
+use crate::env::GRAPHQL_SOURCE;
 use crate::game_wrapper::GameWrapper;
 use crate::games_loop::GamesLoop;
+use crate::graphql::{create_schema, GraphQLContext};
 use crate::socket_server::MahjongWebsocketServer;
 use crate::socket_session::MahjongWebsocketSession;
 use crate::user_wrapper::UserWrapper;
@@ -11,6 +13,8 @@ use actix_web::{
     get, patch, post, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
 };
 use actix_web_actors::ws;
+use juniper::http::playground::playground_source;
+use juniper::http::GraphQLRequest;
 use mahjong_core::deck::DEFAULT_DECK;
 use mahjong_core::GameId;
 use rustc_hash::FxHashMap;
@@ -915,6 +919,43 @@ async fn get_ws(
     )
 }
 
+#[get("/v1/graphql")]
+async fn graphql_playground() -> HttpResponse {
+    let graphql_source = std::env::var(GRAPHQL_SOURCE).unwrap_or("/api/v1/graphql".to_string());
+
+    HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(playground_source(&graphql_source, None))
+}
+
+#[post("/v1/graphql")]
+async fn graphql(
+    data: web::Json<GraphQLRequest>,
+    req: HttpRequest,
+    storage: StorageData,
+) -> Result<HttpResponse, Error> {
+    let auth_handler = AuthHandler::new(&storage, &req);
+
+    let user_id = auth_handler.get_user_from_token();
+
+    if user_id.is_none() {
+        return Ok(AuthHandler::get_unauthorized());
+    }
+
+    let ctx = GraphQLContext {
+        user_id: user_id.unwrap(),
+        storage,
+    };
+
+    let schema = create_schema();
+    let res = data.execute(&schema, &ctx).await;
+    let res_str = serde_json::to_string(&res).unwrap();
+
+    Ok(HttpResponse::Ok()
+        .content_type("application/json")
+        .body(res_str))
+}
+
 pub struct MahjongServer;
 
 impl MahjongServer {
@@ -977,6 +1018,8 @@ impl MahjongServer {
                 .service(user_post_game_say_mahjong)
                 .service(user_post_game_settings)
                 .service(user_post_game_sort_hand)
+                .service(graphql_playground)
+                .service(graphql)
         })
         .bind((address, port))?
         .run()

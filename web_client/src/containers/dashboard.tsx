@@ -1,9 +1,8 @@
+import { tokenObserver } from "mahjong_sdk/dist/auth";
+import { UserRole } from "mahjong_sdk/dist/core";
+import { useUserTokenClaims } from "mahjong_sdk/dist/hooks";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-
-import { tokenObserver } from "mahjong_sdk/src/auth";
-import { UserRole } from "mahjong_sdk/src/core";
-import { useUserTokenClaims } from "mahjong_sdk/src/hooks";
 
 const DashboardAdmin = dynamic(() => import("./dashboard-admin"), {
   ssr: false,

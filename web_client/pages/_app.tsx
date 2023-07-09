@@ -1,13 +1,15 @@
 import i18n from "i18next";
 import HttpApi from "i18next-http-backend";
+import { tokenObserver } from "mahjong_sdk/dist/auth";
+import { setBaseUrl } from "mahjong_sdk/dist/http-client";
 import type { AppProps } from "next/app";
-import { DndProvider } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
+import { HTML5toTouch } from "rdndmb-html5-to-touch";
+import { DndProvider } from "react-dnd-multi-backend";
 import { initReactI18next } from "react-i18next";
 import { I18nextProvider } from "react-i18next";
 
-import { tokenObserver } from "mahjong_sdk/src/auth";
-import { setBaseUrl } from "mahjong_sdk/src/http-server";
+import { DnDPreview } from "src/containers/dnd-preview";
+import { TOKEN_KEY } from "src/lib/auth";
 import { env } from "src/lib/env";
 import "src/styles/global.css";
 
@@ -25,8 +27,6 @@ if (typeof window !== "undefined") {
 }
 
 const setupApp = async () => {
-  const TOKEN_KEY = "mahjongAuthToken";
-
   i18n.on("languageChanged", (lng) => {
     localStorage.setItem("i18nextLng", lng);
   });
@@ -56,8 +56,9 @@ setupApp();
 export default function App({ Component, pageProps }: AppProps) {
   return (
     <I18nextProvider i18n={i18n}>
-      <DndProvider backend={HTML5Backend}>
+      <DndProvider options={HTML5toTouch}>
         <Component {...pageProps} />
+        <DnDPreview />
       </DndProvider>
     </I18nextProvider>
   );
