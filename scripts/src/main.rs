@@ -5,6 +5,7 @@
 use check::{run_check, run_clippy, run_fix};
 use clap::Command;
 use docker::run_docker;
+use install::run_setup_dev_install;
 use std::env;
 use sync_prod::run_sync_prod;
 use utils::Shell;
@@ -12,6 +13,7 @@ use wasm::run_pack_wasm;
 
 mod check;
 mod docker;
+mod install;
 mod sync_prod;
 mod utils;
 mod wasm;
@@ -44,6 +46,7 @@ fn main() {
         .subcommand(Command::new("fix").about("Run linters in fix mode"))
         .subcommand(Command::new("list").about("List root files to be used in a pipe"))
         .subcommand(Command::new("pack_wasm").about("Pack the wasm files"))
+        .subcommand(Command::new("dev_install").about("Install some dependencies for development"))
         .subcommand(Command::new("sync_prod").about("Deploy a clean production DB"));
 
     let current_dir_path = env::current_dir().unwrap();
@@ -63,6 +66,7 @@ fn main() {
         Some(("fix", _)) => run_fix(&shell),
         Some(("list", _)) => list(current_dir),
         Some(("pack_wasm", _)) => run_pack_wasm(&shell),
+        Some(("dev_install", _)) => run_setup_dev_install(&shell),
         Some(("sync_prod", _)) => run_sync_prod(&mut shell),
         _ => {
             cmd.print_long_help().unwrap();

@@ -18,3 +18,12 @@
     padding: 15px 50px 15px;
   }
 }
+
+.inner {
+  box-sizing: border-box;
+  display: flex;
+  margin: auto;
+  max-width: $desktop-max-width;
+  padding: 0 $common-gap;
+  width: 100%;
+}

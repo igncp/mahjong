@@ -9,6 +9,7 @@
     "lint:styles": "stylelint 'src/**/*.css'",
     "lint:fix": "prettier --write 'src/**' 'pages/**' && eslint --fix .",
     "sync_sdk": "cd ../ts_sdk && npm run pack-full && cd ../web_client && npm install ../ts_sdk/*.tgz",
+    "install:initial": "npm uninstall mahjong_sdk && npm i && npm run sync_sdk",
     "test": "i18next && grep '\"\"' -r public/locales | wc -l | grep -q 0",
     "e2e": "playwright test",
     "e2e:prod": "E2E_BASE_URL=https://mahjong-rust.com playwright test",
@@ -20,6 +21,7 @@
     "@types/qs": "^6.9.7",
     "antd": "^5.4.2",
     "dotenv": "^16.3.1",
+    "formik": "^2.4.2",
     "graphql": "^16.7.1",
     "graphql-request": "^6.1.0",
     "i18next": "^22.4.15",
@@ -39,7 +41,8 @@
     "rxjs": "^7.8.0",
     "stylelint": "^15.6.2",
     "stylelint-scss": "^5.0.0",
-    "web_lib": "file:pkg"
+    "web_lib": "file:pkg",
+    "zod": "^3.21.4"
   },
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^4.1.1",

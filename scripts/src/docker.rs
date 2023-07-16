@@ -15,9 +15,7 @@ fn web(shell: &Shell) {
 
     shell.run_status("cd web_client && npm uninstall mahjong_sdk");
 
-    shell.run_status(&vec!["cd web_client", "npm i"].join(";"));
-
-    shell.run_status(&vec!["cd web_client", "npm run sync_sdk"].join(";"));
+    shell.run_status(&vec!["cd web_client", "npm run install:initial"].join(";"));
 
     shell.run_status(&vec!["cd web_client", "npm run build"].join(";"));
 

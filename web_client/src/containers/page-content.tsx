@@ -9,15 +9,16 @@ import styles from "./page-content.module.scss";
 type Props = {
   children: React.ReactNode;
   style?: React.CSSProperties;
+  contentStyle?: React.CSSProperties;
 };
 
-const PageContent = ({ children, ...props }: Props) => (
+const PageContent = ({ children, contentStyle, ...props }: Props) => (
   <PageContentComp {...props}>
     <div className={styles.headerWrapper}>
       <Header />
     </div>
     <div className={styles.pageInner}>
-      <main>{children}</main>
+      <main style={contentStyle}>{children}</main>
       <footer>
         <Button className={styles.githubButton}>
           <Link href="https://github.com/igncp/mahjong" target="_blank">

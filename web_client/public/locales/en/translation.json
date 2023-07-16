@@ -13,12 +13,21 @@
       "pass": "Password:",
       "user": "Username:"
     },
+    "password": {
+      "min": "Your password must have at least 4 characters"
+    },
+    "username": {
+      "min": "Your username must have at least 4 characters"
+    },
     "warning": "Keep in mind that this application is still in early development and the database will be cleared periodically."
   },
   "dashboard": {
     "cancel": "Cancel",
     "defaultPlayerName": "Player {{number}}",
     "editName": "Edit the name",
+    "name": {
+      "placeholder": "The new name"
+    },
     "newAdminGame": "New admin game",
     "newGame": "Create a new game",
     "playerNum1": "1",

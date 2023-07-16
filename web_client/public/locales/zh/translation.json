@@ -13,12 +13,21 @@
       "pass": "密碼:",
       "user": "用戶名:"
     },
+    "password": {
+      "min": "您的密碼必須至少有 4 個字符"
+    },
+    "username": {
+      "min": "您的用戶名必須至少有 4 個字符"
+    },
     "warning": "請記住，此應用程序仍處於早期開發階段，數據庫將定期清除。"
   },
   "dashboard": {
     "cancel": "取消",
     "defaultPlayerName": "玩家 {{number}}",
     "editName": "編輯名稱",
+    "name": {
+      "placeholder": "新名稱"
+    },
     "newAdminGame": "創建一個新的管理遊戲",
     "newGame": "創建一個新遊戲",
     "playerNum1": "一",

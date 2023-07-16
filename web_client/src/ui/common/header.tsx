@@ -12,10 +12,12 @@ interface IProps {
 
 const Header = ({ linkPath, text, children }: IProps) => (
   <Title className={styles.wrapper} level={1}>
-    <Link className={styles.mainLink} href={linkPath}>
-      {text}
-    </Link>
-    {children}
+    <span className={styles.inner}>
+      <Link className={styles.mainLink} href={linkPath}>
+        {text}
+      </Link>
+      {children}
+    </span>
   </Title>
 );
 

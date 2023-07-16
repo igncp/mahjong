@@ -1,8 +1,10 @@
+import { useFormik } from "formik";
 import { tokenObserver } from "mahjong_sdk/dist/auth";
 import { HttpClient } from "mahjong_sdk/dist/http-client";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { first } from "rxjs";
+import z from "zod";
 
 import Alert from "src/ui/common/alert";
 import Button from "src/ui/common/button";
@@ -14,86 +16,164 @@ import Text from "src/ui/common/text";
 import styles from "./auth-form.module.scss";
 import PageContent from "./page-content";
 
+type FormState = {
+  username: string;
+  password: string;
+};
+
 const AuthForm = () => {
   const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+
+  const formSchema = useMemo(
+    () =>
+      z.object({
+        password: z
+          .string()
+          .min(
+            4,
+            t(
+              "auth.password.min",
+              "Your password must have at least 4 characters"
+            ) as string
+          ),
+        username: z
+          .string()
+          .min(
+            4,
+            t(
+              "auth.username.min",
+              "Your username must have at least 4 characters"
+            ) as string
+          ),
+      }),
+    [t]
+  );
+
+  const validate = (values: FormState) => {
+    try {
+      formSchema.parse(values);
+    } catch (err: unknown) {
+      return (err as z.ZodError).formErrors.fieldErrors;
+    }
+  };
+
+  const formik = useFormik<FormState>({
+    initialValues: {
+      password: "",
+      username: "",
+    },
+    onSubmit: (values, { setSubmitting }) => {
+      const { username, password } = values;
+
+      HttpClient.setAuth({
+        password,
+        username,
+      })
+        .pipe(first())
+        .subscribe({
+          error: (err) => {
+            console.log("debug: auth-form.tsx: err", err);
+            setError(t("auth.error.unknown"));
+          },
+          next: (response) => {
+            setSubmitting(false);
+
+            if (typeof response === "string") {
+              const error =
+                {
+                  ["E_INVALID_USER_PASS"]: t("auth.error.invalidUserPass"),
+                }[response] || t("auth.error.unknown");
+
+              setError(error);
+
+              return;
+            }
+
+            if (response.token) {
+              tokenObserver.next(response.token);
+            }
+          },
+        });
+    },
+    validate,
+  });
+
+  useEffect(() => {
+    formik.validateForm();
+  }, [t]);
 
   return (
-    <PageContent>
-      <Text>{t("auth.intro1")}</Text>
-      <Text>{t("auth.intro2")}</Text>
-      <Space style={{ maxWidth: 500 }}>
-        <Alert message={t("auth.warning")} type="info" />
-      </Space>
-      <div className={styles.formWrapper}>
-        <Card>
-          <Space direction="vertical">
-            {error && (
-              <Space>
-                <Alert message={error} type="error" />
-              </Space>
-            )}
-            <Text>{t("auth.label.user")}</Text>
-            <Input
-              data-name="username"
-              onChange={(e) => {
-                setError(null);
-                setUsername(e.target.value);
+    <PageContent contentStyle={{ marginTop: "20px" }}>
+      <div className={styles.waves}>
+        <div className={styles.wave} />
+        <div className={styles.wave} />
+        <div className={styles.wave} />
+      </div>
+      <div className={styles.content}>
+        <Text>{t("auth.intro1")}</Text>
+        <Text>{t("auth.intro2")}</Text>
+        <Space style={{ maxWidth: 500 }}>
+          <Alert message={t("auth.warning")} type="info" />
+        </Space>
+        <div className={styles.formWrapper}>
+          <Card style={{ width: "100%" }}>
+            <form
+              className={styles.form}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  formik.submitForm();
+                }
               }}
-              type="text"
-              value={username}
-            />
-            <Text>{t("auth.label.pass")}</Text>
-            <Input
-              data-name="password"
-              onChange={(e) => {
-                setError(null);
-                setPassword(e.target.value);
-              }}
-              type="password"
-              value={password}
-            />
-            <Button
-              data-name="auth-submit"
-              disabled={!username || !password}
-              onClick={() => {
-                HttpClient.setAuth({
-                  password,
-                  username,
-                })
-                  .pipe(first())
-                  .subscribe({
-                    error: (err) => {
-                      console.log("debug: auth-form.tsx: err", err);
-                      setError(t("auth.error.unknown"));
-                    },
-                    next: (response) => {
-                      if (typeof response === "string") {
-                        const error =
-                          {
-                            ["E_INVALID_USER_PASS"]: t(
-                              "auth.error.invalidUserPass"
-                            ),
-                          }[response] || t("auth.error.unknown");
-                        setError(error);
-
-                        return;
-                      }
-
-                      if (response.token) {
-                        tokenObserver.next(response.token);
-                      }
-                    },
-                  });
-              }}
-              type="primary"
+              onSubmit={formik.handleSubmit}
             >
-              {t("auth.button.submit")}
-            </Button>
-          </Space>
-        </Card>
+              {error && (
+                <Space>
+                  <Alert message={error} type="error" />
+                </Space>
+              )}
+              <Text style={{ alignSelf: "flex-start" }}>
+                {t("auth.label.user")}
+              </Text>
+              <Input
+                data-name="username"
+                type="text"
+                {...formik.getFieldProps("username")}
+              />
+              {formik.touched.username && formik.errors.username?.length ? (
+                <Alert
+                  message={formik.errors.username[0]}
+                  style={{ alignSelf: "flex-start" }}
+                  type="error"
+                />
+              ) : null}
+              <Text style={{ alignSelf: "flex-start" }}>
+                {t("auth.label.pass")}
+              </Text>
+              <Input
+                data-name="password"
+                type="password"
+                {...formik.getFieldProps("password")}
+              />
+              {formik.touched.password && formik.errors.password?.length ? (
+                <Alert
+                  message={formik.errors.password[0]}
+                  style={{ alignSelf: "flex-start" }}
+                  type="error"
+                />
+              ) : null}
+              <Button
+                data-name="auth-submit"
+                disabled={formik.isSubmitting || !formik.isValid}
+                onClick={formik.submitForm}
+                style={{ maxWidth: 150 }}
+                type="primary"
+              >
+                {t("auth.button.submit")}
+              </Button>
+            </form>
+          </Card>
+        </div>
       </div>
     </PageContent>
   );
