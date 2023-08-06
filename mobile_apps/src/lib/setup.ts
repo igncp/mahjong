@@ -7,9 +7,10 @@ import { setDeck } from "mahjong_sdk/dist/service-game-summary";
 import { first, from, tap } from "rxjs";
 
 const TOKEN_KEY = "mahjong_rust_token";
+const defaultAPI = "https://mahjong-rust.com";
 
 export const setupApp = () => {
-  setBaseUrl(API_URL);
+  setBaseUrl(API_URL || defaultAPI);
 
   from(AsyncStorage.getItem(TOKEN_KEY))
     .pipe(

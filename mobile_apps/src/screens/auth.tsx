@@ -29,7 +29,7 @@ export const AuthScreen = () => {
       .pipe(first())
       .subscribe({
         error: (err) => {
-          console.log("debug: auth-form.tsx: err", err);
+          console.log("debug: auth.tsx: err", err);
           setError("Unknown error");
         },
         next: (response) => {

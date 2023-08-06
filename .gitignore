@@ -11,3 +11,4 @@ node_modules
 *.svg
 perf.data
 perf.data.*
+.direnv
