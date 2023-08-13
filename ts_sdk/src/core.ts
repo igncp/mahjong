@@ -79,6 +79,12 @@ export type DragonTile = {
 export type Tile = FlowerTile | SeasonTile | WindTile | DragonTile | SuitTile;
 export type SetId = string;
 
+export type ServicePlayerGame = {
+  createdAt: string;
+  id: GameId;
+  updatedAt: string;
+};
+
 type HandTile = {
   concealed: boolean;
   id: TileId;
@@ -129,6 +135,7 @@ export type GameSettings = {
   ai_enabled: boolean;
   discard_wait_ms: number | null;
   fixed_settings: boolean;
+  last_discard_time: string | null;
 };
 
 export type GameSettingsSummary = {
@@ -185,7 +192,7 @@ export type TAdminPostCreateMeldRequest = {
 };
 export type TAdminPostCreateMeldResponse = Hand;
 
-export type TAdminGetGamesResponse = GameId[];
+export type TAdminGetGamesResponse = ServicePlayerGame[];
 export type TAdminGetGameResponse = ServiceGame;
 
 export type TAdminPostNewGameRequest = void;
@@ -242,7 +249,7 @@ export type TSocketWrapper = {
 export type TUserGetGamesQuery = {
   player_id: PlayerId;
 };
-export type TUserGetGamesResponse = GameId[];
+export type TUserGetGamesResponse = ServicePlayerGame[];
 
 export type TUserGetInfoResponse = {
   name: string;

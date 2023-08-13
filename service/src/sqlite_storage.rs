@@ -13,10 +13,13 @@ use diesel::sqlite::SqliteConnection;
 use mahjong_core::{Game, GameId, PlayerId};
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
-use service_contracts::{ServiceGame, ServicePlayer};
+use service_contracts::{ServiceGame, ServicePlayer, ServicePlayerGame};
 use tracing::debug;
 
-use self::models::{DieselGameBoard, DieselGameDrawWall, DieselGameHand, DieselGameSettings};
+use self::{
+    models::{DieselGameBoard, DieselGameDrawWall, DieselGameHand, DieselGameSettings},
+    models_translation::DieselGameExtra,
+};
 
 mod models;
 mod models_translation;
@@ -99,7 +102,13 @@ impl Storage for SQLiteStorage {
         DieselGameHand::update_from_game(&mut connection, service_game);
         DieselGameSettings::update_from_game(&mut connection, service_game);
 
-        let diesel_game = DieselGame::from_raw(&service_game.game);
+        let diesel_game_extra = DieselGameExtra {
+            created_at: service_game.created_at,
+            game: service_game.game.clone(),
+            updated_at: service_game.updated_at,
+        };
+        let diesel_game = DieselGame::from_raw(&diesel_game_extra);
+
         diesel_game.update(&mut connection);
 
         Ok(())
@@ -127,7 +136,8 @@ impl Storage for SQLiteStorage {
             return Ok(None);
         }
 
-        let mut game = result.unwrap();
+        let game_extra = result.unwrap();
+        let mut game = game_extra.game;
         game.set_players(&game_players);
         game.score = score;
         game.table.hands = hands;
@@ -135,15 +145,20 @@ impl Storage for SQLiteStorage {
         game.table.draw_wall = draw_wall;
 
         let service_game = ServiceGame {
+            created_at: game_extra.created_at,
             game,
             players,
             settings: settings.unwrap(),
+            updated_at: game_extra.updated_at,
         };
 
         Ok(Some(service_game))
     }
 
-    async fn get_games_ids(&self, player_id: &Option<PlayerId>) -> Result<Vec<GameId>, String> {
+    async fn get_player_games(
+        &self,
+        player_id: &Option<PlayerId>,
+    ) -> Result<Vec<ServicePlayerGame>, String> {
         let mut connection = SqliteConnection::establish(&self.db_path).unwrap();
 
         if player_id.is_some() {
@@ -153,7 +168,7 @@ impl Storage for SQLiteStorage {
             return Ok(result);
         }
 
-        let all = DieselGame::read_ids(&mut connection);
+        let all = DieselGame::read_player_games(&mut connection);
 
         Ok(all)
     }

@@ -19,9 +19,9 @@ mod games_loop;
 mod graphql;
 mod http_server;
 mod logs;
-mod socket_server;
-mod socket_session;
+mod socket;
 mod sqlite_storage;
+mod time;
 mod user_wrapper;
 
 #[actix_web::main]

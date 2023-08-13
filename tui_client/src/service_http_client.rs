@@ -13,8 +13,8 @@ use service_contracts::{
     AdminPostCreateMeldResponse, AdminPostDiscardTileRequest, AdminPostDiscardTileResponse,
     AdminPostDrawTileResponse, AdminPostMovePlayerResponse, AdminPostSayMahjongRequest,
     AdminPostSayMahjongResponse, AdminPostSortHandsResponse, AdminPostSwapDrawTilesRequest,
-    AdminPostSwapDrawTilesResponse, ServiceGame, SocketMessage, UserGetGamesQuery,
-    UserGetLoadGameResponse, UserLoadGameQuery, UserPostDiscardTileRequest,
+    AdminPostSwapDrawTilesResponse, ServiceGame, ServicePlayerGame, SocketMessage,
+    UserGetGamesQuery, UserGetLoadGameResponse, UserLoadGameQuery, UserPostDiscardTileRequest,
     UserPostDiscardTileResponse, WebSocketQuery,
 };
 use tokio::net::TcpStream;
@@ -265,7 +265,10 @@ impl ServiceHTTPClient {
         }
     }
 
-    pub async fn get_games(&self, user: Option<&PlayerId>) -> Result<Vec<GameId>, String> {
+    pub async fn get_games(
+        &self,
+        user: Option<&PlayerId>,
+    ) -> Result<Vec<ServicePlayerGame>, String> {
         let url = if user.is_some() {
             let query = UserGetGamesQuery {
                 player_id: user.unwrap().to_string(),

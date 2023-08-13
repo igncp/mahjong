@@ -1,7 +1,7 @@
 use crate::{DragonTile, FlowerTile, SeasonTile, SuitTile, WindTile};
 use serde::{Deserialize, Serialize};
 
-pub type TileId = u32;
+pub type TileId = i32;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Tile {

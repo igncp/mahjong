@@ -10,7 +10,7 @@ use mahjong_core::round::{Round, RoundTileClaimed};
 use mahjong_core::{Board, DrawWall, Game, GameId, Hand, HandTile, Hands, PlayerId, Score, TileId};
 use rustc_hash::FxHashMap;
 use schema::player::dsl as player_dsl;
-use service_contracts::{GameSettings, ServiceGame, ServicePlayer};
+use service_contracts::{GameSettings, ServiceGame, ServicePlayer, ServicePlayerGame};
 
 pub fn wait_common() {
     std::thread::sleep(std::time::Duration::from_millis(1));
@@ -150,6 +150,24 @@ impl DieselPlayer {
         }
     }
 
+    pub fn read_from_id_raw(
+        connection: &mut SqliteConnection,
+        player_id: &PlayerId,
+    ) -> Option<Self> {
+        loop {
+            if let Ok(player) = player_dsl::player
+                .filter(player_dsl::id.eq(player_id))
+                .limit(1)
+                .load::<Self>(connection)
+            {
+                break player;
+            }
+            wait_common();
+        }
+        .get(0)
+        .cloned()
+    }
+
     pub fn read_from_id(
         connection: &mut SqliteConnection,
         player_id: &PlayerId,
@@ -169,8 +187,14 @@ impl DieselPlayer {
     }
 }
 
+pub struct DieselGameExtra {
+    pub game: Game,
+    pub created_at: u128,
+    pub updated_at: u128,
+}
+
 impl DieselGame {
-    pub fn into_raw(self) -> Game {
+    pub fn into_raw(self) -> DieselGameExtra {
         let round = Round {
             dealer_player_index: self.round_dealer_index as usize,
             player_index: self.round_player_index as usize,
@@ -183,7 +207,7 @@ impl DieselGame {
             wall_tile_drawn: self.round_wall_tile_drawn.map(|tile_id| tile_id as TileId),
             wind: serde_json::from_str(&self.round_wind).unwrap(),
         };
-        Game {
+        let game = Game {
             name: self.name,
             version: self.version,
             id: self.id,
@@ -191,10 +215,19 @@ impl DieselGame {
             round,
             // For now the deck is not persisted
             ..Game::default()
+        };
+
+        DieselGameExtra {
+            game,
+            created_at: self.created_at.parse::<u128>().unwrap(),
+            updated_at: self.updated_at.parse::<u128>().unwrap(),
         }
     }
 
-    pub fn read_from_id(connection: &mut SqliteConnection, game_id: &GameId) -> Option<Game> {
+    pub fn read_from_id(
+        connection: &mut SqliteConnection,
+        game_id: &GameId,
+    ) -> Option<DieselGameExtra> {
         use schema::game::dsl as game_dsl;
 
         loop {
@@ -211,7 +244,7 @@ impl DieselGame {
         .map(|game| game.clone().into_raw())
     }
 
-    pub fn read_ids(connection: &mut SqliteConnection) -> Vec<GameId> {
+    pub fn read_player_games(connection: &mut SqliteConnection) -> Vec<ServicePlayerGame> {
         use schema::game::dsl as game_dsl;
 
         loop {
@@ -221,7 +254,11 @@ impl DieselGame {
             wait_common();
         }
         .into_iter()
-        .map(|game| game.id)
+        .map(|game| ServicePlayerGame {
+            id: game.id,
+            created_at: game.created_at.to_string(),
+            updated_at: game.updated_at.to_string(),
+        })
         .collect()
     }
 
@@ -251,19 +288,23 @@ impl DieselGame {
         }
     }
 
-    pub fn from_raw(raw: &Game) -> Self {
+    pub fn from_raw(extra: &DieselGameExtra) -> Self {
+        let raw = &extra.game;
+
         Self {
+            created_at: extra.created_at.to_string(),
             id: raw.id.clone(),
             name: raw.name.clone(),
             phase: serde_json::to_string(&raw.phase).unwrap(),
             round_claimed_by: raw.round.tile_claimed.clone().and_then(|t| t.by),
             round_claimed_from: raw.round.tile_claimed.clone().map(|t| t.from),
-            round_claimed_id: raw.round.tile_claimed.clone().map(|t| t.id as i32),
+            round_claimed_id: raw.round.tile_claimed.clone().map(|t| t.id),
             round_dealer_index: raw.round.dealer_player_index as i32,
             round_index: raw.round.round_index as i32,
             round_player_index: raw.round.player_index as i32,
-            round_wall_tile_drawn: raw.round.wall_tile_drawn.map(|tile_id| tile_id as i32),
+            round_wall_tile_drawn: raw.round.wall_tile_drawn,
             round_wind: serde_json::to_string(&raw.round.wind).unwrap(),
+            updated_at: extra.updated_at.to_string(),
             version: raw.version.clone(),
         }
     }
@@ -310,22 +351,33 @@ impl DieselGamePlayer {
     pub fn read_from_player(
         connection: &mut SqliteConnection,
         player_id: &PlayerId,
-    ) -> Vec<GameId> {
-        use schema::game_player::dsl as game_player_dsl;
+    ) -> Vec<ServicePlayerGame> {
+        let player = DieselPlayer::read_from_id_raw(connection, player_id);
+
+        if player.is_none() {
+            return vec![];
+        }
+
+        let player = player.unwrap();
 
         loop {
-            if let Ok(data) = game_player_dsl::game_player
-                .filter(game_player_dsl::player_id.eq(player_id))
-                .order(game_player_dsl::player_index.asc())
-                .load::<Self>(connection)
+            if let Ok(data) = Self::belonging_to(&player)
+                .inner_join(super::schema::game::table)
+                .select(DieselGame::as_select())
+                .order(super::schema::game::dsl::updated_at.desc())
+                .load(connection)
             {
                 break data;
             }
             wait_common();
         }
         .into_iter()
-        .map(|game| game.game_id)
-        .collect::<Vec<GameId>>()
+        .map(|game| ServicePlayerGame {
+            created_at: game.created_at,
+            id: game.id,
+            updated_at: game.updated_at,
+        })
+        .collect::<Vec<_>>()
     }
 
     pub fn update(connection: &mut SqliteConnection, diesel_game_players: &Vec<Self>, game: &Game) {
@@ -461,7 +513,7 @@ impl DieselGameBoard {
             .enumerate()
             .map(|(tile_index, tile_id)| Self {
                 game_id: service_game.game.id.clone(),
-                tile_id: *tile_id as i32,
+                tile_id: *tile_id,
                 tile_index: tile_index as i32,
             })
             .collect::<Vec<Self>>();
@@ -528,7 +580,7 @@ impl DieselGameDrawWall {
             .enumerate()
             .map(|(tile_index, tile_id)| Self {
                 game_id: service_game.game.id.clone(),
-                tile_id: *tile_id as i32,
+                tile_id: *tile_id,
                 tile_index: tile_index as i32,
             })
             .collect::<Vec<Self>>();
@@ -596,7 +648,7 @@ impl DieselGameHand {
             .iter()
             .for_each(|(player_id, hand)| {
                 hand.0.iter().enumerate().for_each(|(tile_index, tile)| {
-                    let tile_id = tile.id as i32;
+                    let tile_id = tile.id;
                     let concealed = if tile.concealed { 1 } else { 0 };
                     let set_id = tile.set_id.clone();
 

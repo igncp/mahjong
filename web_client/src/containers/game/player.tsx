@@ -26,23 +26,17 @@ import { getTileInfo } from "src/lib/tile-info";
 import Alert from "src/ui/common/alert";
 import Button from "src/ui/common/button";
 import Card from "src/ui/common/card";
-import { lightGreen } from "src/ui/common/colors";
 import CopyToClipboard from "src/ui/common/copy-to-clipboard";
 import List, { ListItem } from "src/ui/common/list";
 import Select, { SelectOption } from "src/ui/common/select";
 import Text from "src/ui/common/text";
 import Tooltip from "src/ui/common/tooltip";
 import UserAvatar from "src/ui/common/user-avatar";
-import {
-  DROP_BG,
-  DROP_BORDER,
-  DROP_HEIGHT,
-  DROP_WIDTH,
-  useGameUI,
-} from "src/ui/game/use-game-ui";
+import { useGameUI } from "src/ui/game/use-game-ui";
 import TileImg from "src/ui/tile-img";
 
 import PageContent from "../page-content";
+import GameBoard, { BoardPlayer } from "./board";
 import styles from "./player.module.scss";
 
 interface IProps {
@@ -185,6 +179,18 @@ const Game = ({ gameId, userId }: IProps) => {
     loadingState
   );
 
+  const boardPlayers = useMemo(
+    () =>
+      serviceGameSummary?.game_summary.players.map((player) => {
+        const playerSummary = serviceGameSummary?.players[player];
+        return {
+          id: playerSummary.id,
+          name: playerSummary.name,
+        };
+      }),
+    [serviceGameSummary?.game_summary.players.join("")]
+  );
+
   const { boardDropRef, handTilesProps, canDropInBoard } = useGameUI({
     getCanDiscardTile,
     serviceGameM,
@@ -285,7 +291,7 @@ const Game = ({ gameId, userId }: IProps) => {
       </Text>
       <span ref={boardDropRef}>
         <Card
-          bodyStyle={{ background: lightGreen, minHeight: "150px" }}
+          bodyStyle={{ padding: 0 }}
           title={`${t("game.board", "Board")} (${
             serviceGameSummary.game_summary.board.length
           } / ${
@@ -293,63 +299,20 @@ const Game = ({ gameId, userId }: IProps) => {
             serviceGameSummary.game_summary.board.length
           })`}
         >
-          <Text
-            style={{
-              alignItems: "center",
-              display: "flex",
-              flexWrap: "wrap",
-            }}
-          >
-            <span
-              style={{
-                alignItems: "center",
-                display: "inline-flex",
-                flexDirection: "row",
-                flexWrap: "wrap",
-              }}
-            >
-              {serviceGameSummary.game_summary.board.map(
-                (tileId, tileIndex, tiles) => {
-                  const isDiscardedTile =
-                    tiles.length === tileIndex + 1 &&
-                    typeof serviceGameSummary.game_summary.round
-                      .discarded_tile === "number";
-                  const tile = serviceGameM.getTile(tileId);
-
-                  return (
-                    <span
-                      key={tileId}
-                      {...(isDiscardedTile
-                        ? {
-                            onClick: () => {
-                              serviceGameM.claimTile();
-                            },
-                            style: {
-                              color: "blue",
-                              cursor: "pointer",
-                            },
-                          }
-                        : {})}
-                    >
-                      <TileImg tile={tile} />
-                    </span>
-                  );
-                }
-              )}
-              {canDropInBoard && (
-                <span
-                  style={{
-                    background: DROP_BG,
-                    border: DROP_BORDER,
-                    height: DROP_HEIGHT,
-                    marginLeft: "10px",
-                    opacity: 0.8,
-                    width: DROP_WIDTH,
-                  }}
-                />
-              )}
-            </span>
-          </Text>
+          <GameBoard
+            activePlayer={turnPlayer.id}
+            canDropInBoard={canDropInBoard}
+            players={
+              boardPlayers as [
+                BoardPlayer,
+                BoardPlayer,
+                BoardPlayer,
+                BoardPlayer
+              ]
+            }
+            serviceGameM={serviceGameM}
+            serviceGameSummary={serviceGameSummary}
+          />
         </Card>
       </span>
       <div className={styles.topInfo}>

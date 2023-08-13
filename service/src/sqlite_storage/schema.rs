@@ -11,6 +11,7 @@ diesel::table! {
 
 diesel::table! {
     game (id) {
+        created_at -> Timestamp,
         id -> Text,
         name -> Text,
         phase -> Text,
@@ -22,6 +23,7 @@ diesel::table! {
         round_player_index -> Integer,
         round_wall_tile_drawn -> Nullable<Integer>,
         round_wind -> Text,
+        updated_at -> Timestamp,
         version -> Text,
     }
 }
@@ -87,6 +89,9 @@ diesel::table! {
         name -> Text,
     }
 }
+
+diesel::joinable!(game_player -> game (game_id));
+diesel::joinable!(game_player -> player (player_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     auth_info,

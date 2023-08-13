@@ -1,11 +1,15 @@
+use crate::{
+    auth::GetAuthInfo, graphql::gql_game::GraphQLServiceGameSummary, http_server::DataStorage,
+};
 use juniper::{EmptySubscription, FieldResult, RootNode};
-use service_contracts::ServicePlayer;
+use mahjong_core::GameId;
+use service_contracts::{ServiceGameSummary, ServicePlayer, ServicePlayerGame};
 
-use crate::{auth::GetAuthInfo, http_server::StorageData};
+mod gql_game;
 
 pub struct GraphQLContext {
     pub user_id: String,
-    pub storage: StorageData,
+    pub storage: DataStorage,
 }
 
 impl juniper::Context for GraphQLContext {}
@@ -28,10 +32,31 @@ impl GraphQLQuery {
         Ok(player.unwrap())
     }
 
-    pub async fn player_games_ids(ctx: &GraphQLContext) -> FieldResult<Vec<String>> {
+    pub async fn game(ctx: &GraphQLContext, id: GameId) -> FieldResult<GraphQLServiceGameSummary> {
+        let game = ctx.storage.get_game(&id).await?;
+
+        if game.is_none() {
+            return Err("Game not found".into());
+        }
+
+        let game = game.unwrap();
+
+        let game_summary = ServiceGameSummary::from_service_game(&game, &ctx.user_id);
+
+        if game_summary.is_none() {
+            return Err("Invalid game".into());
+        }
+
+        let service_game_summary = game_summary.unwrap();
+        let gql_game = GraphQLServiceGameSummary::from_service_game_summary(&service_game_summary);
+
+        Ok(gql_game)
+    }
+
+    pub async fn player_games(ctx: &GraphQLContext) -> FieldResult<Vec<ServicePlayerGame>> {
         let games = ctx
             .storage
-            .get_games_ids(&Some(ctx.user_id.clone()))
+            .get_player_games(&Some(ctx.user_id.clone()))
             .await?;
 
         Ok(games)
@@ -69,10 +94,11 @@ impl GraphQLMutation {
             return Err("Player not test".into());
         }
 
-        let games_ids = ctx
+        let games = ctx
             .storage
-            .get_games_ids(&Some(ctx.user_id.clone()))
+            .get_player_games(&Some(ctx.user_id.clone()))
             .await?;
+        let games_ids: Vec<_> = games.iter().map(|g| g.id.clone()).collect();
 
         let result = ctx.storage.delete_games(&games_ids).await;
 

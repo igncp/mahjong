@@ -30,12 +30,20 @@
     },
     "newAdminGame": "創建一個新的管理遊戲",
     "newGame": "創建一個新遊戲",
+    "no": "不要",
+    "openGame": "繼續這個遊戲嗎？",
     "playerNum1": "一",
     "playerNum2": "二",
     "playerNum3": "三",
     "playerNum4": "四",
     "save": "保存",
-    "userPoints_other": "{{count}}分"
+    "table": {
+      "created": "創建於",
+      "id": "標識符",
+      "played": "上次玩"
+    },
+    "userPoints_other": "{{count}}分",
+    "yes": "繼續"
   },
   "game": {
     "actions": "動作",

@@ -4,8 +4,8 @@ use crate::env::GRAPHQL_SOURCE;
 use crate::game_wrapper::GameWrapper;
 use crate::games_loop::GamesLoop;
 use crate::graphql::{create_schema, GraphQLContext};
-use crate::socket_server::MahjongWebsocketServer;
-use crate::socket_session::MahjongWebsocketSession;
+use crate::socket::MahjongWebsocketServer;
+use crate::socket::MahjongWebsocketSession;
 use crate::user_wrapper::UserWrapper;
 use actix::prelude::*;
 use actix_cors::Cors;
@@ -32,8 +32,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tracing::{debug, warn};
 
-pub type StorageData = web::Data<Arc<Box<dyn Storage>>>;
-pub type SocketServer = web::Data<Arc<Mutex<Addr<MahjongWebsocketServer>>>>;
+pub type DataStorage = web::Data<Arc<Box<dyn Storage>>>;
+pub type DataSocketServer = web::Data<Arc<Mutex<Addr<MahjongWebsocketServer>>>>;
 
 pub struct GamesManager {
     games_locks: FxHashMap<GameId, Arc<Mutex<()>>>,
@@ -64,18 +64,18 @@ async fn get_health() -> impl Responder {
 }
 
 #[get("/v1/admin/game")]
-async fn admin_get_games(storage: StorageData, req: HttpRequest) -> impl Responder {
+async fn admin_get_games(storage: DataStorage, req: HttpRequest) -> impl Responder {
     let auth_handler = AuthHandler::new(&storage, &req);
 
     if !auth_handler.verify_admin() {
         return AuthHandler::get_unauthorized();
     }
 
-    let games_ids = storage.get_games_ids(&None).await;
+    let games = storage.get_player_games(&None).await;
 
-    match games_ids {
-        Ok(games_ids) => {
-            let response: AdminGetGamesResponse = games_ids;
+    match games {
+        Ok(games) => {
+            let response: AdminGetGamesResponse = games;
             HttpResponse::Ok().json(response)
         }
         Err(_) => HttpResponse::InternalServerError().body("Error getting games"),
@@ -88,7 +88,7 @@ async fn get_deck() -> impl Responder {
 }
 
 #[get("/v1/user/game")]
-async fn user_get_games(storage: StorageData, req: HttpRequest) -> impl Responder {
+async fn user_get_games(storage: DataStorage, req: HttpRequest) -> impl Responder {
     let params = web::Query::<UserGetGamesQuery>::from_query(req.query_string());
     if params.is_err() {
         return HttpResponse::BadRequest().body("Invalid player id");
@@ -106,11 +106,11 @@ async fn user_get_games(storage: StorageData, req: HttpRequest) -> impl Responde
         return HttpResponse::BadRequest().body("Invalid player id");
     }
 
-    let games_ids = storage.get_games_ids(&Some(player_id)).await;
+    let games = storage.get_player_games(&Some(player_id)).await;
 
-    match games_ids {
-        Ok(games_ids) => {
-            let response: UserGetGamesResponse = games_ids;
+    match games {
+        Ok(games) => {
+            let response: UserGetGamesResponse = games;
             HttpResponse::Ok().json(response)
         }
         Err(_) => HttpResponse::InternalServerError().body("Error getting games"),
@@ -119,8 +119,8 @@ async fn user_get_games(storage: StorageData, req: HttpRequest) -> impl Responde
 
 #[post("/v1/admin/game")]
 async fn admin_post_game(
-    storage: StorageData,
-    srv: SocketServer,
+    storage: DataStorage,
+    srv: DataSocketServer,
     req: HttpRequest,
 ) -> impl Responder {
     let auth_handler = AuthHandler::new(&storage, &req);
@@ -142,7 +142,7 @@ async fn admin_post_game(
 
 #[get("/v1/admin/game/{game_id}")]
 async fn admin_get_game_by_id(
-    storage: StorageData,
+    storage: DataStorage,
     manager: GamesManagerData,
     game_id: web::Path<String>,
     req: HttpRequest,
@@ -166,11 +166,11 @@ async fn admin_get_game_by_id(
 
 #[get("/v1/user/game/{game_id}")]
 async fn user_get_game_load(
-    storage: StorageData,
+    storage: DataStorage,
     game_id: web::Path<String>,
     manager: GamesManagerData,
     req: HttpRequest,
-    srv: SocketServer,
+    srv: DataSocketServer,
 ) -> impl Responder {
     let params = web::Query::<UserLoadGameQuery>::from_query(req.query_string());
 
@@ -198,9 +198,9 @@ async fn user_get_game_load(
 #[post("/v1/admin/game/{game_id}/sort-hands")]
 async fn admin_post_game_sort_hands(
     manager: GamesManagerData,
-    storage: StorageData,
+    storage: DataStorage,
     game_id: web::Path<String>,
-    srv: SocketServer,
+    srv: DataSocketServer,
     req: HttpRequest,
 ) -> impl Responder {
     let auth_handler = AuthHandler::new(&storage, &req);
@@ -223,9 +223,9 @@ async fn admin_post_game_sort_hands(
 #[post("/v1/admin/game/{game_id}/draw-tile")]
 async fn admin_post_game_draw_tile(
     manager: GamesManagerData,
-    storage: StorageData,
+    storage: DataStorage,
     game_id: web::Path<GameId>,
-    srv: SocketServer,
+    srv: DataSocketServer,
     req: HttpRequest,
 ) -> impl Responder {
     let auth_handler = AuthHandler::new(&storage, &req);
@@ -248,9 +248,9 @@ async fn admin_post_game_draw_tile(
 #[post("/v1/admin/game/{game_id}/move-player")]
 async fn admin_post_game_move_player(
     manager: GamesManagerData,
-    storage: StorageData,
+    storage: DataStorage,
     game_id: web::Path<String>,
-    srv: SocketServer,
+    srv: DataSocketServer,
     req: HttpRequest,
 ) -> impl Responder {
     let auth_handler = AuthHandler::new(&storage, &req);
@@ -273,10 +273,10 @@ async fn admin_post_game_move_player(
 #[post("/v1/admin/game/{game_id}/break-meld")]
 async fn admin_post_game_break_meld(
     manager: GamesManagerData,
-    storage: StorageData,
+    storage: DataStorage,
     body: web::Json<AdminPostBreakMeldRequest>,
     game_id: web::Path<String>,
-    srv: SocketServer,
+    srv: DataSocketServer,
     req: HttpRequest,
 ) -> impl Responder {
     let auth_handler = AuthHandler::new(&storage, &req);
@@ -299,10 +299,10 @@ async fn admin_post_game_break_meld(
 #[post("/v1/admin/game/{game_id}/create-meld")]
 async fn admin_post_game_create_meld(
     manager: GamesManagerData,
-    storage: StorageData,
+    storage: DataStorage,
     body: web::Json<AdminPostCreateMeldRequest>,
     game_id: web::Path<String>,
-    srv: SocketServer,
+    srv: DataSocketServer,
     req: HttpRequest,
 ) -> impl Responder {
     let auth_handler = AuthHandler::new(&storage, &req);
@@ -324,12 +324,12 @@ async fn admin_post_game_create_meld(
 
 #[post("/v1/user/game/{game_id}/discard-tile")]
 async fn user_post_game_discard_tile(
-    storage: StorageData,
+    storage: DataStorage,
     body: web::Json<UserPostDiscardTileRequest>,
     game_id: web::Path<String>,
     req: HttpRequest,
     manager: GamesManagerData,
-    srv: SocketServer,
+    srv: DataSocketServer,
 ) -> impl Responder {
     let auth_handler = AuthHandler::new(&storage, &req);
     let game_lock = { manager.lock().unwrap().get_game_mutex(&game_id) };
@@ -350,10 +350,10 @@ async fn user_post_game_discard_tile(
 #[post("/v1/admin/game/{game_id}/discard-tile")]
 async fn admin_post_game_discard_tile(
     manager: GamesManagerData,
-    storage: StorageData,
+    storage: DataStorage,
     body: web::Json<AdminPostDiscardTileRequest>,
     game_id: web::Path<String>,
-    srv: SocketServer,
+    srv: DataSocketServer,
     req: HttpRequest,
 ) -> impl Responder {
     let auth_handler = AuthHandler::new(&storage, &req);
@@ -376,10 +376,10 @@ async fn admin_post_game_discard_tile(
 #[post("/v1/admin/game/{game_id}/claim-tile")]
 async fn admin_post_game_claim_tile(
     manager: GamesManagerData,
-    storage: StorageData,
+    storage: DataStorage,
     body: web::Json<AdminPostClaimTileRequest>,
     game_id: web::Path<String>,
-    srv: SocketServer,
+    srv: DataSocketServer,
     req: HttpRequest,
 ) -> impl Responder {
     let auth_handler = AuthHandler::new(&storage, &req);
@@ -402,10 +402,10 @@ async fn admin_post_game_claim_tile(
 #[post("/v1/admin/game/{game_id}/draw-wall-swap-tiles")]
 async fn admin_post_game_swap_tiles(
     manager: GamesManagerData,
-    storage: StorageData,
+    storage: DataStorage,
     body: web::Json<AdminPostSwapDrawTilesRequest>,
     game_id: web::Path<String>,
-    srv: SocketServer,
+    srv: DataSocketServer,
     req: HttpRequest,
 ) -> impl Responder {
     let auth_handler = AuthHandler::new(&storage, &req);
@@ -432,10 +432,10 @@ async fn admin_post_game_swap_tiles(
 #[post("/v1/admin/game/{game_id}/ai-continue")]
 async fn admin_post_game_ai_continue(
     manager: GamesManagerData,
-    storage: StorageData,
+    storage: DataStorage,
     game_id: web::Path<String>,
     body: web::Json<AdminPostAIContinueRequest>,
-    srv: SocketServer,
+    srv: DataSocketServer,
     req: HttpRequest,
 ) -> impl Responder {
     let auth_handler = AuthHandler::new(&storage, &req);
@@ -457,12 +457,12 @@ async fn admin_post_game_ai_continue(
 
 #[post("/v1/user/game/{game_id}/ai-continue")]
 async fn user_post_game_ai_continue(
-    storage: StorageData,
+    storage: DataStorage,
     game_id: web::Path<String>,
     body: web::Json<UserPostAIContinueRequest>,
     manager: GamesManagerData,
     req: HttpRequest,
-    srv: SocketServer,
+    srv: DataSocketServer,
 ) -> impl Responder {
     let auth_handler = AuthHandler::new(&storage, &req);
 
@@ -484,10 +484,10 @@ async fn user_post_game_ai_continue(
 #[post("/v1/admin/game/{game_id}/say-mahjong")]
 async fn admin_post_game_say_mahjong(
     manager: GamesManagerData,
-    storage: StorageData,
+    storage: DataStorage,
     body: web::Json<AdminPostSayMahjongRequest>,
     game_id: web::Path<String>,
-    srv: SocketServer,
+    srv: DataSocketServer,
     req: HttpRequest,
 ) -> impl Responder {
     let auth_handler = AuthHandler::new(&storage, &req);
@@ -509,8 +509,8 @@ async fn admin_post_game_say_mahjong(
 
 #[post("/v1/user/game")]
 async fn user_post_game_create(
-    storage: StorageData,
-    srv: SocketServer,
+    storage: DataStorage,
+    srv: DataSocketServer,
     body: web::Json<UserPostCreateGameRequest>,
     req: HttpRequest,
 ) -> impl Responder {
@@ -544,10 +544,10 @@ async fn user_post_game_create(
 
 #[post("/v1/user/game/{game_id}/draw-tile")]
 async fn user_post_game_draw_tile(
-    storage: StorageData,
+    storage: DataStorage,
     game_id: web::Path<GameId>,
     body: web::Json<UserPostDrawTileRequest>,
-    srv: SocketServer,
+    srv: DataSocketServer,
     req: HttpRequest,
     manager: GamesManagerData,
 ) -> impl Responder {
@@ -571,10 +571,10 @@ async fn user_post_game_draw_tile(
 
 #[post("/v1/user/game/{game_id}/move-player")]
 async fn user_post_game_move_player(
-    storage: StorageData,
+    storage: DataStorage,
     game_id: web::Path<GameId>,
     body: web::Json<UserPostMovePlayerRequest>,
-    srv: SocketServer,
+    srv: DataSocketServer,
     manager: GamesManagerData,
     req: HttpRequest,
 ) -> impl Responder {
@@ -597,10 +597,10 @@ async fn user_post_game_move_player(
 
 #[post("/v1/user/game/{game_id}/sort-hand")]
 async fn user_post_game_sort_hand(
-    storage: StorageData,
+    storage: DataStorage,
     game_id: web::Path<GameId>,
     body: web::Json<UserPostSortHandRequest>,
-    srv: SocketServer,
+    srv: DataSocketServer,
     manager: GamesManagerData,
     req: HttpRequest,
 ) -> impl Responder {
@@ -631,10 +631,10 @@ async fn user_post_game_sort_hand(
 
 #[post("/v1/user/game/{game_id}/create-meld")]
 async fn user_post_game_create_meld(
-    storage: StorageData,
+    storage: DataStorage,
     game_id: web::Path<GameId>,
     body: web::Json<UserPostCreateMeldRequest>,
-    srv: SocketServer,
+    srv: DataSocketServer,
     manager: GamesManagerData,
     req: HttpRequest,
 ) -> impl Responder {
@@ -657,10 +657,10 @@ async fn user_post_game_create_meld(
 
 #[post("/v1/user/game/{game_id}/break-meld")]
 async fn user_post_game_break_meld(
-    storage: StorageData,
+    storage: DataStorage,
     game_id: web::Path<GameId>,
     body: web::Json<UserPostBreakMeldRequest>,
-    srv: SocketServer,
+    srv: DataSocketServer,
     manager: GamesManagerData,
     req: HttpRequest,
 ) -> impl Responder {
@@ -683,10 +683,10 @@ async fn user_post_game_break_meld(
 
 #[post("/v1/user/game/{game_id}/claim-tile")]
 async fn user_post_game_claim_tile(
-    storage: StorageData,
+    storage: DataStorage,
     body: web::Json<UserPostClaimTileRequest>,
     game_id: web::Path<String>,
-    srv: SocketServer,
+    srv: DataSocketServer,
     manager: GamesManagerData,
     req: HttpRequest,
 ) -> impl Responder {
@@ -709,11 +709,11 @@ async fn user_post_game_claim_tile(
 
 #[post("/v1/user/game/{game_id}/say-mahjong")]
 async fn user_post_game_say_mahjong(
-    storage: StorageData,
+    storage: DataStorage,
     body: web::Json<UserPostSayMahjongRequest>,
     game_id: web::Path<String>,
     manager: GamesManagerData,
-    srv: SocketServer,
+    srv: DataSocketServer,
     req: HttpRequest,
 ) -> impl Responder {
     let auth_handler = AuthHandler::new(&storage, &req);
@@ -735,11 +735,11 @@ async fn user_post_game_say_mahjong(
 
 #[post("/v1/user/game/{game_id}/settings")]
 async fn user_post_game_settings(
-    storage: StorageData,
+    storage: DataStorage,
     body: web::Json<UserPostSetGameSettingsRequest>,
     game_id: web::Path<GameId>,
     manager: GamesManagerData,
-    srv: SocketServer,
+    srv: DataSocketServer,
     req: HttpRequest,
 ) -> impl Responder {
     let auth_handler = AuthHandler::new(&storage, &req);
@@ -765,7 +765,7 @@ async fn user_post_game_settings(
 
 #[post("/v1/user")]
 async fn user_post_auth(
-    storage: StorageData,
+    storage: DataStorage,
     body: web::Json<UserPostSetAuthRequest>,
     req: HttpRequest,
 ) -> impl Responder {
@@ -830,7 +830,7 @@ async fn user_post_auth(
 
 #[get("/v1/user/info/{user_id}")]
 async fn user_get_info(
-    storage: StorageData,
+    storage: DataStorage,
     req: HttpRequest,
     user_id: web::Path<String>,
 ) -> impl Responder {
@@ -852,7 +852,7 @@ async fn user_get_info(
 
 #[patch("/v1/user/info/{player_id}")]
 async fn user_patch_info(
-    storage: StorageData,
+    storage: DataStorage,
     body: web::Json<UserPatchInfoRequest>,
     user_id: web::Path<String>,
     req: HttpRequest,
@@ -877,8 +877,8 @@ async fn user_patch_info(
 async fn get_ws(
     req: HttpRequest,
     stream: web::Payload,
-    srv: SocketServer,
-    storage: StorageData,
+    srv: DataSocketServer,
+    storage: DataStorage,
 ) -> Result<impl Responder, Error> {
     let params = web::Query::<WebSocketQuery>::from_query(req.query_string());
 
@@ -932,7 +932,7 @@ async fn graphql_playground() -> HttpResponse {
 async fn graphql(
     data: web::Json<GraphQLRequest>,
     req: HttpRequest,
-    storage: StorageData,
+    storage: DataStorage,
 ) -> Result<HttpResponse, Error> {
     let auth_handler = AuthHandler::new(&storage, &req);
 
@@ -976,7 +976,7 @@ impl MahjongServer {
         GamesLoop::new(loop_storage_arc, loop_socket_server, loop_games_manager_arc).run();
 
         HttpServer::new(move || {
-            let storage_data: StorageData = web::Data::new(storage_arc.clone());
+            let storage_data: DataStorage = web::Data::new(storage_arc.clone());
             let games_manager_data = web::Data::new(games_manager_arc.clone());
             let cors = Cors::permissive();
             let endpoints_server = socket_server.clone();

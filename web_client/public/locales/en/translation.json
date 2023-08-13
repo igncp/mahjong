@@ -30,13 +30,21 @@
     },
     "newAdminGame": "New admin game",
     "newGame": "Create a new game",
+    "no": "No",
+    "openGame": "Open this game?",
     "playerNum1": "1",
     "playerNum2": "2",
     "playerNum3": "3",
     "playerNum4": "4",
     "save": "Save",
+    "table": {
+      "created": "Created at",
+      "id": "ID",
+      "played": "Last played at"
+    },
     "userPoints_one": "{{count}} points",
-    "userPoints_other": "{{count}} points"
+    "userPoints_other": "{{count}} points",
+    "yes": "Yes"
   },
   "game": {
     "actions": "Actions",

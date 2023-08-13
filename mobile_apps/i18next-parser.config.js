@@ -1,0 +1,17 @@
+module.exports = {
+  contextSeparator: "_",
+  createOldCatalogs: false,
+  defaultNamespace: "translation",
+  failOnWarnings: true,
+  indentation: 2,
+  input: ["src/**/*.{js,jsx,ts,tsx}"],
+  keepRemoved: false,
+  keySeparator: ".",
+  lineEnding: "auto",
+  locales: ["en", "zh"],
+  namespaceSeparator: ":",
+  output: "public/locales/$LOCALE/$NAMESPACE.json",
+  pluralSeparator: "_",
+  sort: true,
+  verbose: false,
+};

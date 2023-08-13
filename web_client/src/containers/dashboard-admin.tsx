@@ -43,7 +43,7 @@ const DashboardAdmin = () => {
         dataSource={page}
         renderItem={(game) => (
           <ListItem>
-            <Link href={SiteUrls.adminGame(game)}>{game}</Link>
+            <Link href={SiteUrls.adminGame(game.id)}>{game.id}</Link>
           </ListItem>
         )}
       />

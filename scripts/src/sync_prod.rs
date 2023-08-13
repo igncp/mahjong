@@ -47,6 +47,7 @@ pub fn run_sync_prod(shell: &mut Shell) {
         "docker compose down",
         "rm -rf data/mahjong.db",
         "cp data/mahjong_prod.db data/mahjong.db",
+        "docker compose pull",
         "docker compose up -d --quiet-pull",
     ];
 

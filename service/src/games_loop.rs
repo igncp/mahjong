@@ -1,7 +1,7 @@
 use crate::common::Storage;
 use crate::game_wrapper::GameWrapper;
 use crate::http_server::GamesManager;
-use crate::socket_server::{ListSessions, MahjongWebsocketServer};
+use crate::socket::{MahjongWebsocketServer, SocketMessageListSessions};
 use actix::{spawn, Addr};
 use actix_web::rt::time;
 use actix_web::web;
@@ -43,7 +43,7 @@ impl GamesLoop {
                     if server.is_err() {
                         continue;
                     }
-                    message_response = server.unwrap().send(ListSessions);
+                    message_response = server.unwrap().send(SocketMessageListSessions);
                 }
 
                 let sessions = message_response.await.unwrap();

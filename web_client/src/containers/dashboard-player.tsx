@@ -1,4 +1,5 @@
-import { EditOutlined } from "@ant-design/icons";
+import { EditOutlined, PlusCircleOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
 import { tokenObserver } from "mahjong_sdk/dist/auth";
 import {
   DashboardQueryResponse,
@@ -6,7 +7,6 @@ import {
 } from "mahjong_sdk/dist/graphql/dashboard-user-query";
 import { HttpClient } from "mahjong_sdk/dist/http-client";
 import Head from "next/head";
-import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,8 +15,9 @@ import { first } from "rxjs";
 import Button from "src/ui/common/button";
 import Card from "src/ui/common/card";
 import Input from "src/ui/common/input";
-import List from "src/ui/common/list";
+import Modal from "src/ui/common/modal";
 import Space from "src/ui/common/space";
+import Table from "src/ui/common/table";
 import Title from "src/ui/common/title";
 
 import { SiteUrls } from "../lib/site/urls";
@@ -27,6 +28,16 @@ type TProps = {
   userId: string;
 };
 
+const simpleFormatDate = (timestamp: string): string => {
+  const timestampNum = Number(timestamp);
+
+  if (isNaN(timestampNum)) return "-";
+
+  const day = dayjs(timestampNum);
+
+  return day.format("YYYY-MM-DD HH:mm:ss");
+};
+
 const DashboardUser = ({ userId }: TProps) => {
   const { t } = useTranslation();
   const [dashboardQueryResponse, setDashboardQueryResponse] =
@@ -34,6 +45,8 @@ const DashboardUser = ({ userId }: TProps) => {
   const [editName, setEditName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedGameId, setSelectGameId] = useState("");
 
   const router = useRouter();
 
@@ -55,7 +68,7 @@ const DashboardUser = ({ userId }: TProps) => {
 
   if (!dashboardQueryResponse) return null;
 
-  const { player, playerGamesIds, playerTotalScore } = dashboardQueryResponse;
+  const { player, playerGames, playerTotalScore } = dashboardQueryResponse;
 
   const isSaveNameDisabled = !nameInput || isLoading;
 
@@ -84,6 +97,11 @@ const DashboardUser = ({ userId }: TProps) => {
           setEditName(false);
         },
       });
+  };
+
+  const onGameClick = (gameId: string) => {
+    setSelectGameId(gameId);
+    setIsModalOpen(true);
   };
 
   return (
@@ -145,16 +163,6 @@ const DashboardUser = ({ userId }: TProps) => {
           )
         </Title>
       )}
-      <List
-        bordered
-        className={styles.list}
-        dataSource={playerGamesIds}
-        renderItem={(gameId) => (
-          <div className={styles.listItem} data-name="existing-game">
-            <Link href={SiteUrls.playerGame(gameId, userId)}>{gameId}</Link>
-          </div>
-        )}
-      />
       <div className={styles.newGameButton}>
         <Button
           data-name="create-game-button"
@@ -184,9 +192,94 @@ const DashboardUser = ({ userId }: TProps) => {
               });
           }}
         >
-          {t("dashboard.newGame")}
+          {t("dashboard.newGame")} <PlusCircleOutlined />
         </Button>
       </div>
+      <Table
+        className={styles.table}
+        columns={[
+          {
+            dataIndex: "id",
+            key: "id",
+            render: (text) => (
+              <div onClick={() => onGameClick(text)}>
+                {text.slice(0, 12)}...
+              </div>
+            ),
+            responsive: ["xs"],
+            title: t("dashboard.table.id", "ID"),
+          },
+          {
+            dataIndex: "id",
+            key: "id",
+            render: (text) => (
+              <div onClick={() => onGameClick(text)}>{text.slice(0, 6)}...</div>
+            ),
+            responsive: ["md"],
+            title: t("dashboard.table.id", "ID"),
+          },
+          {
+            key: "updatedAt",
+            render: (record) => (
+              <>
+                <b>{simpleFormatDate(record.updatedAt)}</b>
+                <br />
+                {simpleFormatDate(record.createdAt)}
+              </>
+            ),
+            responsive: ["xs"],
+            title: `${t("dashboard.table.played")} / ${t(
+              "dashboard.table.created"
+            )}`,
+          },
+          {
+            dataIndex: "updatedAt",
+            key: "updatedAt",
+            render: (text) => simpleFormatDate(text),
+            responsive: ["sm"],
+            title: t("dashboard.table.played", "Last played at"),
+          },
+          {
+            dataIndex: "createdAt",
+            key: "createdAt",
+            render: (text) => simpleFormatDate(text),
+            responsive: ["sm"],
+            title: t("dashboard.table.created", "Created at"),
+          },
+        ]}
+        dataSource={playerGames.map((game) => ({ ...game, key: game.id }))}
+        onRow={(record) => ({
+          onClick: () => onGameClick(record.id),
+        })}
+      />
+      <Modal
+        footer={[
+          <Button
+            key="yes"
+            onClick={() => {
+              router.push(SiteUrls.playerGame(selectedGameId, userId));
+            }}
+            type="primary"
+          >
+            {t("dashboard.yes", "Yes")}
+          </Button>,
+          <Button
+            key="no"
+            onClick={() => {
+              setIsModalOpen(false);
+            }}
+          >
+            {t("dashboard.no", "No")}
+          </Button>,
+        ]}
+        onCancel={() => {
+          setIsModalOpen(false);
+        }}
+        open={isModalOpen}
+        title={t("dashboard.openGame", "Open this game?") as string}
+      >
+        <p>{selectedGameId}</p>
+      </Modal>
     </PageContent>
   );
 };

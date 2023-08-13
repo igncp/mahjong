@@ -1,10 +1,10 @@
 import { gql } from "graphql-request";
 
-import { GameId, ServicePlayer } from "../core";
+import { ServicePlayer, ServicePlayerGame } from "../core";
 import { HttpClient } from "../http-client";
 
 export type DashboardQueryResponse = {
-  playerGamesIds: GameId[];
+  playerGames: Pick<ServicePlayerGame, "id" | "createdAt" | "updatedAt">[];
   player: Pick<ServicePlayer, "id" | "name">;
   playerTotalScore: number;
 };
@@ -15,7 +15,11 @@ const document = gql`
       id
       name
     }
-    playerGamesIds
+    playerGames {
+      createdAt
+      id
+      updatedAt
+    }
     playerTotalScore
   }
 `;

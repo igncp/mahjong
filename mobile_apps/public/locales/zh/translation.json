@@ -1,0 +1,40 @@
+{
+  "alert": {
+    "disconnected": "您當前已斷開連接"
+  },
+  "auth": {
+    "intro": "您可以創建一個新帳戶或使用現有帳戶。 只需在此處添加您的用戶名和密碼。 請記住，服務器將定期清除帳戶，直到更穩定為止。",
+    "invalidUserPass": "無效的用戶名或密碼",
+    "mahjong": "Mahjong Rust",
+    "openGH": "打開Github",
+    "password": "密碼",
+    "submit": "提交",
+    "unknownError": "未知錯誤",
+    "username": "用戶名"
+  },
+  "dashboard": {
+    "create": "創建遊戲",
+    "games": "遊戲：",
+    "lastPlayed": "上次播放：",
+    "logout": "登出",
+    "noGames": "您還沒有創建任何遊戲",
+    "totalScore": "總得分：",
+    "username": "用戶名："
+  },
+  "game": {
+    "board": "遊戲板: ",
+    "dashboard": "主頁",
+    "hand": "你的手牌: ",
+    "itsYou": " (是你)",
+    "turn": "當前回合: "
+  },
+  "languagePicker": {
+    "close": "關閉",
+    "en": "英語 - English",
+    "zh": "中文"
+  },
+  "router": {
+    "game": "遊戲",
+    "home": "主頁"
+  }
+}

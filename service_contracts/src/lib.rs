@@ -5,7 +5,7 @@ use mahjong_core::{
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::{Deserialize, Serialize};
-pub use service_player::{ServicePlayer, ServicePlayerSummary};
+pub use service_player::{ServicePlayer, ServicePlayerGame, ServicePlayerSummary};
 
 mod service_player;
 
@@ -32,17 +32,19 @@ impl Default for GameSettings {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceGame {
+    pub created_at: u128,
     pub game: Game,
     pub players: FxHashMap<PlayerId, ServicePlayer>,
     pub settings: GameSettings,
+    pub updated_at: u128,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, juniper::GraphQLObject)]
 pub struct GameSettingsSummary {
     pub ai_enabled: bool,
     pub discard_wait_ms: Option<i32>,
     pub fixed_settings: bool,
-    pub last_discard_time: i128,
+    pub last_discard_time: String,
     pub auto_sort: bool,
 }
 
@@ -53,7 +55,7 @@ impl GameSettingsSummary {
             auto_sort: settings.auto_sort_players.iter().any(|p| p == player_id),
             discard_wait_ms: settings.discard_wait_ms,
             fixed_settings: settings.fixed_settings,
-            last_discard_time: settings.last_discard_time,
+            last_discard_time: settings.last_discard_time.to_string(),
         }
     }
 
@@ -69,7 +71,7 @@ impl GameSettingsSummary {
         new_settings.ai_enabled = self.ai_enabled;
         new_settings.discard_wait_ms = self.discard_wait_ms;
         new_settings.fixed_settings = self.fixed_settings;
-        new_settings.last_discard_time = self.last_discard_time;
+        new_settings.last_discard_time = self.last_discard_time.parse().unwrap_or(0);
 
         new_settings
     }
@@ -141,14 +143,14 @@ pub struct WebSocketQuery {
     pub token: String,
 }
 
-pub type AdminGetGamesResponse = Vec<GameId>;
+pub type AdminGetGamesResponse = Vec<ServicePlayerGame>;
 
 // Initially separating the get-games endpoints by mode to allow changing the response in future
 #[derive(Deserialize, Serialize)]
 pub struct UserGetGamesQuery {
     pub player_id: String,
 }
-pub type UserGetGamesResponse = Vec<GameId>;
+pub type UserGetGamesResponse = Vec<ServicePlayerGame>;
 
 pub type AdminPostDrawTileResponse = Hand;
 

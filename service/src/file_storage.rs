@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use mahjong_core::{Game, GameId, PlayerId};
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
-use service_contracts::{GameSettings, ServiceGame, ServicePlayer};
+use service_contracts::{GameSettings, ServiceGame, ServicePlayer, ServicePlayerGame};
 use tracing::debug;
 
 pub struct FileStorage {
@@ -119,35 +119,21 @@ impl Storage for FileStorage {
             .collect();
 
         let service_game = Some(ServiceGame {
+            created_at: 0,
             game: game.unwrap().clone(),
             players,
             settings: settings.get(id).unwrap().clone(),
+            updated_at: 0,
         });
 
         Ok(service_game)
     }
 
-    async fn get_games_ids(&self, player_id: &Option<PlayerId>) -> Result<Vec<GameId>, String> {
-        let file_content = self.get_file();
-        let games = file_content.games;
-
-        if games.is_none() {
-            return Ok(vec![]);
-        }
-
-        let games = games.unwrap();
-
-        let mut games_ids: Vec<GameId> = games.keys().cloned().collect();
-
-        if player_id.is_some() {
-            games_ids.retain(|game_id| {
-                let game = games.get(game_id).unwrap();
-
-                game.players.contains(player_id.as_ref().unwrap())
-            });
-        }
-
-        Ok(games_ids)
+    async fn get_player_games(
+        &self,
+        _player_id: &Option<PlayerId>,
+    ) -> Result<Vec<ServicePlayerGame>, String> {
+        panic!("Not implemented")
     }
 
     async fn get_player(&self, id: &PlayerId) -> Result<Option<ServicePlayer>, String> {

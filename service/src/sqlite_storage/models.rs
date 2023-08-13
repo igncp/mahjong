@@ -21,7 +21,7 @@ pub struct DieselAuthInfo {
     pub username: String,
 }
 
-#[derive(Insertable, Queryable, Clone)]
+#[derive(Insertable, Queryable, Selectable, Identifiable, PartialEq, Clone, Debug)]
 #[diesel(table_name = player)]
 pub struct DieselPlayer {
     pub id: PlayerId,
@@ -29,9 +29,10 @@ pub struct DieselPlayer {
     pub name: String,
 }
 
-#[derive(Insertable, Queryable, Clone)]
+#[derive(Insertable, Queryable, Selectable, Identifiable, PartialEq, Clone, Debug)]
 #[diesel(table_name = game)]
 pub struct DieselGame {
+    pub created_at: String,
     pub id: GameId,
     pub name: String,
     pub phase: String,
@@ -43,11 +44,15 @@ pub struct DieselGame {
     pub round_player_index: i32,
     pub round_wall_tile_drawn: Option<i32>,
     pub round_wind: String,
+    pub updated_at: String,
     pub version: GameVersion,
 }
 
-#[derive(Insertable, Queryable, Clone)]
+#[derive(Identifiable, Insertable, Selectable, Queryable, Associations, Debug)]
 #[diesel(table_name = game_player)]
+#[diesel(belongs_to(DieselGame, foreign_key = game_id))]
+#[diesel(belongs_to(DieselPlayer, foreign_key = player_id))]
+#[diesel(primary_key(game_id, player_id))]
 pub struct DieselGamePlayer {
     pub game_id: GameId,
     pub player_id: PlayerId,

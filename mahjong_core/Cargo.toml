@@ -10,3 +10,4 @@ rustc-hash = "1.1.0"
 serde = { version = "1.0.167", features = ["derive"] }
 uuid = { version = "1.4.0", features = ["v4", "fast-rng", "macro-diagnostics", "js"] }
 wasm-bindgen = "0.2.87"
+juniper = "0.15.11"

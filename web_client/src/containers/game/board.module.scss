@@ -1,0 +1,60 @@
+@import "../../ui/styles";
+
+.content {
+  align-items: center;
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+$user-gap: 5px;
+
+.userWrapper {
+  display: flex;
+  opacity: 0.5;
+  position: absolute;
+
+  &.userRight,
+  &.userLeft {
+    top: 0;
+    bottom: 0;
+    align-items: center;
+  }
+
+  &.userLeft {
+    left: $user-gap;
+  }
+
+  &.userRight {
+    right: $user-gap;
+  }
+
+  &.userBottom {
+    bottom: $user-gap;
+  }
+
+  &.userTop {
+    top: $user-gap;
+  }
+
+  &.userTop,
+  &.userBottom {
+    left: 0;
+    right: 0;
+    justify-content: center;
+  }
+
+  &.userActive {
+    opacity: 1;
+  }
+}
+
+.wrapper {
+  align-items: center;
+  background: $color-lightgreen;
+  display: flex;
+  flex-wrap: wrap;
+  min-height: 150px;
+  padding: 40px;
+  position: relative;
+}

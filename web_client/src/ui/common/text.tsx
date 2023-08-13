@@ -4,6 +4,7 @@ const { Text: AntdText } = Typography;
 
 type Props = {
   children: React.ReactNode;
+  className?: string;
   style?: React.CSSProperties;
 };
 

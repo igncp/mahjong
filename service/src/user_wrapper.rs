@@ -1,15 +1,15 @@
-use crate::http_server::StorageData;
+use crate::http_server::DataStorage;
 use actix_web::{web, HttpResponse};
 use service_contracts::{ServicePlayer, UserGetInfoResponse, UserPatchInfoRequest};
 
 pub struct UserWrapper<'a> {
-    storage: &'a StorageData,
+    storage: &'a DataStorage,
     player: ServicePlayer,
 }
 
 impl<'a> UserWrapper<'a> {
     pub async fn from_storage(
-        storage: &'a StorageData,
+        storage: &'a DataStorage,
         player_id: &web::Path<String>,
     ) -> Result<UserWrapper<'a>, HttpResponse> {
         let user = storage.get_player(&player_id.to_string()).await;

@@ -1,14 +1,13 @@
-use std::time::{Duration, Instant};
-
+use super::{
+    MahjongWebsocketServer, SocketMessageConnect, SocketMessageDisconnect, SocketMessageListRooms,
+    SocketMessageStr,
+};
 use actix::prelude::*;
 use actix_web_actors::ws;
 use mahjong_core::{GameId, PlayerId};
 use service_contracts::SocketMessage;
+use std::time::{Duration, Instant};
 use tracing::debug;
-
-use crate::socket_server::{
-    Connect, Disconnect, ListRooms, MahjongWebsocketServer, SocketMessageStr,
-};
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
@@ -33,7 +32,7 @@ impl MahjongWebsocketSession {
     fn hb(&self, ctx: &mut ws::WebsocketContext<Self>) {
         ctx.run_interval(HEARTBEAT_INTERVAL, |act, new_ctx| {
             if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
-                act.addr.do_send(Disconnect { id: act.id });
+                act.addr.do_send(SocketMessageDisconnect { id: act.id });
                 new_ctx.stop();
                 return;
             }
@@ -53,7 +52,7 @@ impl Actor for MahjongWebsocketSession {
         let room = self.room.clone();
 
         self.addr
-            .send(Connect {
+            .send(SocketMessageConnect {
                 room,
                 addr: addr.recipient(),
             })
@@ -73,7 +72,7 @@ impl Actor for MahjongWebsocketSession {
 
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
         debug!("{} disconnected from {}", self.id, self.room);
-        self.addr.do_send(Disconnect { id: self.id });
+        self.addr.do_send(SocketMessageDisconnect { id: self.id });
         Running::Stop
     }
 }
@@ -112,7 +111,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MahjongWebsocketS
 
                 if let Ok(SocketMessage::ListRooms) = message {
                     self.addr
-                        .send(ListRooms)
+                        .send(SocketMessageListRooms)
                         .into_actor(self)
                         .then(|res, _, new_ctx| {
                             if let Ok(rooms) = res {

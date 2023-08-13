@@ -9,20 +9,20 @@ pub struct SocketMessageStr(pub String);
 
 #[derive(Message)]
 #[rtype(usize)]
-pub struct Connect {
+pub struct SocketMessageConnect {
     pub room: String,
     pub addr: Recipient<SocketMessageStr>,
 }
 
 #[derive(Message)]
 #[rtype(result = "()")]
-pub struct Disconnect {
+pub struct SocketMessageDisconnect {
     pub id: usize,
 }
 
 #[derive(Message)]
 #[rtype(result = "()")]
-pub struct ClientMessage {
+pub struct SocketClientMessage {
     pub id: usize,
     pub msg: SocketMessage,
     pub room: String,
@@ -30,15 +30,15 @@ pub struct ClientMessage {
 
 type RoomName = String;
 
-pub struct ListRooms;
+pub struct SocketMessageListRooms;
 
-impl actix::Message for ListRooms {
+impl actix::Message for SocketMessageListRooms {
     type Result = Vec<RoomName>;
 }
 
-pub struct ListSessions;
+pub struct SocketMessageListSessions;
 
-impl actix::Message for ListSessions {
+impl actix::Message for SocketMessageListSessions {
     type Result = FxHashMap<RoomName, usize>;
 }
 
@@ -80,10 +80,10 @@ impl Actor for MahjongWebsocketServer {
     type Context = Context<Self>;
 }
 
-impl Handler<Connect> for MahjongWebsocketServer {
+impl Handler<SocketMessageConnect> for MahjongWebsocketServer {
     type Result = usize;
 
-    fn handle(&mut self, msg: Connect, _: &mut Context<Self>) -> Self::Result {
+    fn handle(&mut self, msg: SocketMessageConnect, _: &mut Context<Self>) -> Self::Result {
         let sent_msg = SocketMessage::PlayerJoined;
         self.send_message(&msg.room, &sent_msg, 0);
         let id = self.rng.gen::<usize>();
@@ -98,10 +98,10 @@ impl Handler<Connect> for MahjongWebsocketServer {
     }
 }
 
-impl Handler<Disconnect> for MahjongWebsocketServer {
+impl Handler<SocketMessageDisconnect> for MahjongWebsocketServer {
     type Result = ();
 
-    fn handle(&mut self, msg: Disconnect, _: &mut Context<Self>) {
+    fn handle(&mut self, msg: SocketMessageDisconnect, _: &mut Context<Self>) {
         let mut rooms: Vec<String> = Vec::new();
         if self.sessions.remove(&msg.id).is_some() {
             for (name, sessions) in &mut self.rooms {
@@ -124,18 +124,18 @@ impl Handler<Disconnect> for MahjongWebsocketServer {
     }
 }
 
-impl Handler<ClientMessage> for MahjongWebsocketServer {
+impl Handler<SocketClientMessage> for MahjongWebsocketServer {
     type Result = ();
 
-    fn handle(&mut self, msg: ClientMessage, _: &mut Context<Self>) {
+    fn handle(&mut self, msg: SocketClientMessage, _: &mut Context<Self>) {
         self.send_message(&msg.room, &msg.msg, msg.id);
     }
 }
 
-impl Handler<ListRooms> for MahjongWebsocketServer {
-    type Result = MessageResult<ListRooms>;
+impl Handler<SocketMessageListRooms> for MahjongWebsocketServer {
+    type Result = MessageResult<SocketMessageListRooms>;
 
-    fn handle(&mut self, _: ListRooms, _: &mut Context<Self>) -> Self::Result {
+    fn handle(&mut self, _: SocketMessageListRooms, _: &mut Context<Self>) -> Self::Result {
         let mut rooms = Vec::new();
 
         for key in self.rooms.keys() {
@@ -146,10 +146,10 @@ impl Handler<ListRooms> for MahjongWebsocketServer {
     }
 }
 
-impl Handler<ListSessions> for MahjongWebsocketServer {
-    type Result = MessageResult<ListSessions>;
+impl Handler<SocketMessageListSessions> for MahjongWebsocketServer {
+    type Result = MessageResult<SocketMessageListSessions>;
 
-    fn handle(&mut self, _: ListSessions, _: &mut Context<Self>) -> Self::Result {
+    fn handle(&mut self, _: SocketMessageListSessions, _: &mut Context<Self>) -> Self::Result {
         let mut sessions = FxHashMap::default();
 
         for key in self.rooms.keys() {

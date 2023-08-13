@@ -76,7 +76,7 @@ fn create_deck_content() -> DeckContent {
 
     deck_list.iter().enumerate().for_each(|(index, tile)| {
         let mut tile = tile.clone();
-        let id = u32::try_from(index).unwrap();
+        let id = i32::try_from(index).unwrap();
         tile.set_id(id);
         deck.insert(id, tile);
     });

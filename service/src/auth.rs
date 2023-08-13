@@ -1,4 +1,4 @@
-use crate::{env::ENV_AUTH_JWT_SECRET_KEY, http_server::StorageData};
+use crate::{env::ENV_AUTH_JWT_SECRET_KEY, http_server::DataStorage};
 use actix_web::{HttpRequest, HttpResponse};
 use argon2::{self, Config};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
@@ -40,7 +40,7 @@ struct Claims {
 pub struct AuthHandler<'a> {
     auth_info: Option<AuthInfo>,
     req: &'a HttpRequest,
-    storage: &'a StorageData,
+    storage: &'a DataStorage,
 }
 
 impl<'a> AuthHandler<'a> {
@@ -50,7 +50,7 @@ impl<'a> AuthHandler<'a> {
         content.is_ok()
     }
 
-    pub fn new(storage: &'a StorageData, req: &'a HttpRequest) -> Self {
+    pub fn new(storage: &'a DataStorage, req: &'a HttpRequest) -> Self {
         Self {
             auth_info: None,
             req,

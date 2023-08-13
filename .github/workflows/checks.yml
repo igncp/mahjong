@@ -8,16 +8,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: cachix/install-nix-action@v22
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
-      - name: Install wasm-pack
-        run: |
-          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Run checks
-        run: cargo run --bin scripts -- check
+        run: |
+          touch ./scripts/nix/without-android
+          nix develop path:$(pwd) -c rustup install stable
+          nix develop path:$(pwd) -c cargo run --bin scripts --release -- check

@@ -2,7 +2,7 @@
 mod test {
     use rustc_hash::FxHashMap;
 
-    use crate::{round::RoundTileClaimed, Game, Hand, HandTile};
+    use crate::{round::RoundTileClaimed, DrawWall, Game, Hand, HandTile};
 
     #[test]
     fn test_draw_tile_from_wall_moves_tile() {
@@ -40,8 +40,9 @@ mod test {
         game.table.draw_wall = draw_wall;
         game.table.hands = hands;
         let drawn_tile = game.draw_tile_from_wall();
+        let empty_wall: DrawWall = vec![];
 
-        assert_eq!(game.table.draw_wall, vec![]);
+        assert_eq!(game.table.draw_wall, empty_wall);
         assert_eq!(drawn_tile, None);
         assert_eq!(game.round.wall_tile_drawn, None);
         assert_eq!(game.table.hands, {

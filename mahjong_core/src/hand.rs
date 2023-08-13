@@ -15,7 +15,7 @@ pub struct HandPossibleMeld {
     pub tiles: Vec<TileId>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, juniper::GraphQLObject)]
 pub struct HandTile {
     pub concealed: bool,
     pub id: TileId,

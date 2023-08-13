@@ -144,7 +144,8 @@ impl Play {
             println!("Error: {}", games.err().unwrap());
             std::process::exit(1);
         }
-        self.games_ids = Some(games.unwrap());
+        let games_ids = games.unwrap().iter().map(|g| g.id.clone()).collect();
+        self.games_ids = Some(games_ids);
     }
 
     pub async fn admin_swap_wall_tiles(&mut self, tile_id_a: TileId, tile_id_b: TileId) {

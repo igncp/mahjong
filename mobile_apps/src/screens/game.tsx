@@ -4,10 +4,19 @@ import {
   ModelServiceGameSummary,
   ModelState,
 } from "mahjong_sdk/dist/service-game-summary";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Button, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useTranslation } from "react-i18next";
+import { Button, Pressable, Text, View } from "react-native";
 
+import LanguagePicker from "../containers/language-picker";
 import { TileImg } from "../ui/tile-img";
+import { styles } from "./game.styles";
 
 interface IProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -24,12 +33,15 @@ export const GameScreen = ({ navigation, route }: IProps) => {
   const gameState = useState(initialGame);
   const socketRef = useRef<TSocketWrapper>();
   const loadingState = useState(false);
+  const { t } = useTranslation();
 
   const [game, setGame] = gameState;
 
   const gameId = game.game_summary.id;
   const userId = game.game_summary.player_id;
   const serviceGameMRef = useRef<ModelServiceGameSummary | null>(null);
+
+  const [serviceGameSummary] = gameState;
 
   useEffect(() => {
     const socket$ = HttpClient.connectToSocket({
@@ -56,6 +68,17 @@ export const GameScreen = ({ navigation, route }: IProps) => {
     navigation.pop();
   }, [navigation]);
 
+  const canDiscardTile = useMemo(() => {
+    if (!serviceGameSummary) {
+      return false;
+    }
+
+    const { hand } = serviceGameSummary.game_summary;
+
+    // This should be from API
+    return hand.length === 14;
+  }, [serviceGameSummary]);
+
   serviceGameMRef.current =
     serviceGameMRef.current || new ModelServiceGameSummary();
 
@@ -71,43 +94,55 @@ export const GameScreen = ({ navigation, route }: IProps) => {
   const handWithoutMelds = hand.filter((tile) => !tile.set_id);
 
   return (
-    <ScrollView bounces={false}>
-      <Text>Game ID: {game.game_summary.id}</Text>
-      <Text>Player: {game.game_summary.player_id}</Text>
-      <Text>
-        Current turn: {turnPlayer.name}
-        {turnPlayer.id === player.id ? " (it's you)" : ""}
-      </Text>
-      <View>
-        {gameState[0].game_summary.board.map((tileId) => {
-          const tile = serviceGameM.getTile(tileId);
-
-          return <TileImg key={tileId} tile={tile} />;
-        })}
+    <View style={styles.wrapper}>
+      <View style={styles.turn}>
+        <Text>
+          {t("game.turn", "Current turn: ")}
+          {turnPlayer.name}
+          {turnPlayer.id === player.id ? t("game.itsYou", " (it's you)") : ""}
+        </Text>
       </View>
       <View>
-        <Text>Hand: ({hand.length})</Text>
-        <View style={handStyles.list}>
+        <Text>
+          {t("game.board", "Board: ")}({hand.length})
+        </Text>
+        <View style={styles.list}>
+          {gameState[0].game_summary.board.map((tileId) => {
+            const tile = serviceGameM.getTile(tileId);
+
+            return (
+              <View key={tileId} style={styles.item}>
+                <TileImg tile={tile} />
+              </View>
+            );
+          })}
+        </View>
+      </View>
+      <View>
+        <Text>
+          {t("game.hand", "Hand: ")}({hand.length})
+        </Text>
+        <View style={styles.list}>
           {handWithoutMelds.map((tile) => (
-            <View key={tile.id} style={handStyles.item}>
+            <Pressable
+              key={tile.id}
+              onPress={() => {
+                if (canDiscardTile) {
+                  serviceGameM.discardTile(tile.id);
+                }
+              }}
+              style={styles.item}
+            >
               <TileImg tile={serviceGameM.getTile(tile.id)} />
-            </View>
+            </Pressable>
           ))}
         </View>
       </View>
-      <Button onPress={onDashboardClick} title="Dashboard" />
-    </ScrollView>
+      <Button
+        onPress={onDashboardClick}
+        title={t("game.dashboard", "Dashboard")}
+      />
+      <LanguagePicker />
+    </View>
   );
 };
-
-const handStyles = StyleSheet.create({
-  item: {
-    borderColor: "black",
-    borderWidth: 1,
-  },
-  list: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-});
