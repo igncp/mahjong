@@ -1,18 +1,62 @@
 @import "../../ui/styles";
 
 .content {
-  align-items: center;
   display: inline-flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  flex-flow: row wrap;
+  align-items: center;
 }
 
-$user-gap: 5px;
+$user-gap: 10px;
+
+.dealerIcon {
+  color: yellow;
+
+  &.boardIcon {
+    position: absolute;
+    right: -18px;
+    bottom: -2px;
+  }
+
+  &.helpIcon {
+    background-color: $color-lightgreen;
+  }
+}
+
+.discardedTile {
+  cursor: pointer;
+  color: blue;
+}
+
+.helpModalTrigger {
+  cursor: pointer;
+
+  position: absolute;
+  right: 0;
+  bottom: 0;
+
+  padding: $user-gap;
+
+  font-size: 30px;
+  color: #777;
+
+  opacity: 0.5;
+
+  transition: all 0.3s ease-in-out;
+
+  &:hover {
+    color: #333;
+    opacity: 1;
+  }
+}
+
+.userItem {
+  position: relative;
+}
 
 .userWrapper {
-  display: flex;
-  opacity: 0.5;
   position: absolute;
+  display: flex;
+  opacity: 0.4;
 
   &.userRight,
   &.userLeft {
@@ -39,22 +83,29 @@ $user-gap: 5px;
 
   &.userTop,
   &.userBottom {
-    left: 0;
     right: 0;
+    left: 0;
     justify-content: center;
   }
 
   &.userActive {
     opacity: 1;
+
+    :global .ant-avatar {
+      background: darkgreen;
+    }
   }
 }
 
 .wrapper {
-  align-items: center;
-  background: $color-lightgreen;
+  position: relative;
+
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+
   min-height: 150px;
-  padding: 40px;
-  position: relative;
+  padding: 60px;
+
+  background: $color-lightgreen;
 }

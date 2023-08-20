@@ -1,27 +1,31 @@
-@import "../ui/styles.scss";
+@import "../ui/styles";
 
 .githubButton {
-  display: none;
-
   @include mobile {
     display: inline-block;
   }
+
+  display: none;
 }
 
 .headerWrapper {
-  left: 0;
   position: absolute;
-  min-width: 100vw;
-  right: 0;
   top: 0;
+  right: 0;
+  left: 0;
 }
 
 .pageInner {
+  @include tablet-above {
+    grid-template-rows: 1fr 0;
+  }
+
   display: grid;
-  flex: 1;
-  gap: $common-gap;
   grid-template-columns: 1fr;
   grid-template-rows: 1fr 80px;
+  flex: 1;
+  gap: $common-gap;
+
   padding: 0 $common-gap;
 
   main {
@@ -31,14 +35,10 @@
   }
 
   footer {
-    align-items: center;
     display: flex;
     flex-direction: column;
     gap: $common-gap;
+    align-items: center;
     justify-content: center;
-  }
-
-  @include tablet-above {
-    grid-template-rows: 1fr 0px;
   }
 }

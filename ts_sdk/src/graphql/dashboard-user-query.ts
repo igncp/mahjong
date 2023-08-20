@@ -5,13 +5,14 @@ import { HttpClient } from "../http-client";
 
 export type DashboardQueryResponse = {
   playerGames: Pick<ServicePlayerGame, "id" | "createdAt" | "updatedAt">[];
-  player: Pick<ServicePlayer, "id" | "name">;
+  player: Pick<ServicePlayer, "id" | "name" | "createdAt">;
   playerTotalScore: number;
 };
 
 const document = gql`
   {
     player {
+      createdAt
       id
       name
     }
@@ -24,6 +25,5 @@ const document = gql`
   }
 `;
 
-export const queryDashboardUserQuery = () => {
-  return HttpClient.fetchGraphQLQuery<DashboardQueryResponse>(document);
-};
+export const queryDashboardUserQuery = () =>
+  HttpClient.fetchGraphQLQuery<DashboardQueryResponse>(document);

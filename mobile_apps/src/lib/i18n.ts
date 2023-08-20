@@ -1,12 +1,14 @@
-import i18n from "i18next";
+import i18n, { ResourceLanguage } from "i18next";
 import { initReactI18next } from "react-i18next";
 
 import en from "../../public/locales/en/translation.json";
 import zh from "../../public/locales/zh/translation.json";
 
+export type InternalLocale = "en" | "zh";
+
 export const I18N_KEY = "i18n-key";
 
-const resources = {
+const resources: Record<InternalLocale, ResourceLanguage> = {
   en: {
     translation: en,
   },

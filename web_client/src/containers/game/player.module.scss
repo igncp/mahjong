@@ -1,4 +1,4 @@
-@import "../../ui/styles.scss";
+@import "../../ui/styles";
 
 $small-width: 400px;
 
@@ -8,18 +8,19 @@ $card-height-desktop: 140px;
 $card-row-offset: 55px;
 
 .actionsPanel {
-  align-items: center;
   display: inline-flex;
   flex-wrap: wrap;
   gap: $common-gap;
+  align-items: center;
   justify-content: flex-start;
+
   padding: $common-gap;
 }
 
 .boardButtons {
   display: flex;
-  gap: $common-gap;
   flex-wrap: wrap;
+  gap: $common-gap;
   justify-content: center;
 }
 
@@ -29,17 +30,19 @@ $card-row-offset: 55px;
 
 .cardSmall {
   :global(.ant-card-body) {
-    border-radius: 0 0 8px 8px;
-    border-top: 1px solid #f0f0f0;
-    display: flex;
-    flex: 1;
-    height: $card-height-normal;
-    overflow: auto;
-    padding: 0;
-
     @include desktop-above {
       height: $card-height-desktop;
     }
+
+    overflow: auto;
+    display: flex;
+    flex: 1;
+
+    height: $card-height-normal;
+    padding: 0;
+
+    border-top: 1px solid #f0f0f0;
+    border-radius: 0 0 8px 8px;
 
     @media (max-width: $small-width) {
       height: unset;
@@ -54,9 +57,9 @@ $card-row-offset: 55px;
 }
 
 .handTiles {
-  align-items: center;
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
 
   img {
     cursor: pointer;
@@ -65,24 +68,25 @@ $card-row-offset: 55px;
 }
 
 .meldTile {
-  align-items: center;
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: $common-gap;
+  align-items: center;
   justify-content: center;
-  flex: 1;
+
   padding: $common-gap 0;
 }
 
 .smallGrid {
-  display: grid;
-  gap: $common-gap;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
-  grid-template-rows: $card-height-normal + $card-row-offset;
-
   @include desktop-above {
     grid-template-rows: $card-height-desktop + $card-row-offset;
   }
+
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-rows: $card-height-normal + $card-row-offset;
+  gap: $common-gap;
 
   @media (max-width: $bp-desktop-max) {
     grid-template-columns: 1fr 1fr 1fr;
@@ -98,22 +102,25 @@ $card-row-offset: 55px;
 }
 
 .otherPlayer {
-  align-items: center;
   display: flex;
   flex-direction: row;
-  padding: 0 $common-gap;
   gap: $common-gap;
+  align-items: center;
+
+  padding: 0 $common-gap;
 }
 
 .possibleMeld {
-  align-items: center;
-  background-color: white;
   display: flex;
-  flex-direction: column;
   flex: 1;
+  flex-direction: column;
   gap: $common-gap;
+  align-items: center;
   justify-content: center;
+
   padding: $common-gap 0;
+
+  background-color: white;
 }
 
 .settingsFormInner {
@@ -124,12 +131,12 @@ $card-row-offset: 55px;
 }
 
 .topInfo {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: $common-gap;
-
   @include mobile {
     justify-content: center;
   }
+
+  display: flex;
+  flex-wrap: wrap;
+  gap: $common-gap;
+  align-items: center;
 }

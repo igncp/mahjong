@@ -646,6 +646,8 @@ fn create_game(
     let empty_player_names = vec![];
     let player_names = ai_player_names.as_ref().unwrap_or(&empty_player_names);
 
+    let timestamp = get_timestamp();
+
     for (index, game_player) in game.players.iter().enumerate() {
         if index == 0 && player.is_some() {
             let player_clone = player.as_ref().unwrap().clone();
@@ -653,6 +655,7 @@ fn create_game(
         } else {
             let default_name = format!("Player {}", index);
             let service_player = ServicePlayer {
+                created_at: timestamp.to_string(),
                 id: game_player.clone(),
                 is_ai: true,
                 name: player_names.get(index).unwrap_or(&default_name).clone(),
@@ -660,8 +663,6 @@ fn create_game(
             players_set.insert(game_player.clone(), service_player);
         }
     }
-
-    let timestamp = get_timestamp();
 
     ServiceGame {
         created_at: timestamp,

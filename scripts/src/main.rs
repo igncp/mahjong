@@ -46,7 +46,11 @@ fn main() {
         .subcommand(Command::new("fix").about("Run linters in fix mode"))
         .subcommand(Command::new("list").about("List root files to be used in a pipe"))
         .subcommand(Command::new("pack_wasm").about("Pack the wasm files"))
-        .subcommand(Command::new("dev_install").about("Install some dependencies for development"))
+        .subcommand(
+            Command::new("dev_install")
+                .about("Install some dependencies for development")
+                .alias("install_dev"),
+        )
         .subcommand(Command::new("sync_prod").about("Deploy a clean production DB"));
 
     let current_dir_path = env::current_dir().unwrap();

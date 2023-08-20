@@ -1,12 +1,13 @@
-@import "../styles.scss";
+@import "../styles";
 
 .content {
-  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: $common-gap;
+
+  box-sizing: border-box;
+  max-width: $desktop-max-width;
   height: 100vh;
   margin: auto;
-  max-width: $desktop-max-width;
   padding-top: 80px;
 }

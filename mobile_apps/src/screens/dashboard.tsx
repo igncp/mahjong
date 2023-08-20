@@ -1,5 +1,4 @@
 import { useFocusEffect } from "@react-navigation/native";
-import dayjs from "dayjs";
 import { tokenObserver } from "mahjong_sdk/dist/auth";
 import {
   DashboardQueryResponse,
@@ -13,24 +12,13 @@ import { first } from "rxjs";
 
 import LanguagePicker from "../containers/language-picker";
 import { useIsConnected } from "../lib/net";
+import { simpleFormatDate, simpleFormatDateSince } from "../lib/time";
 import { styles } from "./dashboard.styles";
 
 interface IProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   navigation: any;
 }
-
-const simpleFormatDate = (timestamp: string): string => {
-  const timestampNum = Number(timestamp);
-
-  if (isNaN(timestampNum)) {
-    return "-";
-  }
-
-  const day = dayjs(timestampNum);
-
-  return day.format("YYYY-MM-DD HH:mm:ss");
-};
 
 const useScreenData = () => {
   const [dashboardQueryResponse, setDashboardQueryResponse] =
@@ -120,20 +108,22 @@ export const DashboardScreen = ({ navigation }: IProps) => {
   return (
     <View style={styles.wrapper}>
       <Text>
-        {t("dashboard.username", "Username:")}{" "}
-        <Text style={styles.highlight}>{player.name}</Text>
+        {t("dashboard.username")}{" "}
+        <Text style={styles.highlight}>{player.name}</Text> (
+        {t("dashboard.userSince")}
+        {simpleFormatDateSince(player.createdAt)})
       </Text>
       <Text>
-        {t("dashboard.totalScore", "Total score:")} {playerTotalScore}
+        {t("dashboard.totalScore")} {playerTotalScore}
       </Text>
       <Button
         disabled={!isConnected}
         onPress={onCreateGame}
-        title={t("dashboard.create", "Create game")}
+        title={t("dashboard.create")}
       />
       {playerGames?.length ? (
         <View style={styles.gamesList}>
-          <Text>{t("dashboard.games", "Games:")}</Text>
+          <Text>{t("dashboard.games")}</Text>
           {playerGames.map((game) => (
             <Button
               color="darkgreen"
@@ -142,8 +132,7 @@ export const DashboardScreen = ({ navigation }: IProps) => {
               onPress={() => onGamePress(game.id)}
               title={[
                 game.id,
-                t("dashboard.lastPlayed", "Last played: ") +
-                  simpleFormatDate(game.updatedAt),
+                t("dashboard.lastPlayed") + simpleFormatDate(game.updatedAt),
               ].join("\n")}
             />
           ))}

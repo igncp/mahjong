@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, juniper::GraphQLObject)]
 pub struct ServicePlayer {
+    pub created_at: String,
     pub id: PlayerId,
     pub is_ai: bool,
     pub name: String,

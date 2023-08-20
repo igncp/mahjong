@@ -12,7 +12,7 @@ import React, {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Pressable, Text, View } from "react-native";
+import { Button, Pressable, ScrollView, Text, View } from "react-native";
 
 import LanguagePicker from "../containers/language-picker";
 import { TileImg } from "../ui/tile-img";
@@ -94,55 +94,55 @@ export const GameScreen = ({ navigation, route }: IProps) => {
   const handWithoutMelds = hand.filter((tile) => !tile.set_id);
 
   return (
-    <View style={styles.wrapper}>
-      <View style={styles.turn}>
-        <Text>
-          {t("game.turn", "Current turn: ")}
-          {turnPlayer.name}
-          {turnPlayer.id === player.id ? t("game.itsYou", " (it's you)") : ""}
-        </Text>
-      </View>
-      <View>
-        <Text>
-          {t("game.board", "Board: ")}({hand.length})
-        </Text>
-        <View style={styles.list}>
-          {gameState[0].game_summary.board.map((tileId) => {
-            const tile = serviceGameM.getTile(tileId);
+    <ScrollView>
+      <View style={styles.wrapper}>
+        <View style={styles.turn}>
+          <Text>
+            {t("game.turn")}
+            {turnPlayer.name}
+            {turnPlayer.id === player.id ? t("game.itsYou", " (it's you)") : ""}
+          </Text>
+        </View>
+        <View>
+          <Text>{t("game.board")}</Text>
+          <View style={styles.list}>
+            {gameState[0].game_summary.board.map((tileId) => {
+              const tile = serviceGameM.getTile(tileId);
 
-            return (
-              <View key={tileId} style={styles.item}>
-                <TileImg tile={tile} />
-              </View>
-            );
-          })}
+              return (
+                <View key={tileId} style={styles.item}>
+                  <TileImg tile={tile} />
+                </View>
+              );
+            })}
+          </View>
         </View>
-      </View>
-      <View>
-        <Text>
-          {t("game.hand", "Hand: ")}({hand.length})
-        </Text>
-        <View style={styles.list}>
-          {handWithoutMelds.map((tile) => (
-            <Pressable
-              key={tile.id}
-              onPress={() => {
-                if (canDiscardTile) {
-                  serviceGameM.discardTile(tile.id);
-                }
-              }}
-              style={styles.item}
-            >
-              <TileImg tile={serviceGameM.getTile(tile.id)} />
-            </Pressable>
-          ))}
+        <View>
+          <Text>
+            {t("game.hand", "Hand: ")}({hand.length})
+          </Text>
+          <View style={styles.list}>
+            {handWithoutMelds.map((tile) => (
+              <Pressable
+                key={tile.id}
+                onPress={() => {
+                  if (canDiscardTile) {
+                    serviceGameM.discardTile(tile.id);
+                  }
+                }}
+                style={styles.item}
+              >
+                <TileImg tile={serviceGameM.getTile(tile.id)} />
+              </Pressable>
+            ))}
+          </View>
         </View>
+        <Button
+          onPress={onDashboardClick}
+          title={t("game.dashboard", "Dashboard")}
+        />
+        <LanguagePicker />
       </View>
-      <Button
-        onPress={onDashboardClick}
-        title={t("game.dashboard", "Dashboard")}
-      />
-      <LanguagePicker />
-    </View>
+    </ScrollView>
   );
 };

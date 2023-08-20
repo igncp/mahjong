@@ -1,4 +1,4 @@
-@import "../styles.scss";
+@import "../styles";
 
 .mainLink {
   color: $color-darkgreen !important;
@@ -6,24 +6,28 @@
 }
 
 .wrapper {
+  @include desktop-above {
+    padding: 15px 50px;
+  }
+
+  display: flex;
+
+  margin: 0;
+  padding: 15px 10px;
+
+  font-size: 30px;
+
   background-color: white;
   border-bottom: 1px solid #ccc;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  display: flex;
-  font-size: 30px;
-  margin: 0;
-  padding: 15px 10px 15px;
-
-  @include desktop-above {
-    padding: 15px 50px 15px;
-  }
 }
 
 .inner {
-  box-sizing: border-box;
   display: flex;
-  margin: auto;
-  max-width: $desktop-max-width;
-  padding: 0 $common-gap;
+
+  box-sizing: border-box;
   width: 100%;
+  max-width: $desktop-max-width;
+  margin: auto;
+  padding: 0 $common-gap;
 }

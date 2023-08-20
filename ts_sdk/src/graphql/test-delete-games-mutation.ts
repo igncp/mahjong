@@ -12,6 +12,5 @@ const document = gql`
   }
 `;
 
-export const testDeleteGamesMutation = () => {
-  return HttpClient.fetchGraphQLQuery<TestDeleteGamesMutation>(document);
-};
+export const testDeleteGamesMutation = () =>
+  HttpClient.fetchGraphQLQuery<TestDeleteGamesMutation>(document);

@@ -302,6 +302,7 @@ const Game = ({ gameId, userId }: IProps) => {
           <GameBoard
             activePlayer={turnPlayer.id}
             canDropInBoard={canDropInBoard}
+            dealerPlayer={dealerPlayer.id}
             players={
               boardPlayers as [
                 BoardPlayer,

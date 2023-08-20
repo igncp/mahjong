@@ -24,6 +24,7 @@ pub struct DieselAuthInfo {
 #[derive(Insertable, Queryable, Selectable, Identifiable, PartialEq, Clone, Debug)]
 #[diesel(table_name = player)]
 pub struct DieselPlayer {
+    pub created_at: String,
     pub id: PlayerId,
     pub is_ai: i32,
     pub name: String,

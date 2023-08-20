@@ -25,9 +25,7 @@ export const setFormatTile = (newFormatTile: typeof format_tile) => {
   format_tile = newFormatTile;
 };
 
-export const getTile = (tileId: TileId) => {
-  return deck.get(tileId) as Tile;
-};
+export const getTile = (tileId: TileId) => deck.get(tileId) as Tile;
 
 export const setGetPossibleMeldsSummary = (
   newGetPossibleMeldsSummary: typeof get_possible_melds_summary

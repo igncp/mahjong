@@ -15,23 +15,26 @@ import {
 } from "rxjs";
 
 import Router from "./Router";
-import { I18N_KEY, initI18n } from "./lib/i18n";
+import { I18N_KEY, InternalLocale, initI18n } from "./lib/i18n";
+import { setTimeLocale } from "./lib/time";
 
-const App = () => {
-  const [i18nInstance, setI18nInstance] = useState<null | typeof i18n>(null);
-
+const useSetupI18n = <A,>(setI18nInstance: (val: A) => void) => {
   useEffect(() => {
     const subscription = from(AsyncStorage.getItem(I18N_KEY))
       .pipe(
         first(),
         mergeMap((language) => from(initI18n(language))),
         mergeMap(() => {
-          setI18nInstance(i18n);
+          setI18nInstance(i18n as A);
+          setTimeLocale((i18n.language as InternalLocale) || "en");
 
           return fromEvent(i18n, "languageChanged").pipe(
-            mergeMap((lng) =>
-              from(AsyncStorage.setItem(I18N_KEY, lng)).pipe(map(() => lng))
-            ),
+            mergeMap((lng) => {
+              setTimeLocale(lng);
+              return from(AsyncStorage.setItem(I18N_KEY, lng)).pipe(
+                map(() => lng)
+              );
+            }),
             tap((lng) => {
               console.log("Language saved correctly to:", lng);
             }),
@@ -48,7 +51,13 @@ const App = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [setI18nInstance]);
+};
+
+const App = () => {
+  const [i18nInstance, setI18nInstance] = useState<null | typeof i18n>(null);
+
+  useSetupI18n(setI18nInstance);
 
   if (!i18nInstance) {
     // @TODO: Display a loading screen

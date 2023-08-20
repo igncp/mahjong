@@ -11,7 +11,7 @@ pub fn run_check(shell: &Shell) {
     run_clippy(shell);
 
     run_pack_wasm(shell);
-    shell.run_status("cd ts_sdk && npm i && npm pack");
+    shell.run_status("cd ts_sdk && npm i && npm run lint && npm pack");
 
     shell.run_status("cd web_client && npm uninstall mahjong_sdk");
     shell.run_status("cd mobile_apps && npm uninstall mahjong_sdk");

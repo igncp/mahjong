@@ -1,13 +1,17 @@
-@import "../ui/styles.scss";
+@import "../ui/styles";
 
 .table {
   flex: 1;
+
+  :global .ant-table-row {
+    cursor: pointer;
+  }
 }
 
 .newGameButton {
-  display: inline-block;
-
   @include mobile {
     margin: 0 auto;
   }
+
+  display: inline-block;
 }

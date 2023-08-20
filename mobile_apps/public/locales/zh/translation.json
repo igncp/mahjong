@@ -19,7 +19,8 @@
     "logout": "登出",
     "noGames": "您還沒有創建任何遊戲",
     "totalScore": "總得分：",
-    "username": "用戶名："
+    "username": "用戶名：",
+    "userSince": "自從："
   },
   "game": {
     "board": "遊戲板: ",

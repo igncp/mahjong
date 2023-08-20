@@ -1,52 +1,53 @@
-@import "../ui/styles.scss";
+@import "../ui/styles";
 
 .formWrapper {
-  align-items: center;
   display: flex;
   flex: 1;
+  align-items: center;
   justify-content: center;
+
   width: 100%;
 }
 
 .form {
-  align-items: center;
-  display: flex;
-  flex-direction: column;
-  gap: $common-gap;
-  justify-content: center;
-  margin: auto;
-  width: 100%;
-
   @include desktop-above {
     width: 350px;
   }
-}
 
-.content {
-  align-items: flex-start;
-  background-color: rgba(255, 255, 255, 0.8);
-  border-radius: 10px;
   display: flex;
   flex-direction: column;
   gap: $common-gap;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  margin: auto;
+}
+
+.content {
+  @include desktop-above {
+    align-items: center;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+  }
+
+  display: flex;
+  flex-direction: column;
+  gap: $common-gap;
+  align-items: flex-start;
   justify-content: flex-start;
+
   padding: 15px;
 
-  @include desktop-above {
-    border: 1px solid #ccc;
-    padding: 20px;
-    margin: auto;
-    align-items: center;
-  }
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 10px;
 }
 
 .waves {
   position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
   z-index: -1;
+  inset: 0;
 
   background: linear-gradient(
     315deg,
@@ -55,48 +56,53 @@
     rgba(48, 238, 226, 1) 68%,
     rgba(255, 25, 25, 1) 98%
   );
+  background-attachment: fixed;
+  background-size: 400% 400%;
 
   animation: gradient 35s ease infinite;
-  background-size: 400% 400%;
-  background-attachment: fixed;
 }
 
 @keyframes gradient {
   0% {
     background-position: 0% 0%;
   }
+
   50% {
     background-position: 100% 100%;
   }
+
   100% {
     background-position: 0% 0%;
   }
 }
 
 .wave {
-  background: rgb(255 255 255 / 25%);
-  border-radius: 1000% 1000% 0 0;
   position: fixed;
-  width: 200%;
-  height: 12em;
-  animation: wave 20s -3s linear infinite;
-  transform: translate3d(0, 0, 0);
-  opacity: 0.8;
+  z-index: -1;
   bottom: 0;
   left: 0;
-  z-index: -1;
+  transform: translate3d(0, 0, 0);
+
+  width: 200%;
+  height: 12em;
+
+  opacity: 0.8;
+  background: rgb(255 255 255 / 25%);
+  border-radius: 1000% 1000% 0 0;
+
+  animation: wave 20s -3s linear infinite;
 }
 
 .wave:nth-of-type(2) {
   bottom: -1.25em;
-  animation: wave 18s linear reverse infinite;
   opacity: 0.8;
+  animation: wave 18s linear reverse infinite;
 }
 
 .wave:nth-of-type(3) {
   bottom: -2.5em;
-  animation: wave 20s -1s reverse infinite;
   opacity: 0.9;
+  animation: wave 20s -1s reverse infinite;
 }
 
 @keyframes wave {

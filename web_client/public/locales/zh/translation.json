@@ -21,6 +21,12 @@
     },
     "warning": "請記住，此應用程序仍處於早期開發階段，數據庫將定期清除。"
   },
+  "board": {
+    "help": {
+      "dealer": "莊家玩家",
+      "intro": "突出顯示的用戶是當前回合中應該玩的用戶"
+    }
+  },
   "dashboard": {
     "cancel": "取消",
     "defaultPlayerName": "玩家 {{number}}",
@@ -118,6 +124,7 @@
     },
     "title": "麻將網頁客戶端"
   },
+  "symbols": "符號的含義",
   "tile": {
     "autumn": "秋天（季）",
     "bamboo": "竹子（花）",

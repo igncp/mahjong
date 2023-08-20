@@ -51,6 +51,7 @@ impl DieselAuthInfo {
 impl DieselPlayer {
     pub fn into_raw(self) -> ServicePlayer {
         ServicePlayer {
+            created_at: self.created_at,
             id: self.id,
             is_ai: self.is_ai == 1,
             name: self.name,
@@ -59,6 +60,7 @@ impl DieselPlayer {
 
     pub fn from_raw(raw: &ServicePlayer) -> Self {
         Self {
+            created_at: raw.created_at.to_string(),
             id: raw.id.clone(),
             is_ai: if raw.is_ai { 1 } else { 0 },
             name: raw.name.clone(),

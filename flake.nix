@@ -27,7 +27,7 @@
     in rec {
       devShell = pkgs.mkShell ({
           packages = with pkgs-stable;
-            [nodejs]
+            [nodejs inkscape]
             ++ android.extra-shell-packages
             ++ rust.extra-shell-packages;
         }

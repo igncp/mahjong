@@ -5,7 +5,7 @@ type Props = {
   onCancel: () => void;
   open: boolean;
   children: React.ReactNode;
-  footer?: React.ReactNode[];
+  footer?: React.ReactNode[] | null;
 };
 
 const Modal = (props: Props) => <AntdModal {...props} />;

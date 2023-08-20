@@ -1,4 +1,4 @@
-use crate::{env::ENV_AUTH_JWT_SECRET_KEY, http_server::DataStorage};
+use crate::{env::ENV_AUTH_JWT_SECRET_KEY, http_server::DataStorage, time::get_timestamp};
 use actix_web::{HttpRequest, HttpResponse};
 use argon2::{self, Config};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
@@ -110,6 +110,7 @@ impl<'a> AuthHandler<'a> {
         let player = ServicePlayer {
             id: auth_info.user_id.clone(),
             name: username.clone(),
+            created_at: get_timestamp().to_string(),
 
             ..ServicePlayer::default()
         };

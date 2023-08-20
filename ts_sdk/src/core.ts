@@ -112,10 +112,12 @@ export type Game = {
 };
 
 export type ServicePlayer = {
+  createdAt: string;
   id: string;
   name: string;
 };
 export type ServicePlayerSummary = {
+  createdAt: string;
   id: string;
   name: string;
 };

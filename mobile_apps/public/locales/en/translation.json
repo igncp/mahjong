@@ -19,7 +19,8 @@
     "logout": "Log out",
     "noGames": "You haven't created any games yet",
     "totalScore": "Total score:",
-    "username": "Username:"
+    "username": "Username:",
+    "userSince": "Since: "
   },
   "game": {
     "board": "Board: ",

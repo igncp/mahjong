@@ -236,12 +236,12 @@ export const HttpClient = {
   fetchGraphQLQuery<T>(document: string): Observable<T> {
     return from(
       request<T>({
-        url: `${baseUrl}/v1/graphql`,
         document,
         requestHeaders: {
           ...getAuthTokenHeader(),
           "Content-Type": "application/json",
         },
+        url: `${baseUrl}/v1/graphql`,
       })
     );
   },

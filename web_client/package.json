@@ -6,7 +6,7 @@
     "dev": "next dev -p 9000",
     "i18next": "i18next",
     "lint": "prettier --check 'src/**' 'pages/**' && eslint . && npm run lint:styles",
-    "lint:styles": "stylelint 'src/**/*.css'",
+    "lint:styles": "stylelint 'src/**/*.css' 'src/**/*.scss' --max-warnings 0",
     "lint:fix": "prettier --write 'src/**' 'pages/**' && eslint --fix .",
     "sync_sdk": "cd ../ts_sdk && npm run pack-full && cd ../web_client && npm install ../ts_sdk/*.tgz",
     "install:initial": "npm uninstall mahjong_sdk && npm i && npm run sync_sdk",
@@ -40,7 +40,7 @@
     "react-dom": "18.2.0",
     "react-i18next": "^12.2.2",
     "rxjs": "^7.8.0",
-    "stylelint": "^15.6.2",
+    "stylelint": "^15.10.2",
     "stylelint-scss": "^5.0.0",
     "web_lib": "file:pkg",
     "zod": "^3.21.4"
@@ -55,8 +55,12 @@
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-playwright": "^0.15.3",
     "eslint-plugin-react": "^7.32.2",
+    "postcss-scss": "^4.0.6",
     "prettier": "^2.8.7",
     "sass": "^1.62.1",
+    "stylelint-config-clean-order": "^5.2.0",
+    "stylelint-config-standard-scss": "^10.0.0",
+    "stylelint-order": "^6.0.3",
     "typescript": "5.0.2"
   }
 }

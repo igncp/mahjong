@@ -9,11 +9,13 @@
 
 ## Improvements
 
+- Random user position (especially with other players)
 - Diesel updates (no remove + insert for sqlite)
 - Refactor the socket server
 - ESLint rule noshadow
 - Move web and server logic which should be in core
     - Move logic in core to correct places
+- Move useful utils (e.g. i18n, locale) to the TS SDK
 
 ## Backlog
 

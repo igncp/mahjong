@@ -84,6 +84,7 @@ diesel::table! {
 
 diesel::table! {
     player (id) {
+        created_at -> Timestamp,
         id -> Text,
         is_ai -> Integer,
         name -> Text,
