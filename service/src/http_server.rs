@@ -1,6 +1,6 @@
-use crate::auth::{AuthHandler, UserRole};
+use crate::auth::{AuthHandler, GithubAuth, GithubCallbackQuery, UserRole};
 use crate::common::Storage;
-use crate::env::GRAPHQL_SOURCE;
+use crate::env::{ENV_FRONTEND_URL, ENV_GRAPHQL_SOURCE};
 use crate::game_wrapper::GameWrapper;
 use crate::games_loop::GamesLoop;
 use crate::graphql::{create_schema, GraphQLContext};
@@ -25,8 +25,9 @@ use service_contracts::{
     UserGetGamesResponse, UserLoadGameQuery, UserPatchInfoRequest, UserPostAIContinueRequest,
     UserPostBreakMeldRequest, UserPostClaimTileRequest, UserPostCreateGameRequest,
     UserPostCreateMeldRequest, UserPostDiscardTileRequest, UserPostDrawTileRequest,
-    UserPostMovePlayerRequest, UserPostSayMahjongRequest, UserPostSetAuthRequest,
-    UserPostSetGameSettingsRequest, UserPostSortHandRequest, WebSocketQuery,
+    UserPostMovePlayerRequest, UserPostPassRoundRequest, UserPostSayMahjongRequest,
+    UserPostSetAuthRequest, UserPostSetGameSettingsRequest, UserPostSortHandRequest,
+    WebSocketQuery,
 };
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -168,7 +169,6 @@ async fn admin_get_game_by_id(
 async fn user_get_game_load(
     storage: DataStorage,
     game_id: web::Path<String>,
-    manager: GamesManagerData,
     req: HttpRequest,
     srv: DataSocketServer,
 ) -> impl Responder {
@@ -184,9 +184,6 @@ async fn user_get_game_load(
     if !auth_handler.verify_user(&player_id) {
         return AuthHandler::get_unauthorized();
     }
-
-    let game_lock = { manager.lock().unwrap().get_game_mutex(&game_id) };
-    let _game_lock = game_lock.lock().unwrap();
 
     let game_wrapper = GameWrapper::from_storage(&storage, &game_id, srv, None).await;
     match game_wrapper {
@@ -733,6 +730,32 @@ async fn user_post_game_say_mahjong(
     }
 }
 
+#[post("/v1/user/game/{game_id}/pass-round")]
+async fn user_post_game_pass_round(
+    storage: DataStorage,
+    body: web::Json<UserPostPassRoundRequest>,
+    game_id: web::Path<GameId>,
+    manager: GamesManagerData,
+    srv: DataSocketServer,
+    req: HttpRequest,
+) -> impl Responder {
+    let auth_handler = AuthHandler::new(&storage, &req);
+
+    if !auth_handler.verify_user(&body.player_id) {
+        return AuthHandler::get_unauthorized();
+    }
+
+    let game_lock = { manager.lock().unwrap().get_game_mutex(&game_id) };
+    let _game_lock = game_lock.lock().unwrap();
+
+    let game_wrapper = GameWrapper::from_storage(&storage, &game_id, srv, None).await;
+
+    match game_wrapper {
+        Ok(mut game_wrapper) => game_wrapper.handle_user_pass_round(&body.player_id).await,
+        Err(err) => err,
+    }
+}
+
 #[post("/v1/user/game/{game_id}/settings")]
 async fn user_post_game_settings(
     storage: DataStorage,
@@ -773,7 +796,9 @@ async fn user_post_auth(
     let username = username.to_lowercase();
     let mut auth_handler = AuthHandler::new(&storage, &req);
 
-    let user = auth_handler.validate_user(&username, &body.password).await;
+    let user = auth_handler
+        .validate_email_user(&username, &body.password)
+        .await;
 
     if user.is_err() {
         return HttpResponse::Unauthorized().finish();
@@ -784,7 +809,7 @@ async fn user_post_auth(
     if user.is_none() {
         debug!("Creating new username: {username}");
         let result = auth_handler
-            .create_user(
+            .create_email_user(
                 &username,
                 &body.password,
                 if username == "admin" {
@@ -873,6 +898,34 @@ async fn user_patch_info(
     user_wrapper.unwrap().update_info(&body).await
 }
 
+#[get("/v1/github_callback")]
+async fn github_callback(req: HttpRequest, storage: DataStorage) -> Result<impl Responder, Error> {
+    let query = web::Query::<GithubCallbackQuery>::from_query(req.query_string());
+
+    if query.is_err() {
+        return Ok(HttpResponse::BadRequest().json("Invalid query"));
+    }
+
+    let query = query.unwrap();
+
+    let mut auth_handler = AuthHandler::new(&storage, &req);
+    let result = GithubAuth::handle_callback(query, &storage, &mut auth_handler).await;
+
+    if result.is_none() {
+        return Ok(HttpResponse::InternalServerError().json("Error handling callback"));
+    }
+
+    let response_body = result.unwrap();
+    let response_qs = serde_qs::to_string(&response_body).unwrap();
+
+    let frontend_url = std::env::var(ENV_FRONTEND_URL).unwrap();
+    let redirect = HttpResponse::Found()
+        .append_header(("Location", format!("{}?{}", frontend_url, response_qs)))
+        .finish();
+
+    Ok(redirect)
+}
+
 #[get("/v1/ws")]
 async fn get_ws(
     req: HttpRequest,
@@ -921,7 +974,7 @@ async fn get_ws(
 
 #[get("/v1/graphql")]
 async fn graphql_playground() -> HttpResponse {
-    let graphql_source = std::env::var(GRAPHQL_SOURCE).unwrap_or("/api/v1/graphql".to_string());
+    let graphql_source = std::env::var(ENV_GRAPHQL_SOURCE).unwrap_or("/api/v1/graphql".to_string());
 
     HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
@@ -982,9 +1035,8 @@ impl MahjongServer {
             let endpoints_server = socket_server.clone();
 
             App::new()
-                .wrap(cors)
-                .app_data(storage_data)
                 .app_data(games_manager_data)
+                .app_data(storage_data)
                 .app_data(web::Data::new(endpoints_server))
                 .service(admin_get_game_by_id)
                 .service(admin_get_games)
@@ -1002,6 +1054,9 @@ impl MahjongServer {
                 .service(get_deck)
                 .service(get_health)
                 .service(get_ws)
+                .service(github_callback)
+                .service(graphql)
+                .service(graphql_playground)
                 .service(user_get_game_load)
                 .service(user_get_games)
                 .service(user_get_info)
@@ -1015,11 +1070,11 @@ impl MahjongServer {
                 .service(user_post_game_discard_tile)
                 .service(user_post_game_draw_tile)
                 .service(user_post_game_move_player)
+                .service(user_post_game_pass_round)
                 .service(user_post_game_say_mahjong)
                 .service(user_post_game_settings)
                 .service(user_post_game_sort_hand)
-                .service(graphql_playground)
-                .service(graphql)
+                .wrap(cors)
         })
         .bind((address, port))?
         .run()

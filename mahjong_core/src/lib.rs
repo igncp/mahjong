@@ -11,6 +11,7 @@ pub mod deck;
 pub mod game;
 pub mod game_summary;
 pub mod hand;
+mod log;
 pub mod meld;
 pub mod round;
 pub mod score;

@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { first } from "rxjs";
 import z from "zod";
 
+import { githubAuth } from "src/lib/auth";
 import Alert from "src/ui/common/alert";
 import Button from "src/ui/common/button";
 import Card from "src/ui/common/card";
@@ -103,6 +104,10 @@ const AuthForm = () => {
     formik.validateForm();
   }, [t]);
 
+  const loginWithGithub = () => {
+    githubAuth.login();
+  };
+
   return (
     <PageContent contentStyle={{ marginTop: "20px" }}>
       <div className={styles.waves}>
@@ -170,6 +175,14 @@ const AuthForm = () => {
                 type="primary"
               >
                 {t("auth.button.submit")}
+              </Button>
+              <Button
+                data-name="auth-submit-github"
+                disabled={formik.isSubmitting}
+                onClick={loginWithGithub}
+                type="primary"
+              >
+                {t("auth.button.submitGithub", "Login with Github")}
               </Button>
             </form>
           </Card>

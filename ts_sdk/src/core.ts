@@ -85,7 +85,7 @@ export type ServicePlayerGame = {
   updatedAt: string;
 };
 
-type HandTile = {
+export type HandTile = {
   concealed: boolean;
   id: TileId;
   set_id: SetId;
@@ -135,6 +135,7 @@ export type HandSummary = {
 
 export type GameSettings = {
   ai_enabled: boolean;
+  auto_stop_claim_meld: boolean;
   discard_wait_ms: number | null;
   fixed_settings: boolean;
   last_discard_time: string | null;
@@ -143,6 +144,7 @@ export type GameSettings = {
 export type GameSettingsSummary = {
   ai_enabled: boolean;
   auto_sort: boolean;
+  auto_stop_claim_meld: boolean;
   discard_wait_ms: number | null;
   fixed_settings: boolean;
 };
@@ -261,6 +263,11 @@ export type TUserPatchInfoRequest = {
   name: string;
 };
 export type TUserPatchInfoResponse = TUserGetInfoResponse;
+
+export type TUserPostPassRoundRequest = {
+  player_id: PlayerId;
+};
+export type TUserPostPassRoundResponse = ServiceGameSummary;
 
 export type TUserLoadGameQuery = {
   player_id: PlayerId;

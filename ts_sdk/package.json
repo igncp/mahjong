@@ -7,8 +7,7 @@
     "build": "rm -rf dist && tsc",
     "lint": "prettier --check 'src/**' && eslint .",
     "lint:fix": "prettier --write 'src/**' && eslint --fix .",
-    "pack-full": "rm -rf *.tgz && npm i && npm run build && npm pack",
-    "sync_all": "cd ../web_client && npm run sync_sdk && cd ../mobile_apps && npm run sync_sdk"
+    "sync_sdk": "bash scripts/sync_sdk.sh"
   },
   "dependencies": {
     "graphql": "^16.7.1",

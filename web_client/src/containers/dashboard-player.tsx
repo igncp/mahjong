@@ -156,7 +156,7 @@ const DashboardUser = ({ userId }: TProps) => {
           style={{ cursor: "pointer", margin: "10px 0" }}
         >
           <span data-name="display-name-content">{player.name}</span>{" "}
-          <EditOutlined style={{ fontSize: "16px" }} /> (
+          <EditOutlined rev="" style={{ fontSize: "16px" }} /> (
           {t("dashboard.userPoints", "{{count}} points", {
             count: playerTotalScore,
           })}
@@ -192,7 +192,7 @@ const DashboardUser = ({ userId }: TProps) => {
               });
           }}
         >
-          {t("dashboard.newGame")} <PlusCircleOutlined />
+          {t("dashboard.newGame")} <PlusCircleOutlined rev="" />
         </Button>
       </div>
       <Table
@@ -202,7 +202,7 @@ const DashboardUser = ({ userId }: TProps) => {
             dataIndex: "id",
             key: "id",
             render: (text) => (
-              <div onClick={() => onGameClick(text)}>
+              <div data-name="existing-game" onClick={() => onGameClick(text)}>
                 {text.slice(0, 12)}...
               </div>
             ),
@@ -213,7 +213,9 @@ const DashboardUser = ({ userId }: TProps) => {
             dataIndex: "id",
             key: "id",
             render: (text) => (
-              <div onClick={() => onGameClick(text)}>{text.slice(0, 6)}...</div>
+              <div data-name="existing-game" onClick={() => onGameClick(text)}>
+                {text.slice(0, 6)}...
+              </div>
             ),
             responsive: ["md"],
             title: t("dashboard.table.id", "ID"),

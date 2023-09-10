@@ -2,3 +2,4 @@ mahjong.db
 mahjong.json
 .env
 /result
+/target

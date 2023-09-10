@@ -1,12 +1,13 @@
 {
   pkgs,
   system,
+  is-docker-ci,
 }: let
   # Keep in sync with mobile_apps/android/build.gradle
   buildToolsVersion = "33.0.0";
 
   has_skip_android = builtins.pathExists ./without-android;
-  with_android = has_skip_android == false && system != "aarch64-linux" && system != "aarch64-darwin";
+  with_android = is-docker-ci == false && has_skip_android == false && system != "aarch64-linux" && system != "aarch64-darwin";
 
   androidComposition = pkgs.androidenv.composeAndroidPackages {
     buildToolsVersions = [buildToolsVersion "30.0.3"];

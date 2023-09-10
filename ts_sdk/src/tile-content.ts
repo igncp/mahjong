@@ -1,11 +1,11 @@
-import { Dragon, Flower, FlowerTile, Season, Suit, Tile, Wind } from "./core";
+import { Dragon, Flower, Season, Suit, Tile, Wind } from "./core";
 
 const prefix = "https://upload.wikimedia.org/wikipedia/commons/";
 
 // https://en.wikipedia.org/wiki/Mahjong_tiles#Contents
 export const getTileInfo = (tile: Tile): [string, string] | null => {
-  if ((tile as FlowerTile).Flower) {
-    switch ((tile as FlowerTile).Flower.value) {
+  if ("Flower" in tile) {
+    switch (tile.Flower.value) {
       case Flower.Plum:
         return [`${prefix}8/8b/MJh5-.svg`, "Plum (Flower)"];
       case Flower.Orchid:
@@ -131,4 +131,30 @@ export const getTileInfo = (tile: Tile): [string, string] | null => {
   }
 
   return null;
+};
+
+export const getIsSameTile = (tileA: Tile, tileB: Tile) => {
+  if ("Flower" in tileA) {
+    return "Flower" in tileB && tileA.Flower.value === tileB.Flower.value;
+  }
+
+  if ("Wind" in tileA) {
+    return "Wind" in tileB && tileA.Wind.value === tileB.Wind.value;
+  }
+
+  if ("Dragon" in tileA) {
+    return "Dragon" in tileB && tileA.Dragon.value === tileB.Dragon.value;
+  }
+
+  if ("Season" in tileA) {
+    return "Season" in tileB && tileA.Season.value === tileB.Season.value;
+  }
+
+  if ("Suit" in tileA) {
+    return (
+      "Suit" in tileB &&
+      tileA.Suit.suit === tileB.Suit.suit &&
+      tileA.Suit.value === tileB.Suit.value
+    );
+  }
 };

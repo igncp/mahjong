@@ -1,4 +1,6 @@
 use super::schema::auth_info;
+use super::schema::auth_info_email;
+use super::schema::auth_info_github;
 use super::schema::game;
 use super::schema::game_board;
 use super::schema::game_draw_wall;
@@ -15,8 +17,23 @@ use mahjong_core::PlayerId;
 #[derive(Insertable, Queryable, Clone)]
 #[diesel(table_name = auth_info)]
 pub struct DieselAuthInfo {
-    pub hashed_pass: String,
+    pub provider: String,
     pub role: String,
+    pub user_id: PlayerId,
+}
+
+#[derive(Insertable, Queryable, Clone)]
+#[diesel(table_name = auth_info_email)]
+pub struct DieselAuthInfoEmail {
+    pub hashed_pass: String,
+    pub user_id: PlayerId,
+    pub username: String,
+}
+
+#[derive(Insertable, Queryable, Clone)]
+#[diesel(table_name = auth_info_github)]
+pub struct DieselAuthInfoGithub {
+    pub token: Option<String>,
     pub user_id: PlayerId,
     pub username: String,
 }
@@ -100,6 +117,7 @@ pub struct DieselGameHand {
 pub struct DieselGameSettings {
     pub ai_enabled: i32,
     pub auto_sort_players: String,
+    pub auto_stop_claim_meld: String,
     pub discard_wait_ms: Option<i32>,
     pub fixed_settings: i32,
     pub game_id: GameId,

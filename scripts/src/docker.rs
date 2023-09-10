@@ -13,19 +13,23 @@ const DOCKER_IMAGE_TAG: &str = "arm";
 fn web(shell: &Shell) {
     run_pack_wasm(shell);
 
-    shell.run_status("cd web_client && npm uninstall mahjong_sdk");
+    shell.run_status(&["cd ts_sdk", "bun run sync_sdk"].join(" && "));
 
-    shell.run_status(&vec!["cd web_client", "npm run install:initial"].join(";"));
-
-    shell.run_status(&vec!["cd web_client", "npm run build"].join(";"));
+    shell.run_status(&["cd web_client", "bun run build"].join(" && "));
 
     doc(shell);
 }
 
 fn docker_service(shell: &Shell) {
+    // Now this can only target x86-64
+    shell.run_status(&[
+    "cd service",
+    "cargo build --release --target-dir target",
+    "patchelf --set-interpreter /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ./target/release/mahjong_service",
+    ].join(" && "));
+
     shell.run_status(
-        // This could use buildx but that cross-compiling is not working with sqlite3
-        &vec![
+        &[
             "docker build",
             format!("-t 'igncp/mahjong_service:{DOCKER_IMAGE_TAG}'").as_str(),
             "-f scripts/Dockerfile.service",
@@ -36,7 +40,7 @@ fn docker_service(shell: &Shell) {
     );
 
     shell.run_status(
-        &vec![
+        &[
             "docker image push",
             format!("'igncp/mahjong_service:{DOCKER_IMAGE_TAG}'").as_str(),
         ]
@@ -46,7 +50,7 @@ fn docker_service(shell: &Shell) {
 
 fn docker_front(shell: &Shell) {
     shell.run_status(
-        &vec![
+        &[
             "docker build",
             format!("-t 'igncp/mahjong_front:{DOCKER_IMAGE_TAG}'").as_str(),
             "-f scripts/Dockerfile.front",
@@ -57,7 +61,7 @@ fn docker_front(shell: &Shell) {
     );
 
     shell.run_status(
-        &vec![
+        &[
             "docker image push",
             format!("'igncp/mahjong_front:{DOCKER_IMAGE_TAG}'").as_str(),
         ]

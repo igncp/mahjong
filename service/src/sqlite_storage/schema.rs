@@ -1,11 +1,32 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    auth_info (username) {
-        hashed_pass -> Text,
+    auth_info (user_id) {
+        provider -> Text,
         role -> Text,
         user_id -> Text,
+    }
+}
+
+diesel::table! {
+    auth_info_email (user_id) {
+        hashed_pass -> Text,
+        user_id -> Text,
         username -> Text,
+    }
+}
+
+diesel::table! {
+    auth_info_github (user_id) {
+        token -> Nullable<Text>,
+        user_id -> Text,
+        username -> Text,
+    }
+}
+
+diesel::table! {
+    auth_info_providers (id) {
+        id -> Nullable<Text>,
     }
 }
 
@@ -75,6 +96,7 @@ diesel::table! {
     game_settings (game_id) {
         ai_enabled -> Integer,
         auto_sort_players -> Text,
+        auto_stop_claim_meld -> Text,
         discard_wait_ms -> Nullable<Integer>,
         fixed_settings -> Integer,
         game_id -> Text,
@@ -91,11 +113,17 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(auth_info -> auth_info_providers (provider));
+diesel::joinable!(auth_info_email -> auth_info (user_id));
+diesel::joinable!(auth_info_github -> auth_info (user_id));
 diesel::joinable!(game_player -> game (game_id));
 diesel::joinable!(game_player -> player (player_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     auth_info,
+    auth_info_email,
+    auth_info_github,
+    auth_info_providers,
     game,
     game_board,
     game_draw_wall,

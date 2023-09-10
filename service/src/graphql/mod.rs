@@ -1,5 +1,7 @@
 use crate::{
-    auth::GetAuthInfo, graphql::gql_game::GraphQLServiceGameSummary, http_server::DataStorage,
+    auth::{AuthInfoData, GetAuthInfo},
+    graphql::gql_game::GraphQLServiceGameSummary,
+    http_server::DataStorage,
 };
 use juniper::{EmptySubscription, FieldResult, RootNode};
 use mahjong_core::GameId;
@@ -90,8 +92,12 @@ impl GraphQLMutation {
 
         let auth_info = auth_info.unwrap();
 
-        if auth_info.username != "test" {
-            return Err("Player not test".into());
+        if let AuthInfoData::Email(auth_info_email) = auth_info.data {
+            if auth_info_email.username != "test" {
+                return Err("Player not test".into());
+            }
+        } else {
+            return Err("Player not found".into());
         }
 
         let games = ctx

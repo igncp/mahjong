@@ -1,6 +1,6 @@
 import { Tile } from "mahjong_sdk/dist/core";
 import { useEffectExceptOnMount } from "mahjong_sdk/dist/hooks";
-import { memo, useMemo } from "react";
+import { MouseEventHandler, memo, useMemo } from "react";
 import { ConnectDropTarget, useDrag } from "react-dnd";
 import { useTranslation } from "react-i18next";
 
@@ -12,20 +12,24 @@ type Props = {
   draggableItem?: unknown;
   draggableType?: string;
   dropRef?: ConnectDropTarget;
+  isDraggingOther?: boolean;
+  onClick?: MouseEventHandler<HTMLSpanElement>;
   onIsDraggingChange?: (isDragging: boolean) => void;
   paddingLeft?: number;
-  isDraggingOther?: boolean;
   tile: Tile;
+  tooltipFormatter?: (title?: string) => React.ReactNode;
 };
 
 const TileImg = ({
   draggableItem,
   draggableType,
   dropRef,
+  isDraggingOther,
+  onClick,
   onIsDraggingChange,
   paddingLeft,
   tile,
-  isDraggingOther,
+  tooltipFormatter,
 }: Props) => {
   const { i18n } = useTranslation();
   const [{ isDragging }, dragRef] = useDrag(
@@ -51,7 +55,7 @@ const TileImg = ({
   }
 
   const imgEl = (
-    <span ref={dropRef}>
+    <span onClick={onClick} ref={dropRef}>
       <span
         style={{
           display: "inline-block",
@@ -73,11 +77,15 @@ const TileImg = ({
     </span>
   );
 
-  return (
-    <Tooltip title={isDragging || isDraggingOther ? "" : (title as string)}>
-      {imgEl}
-    </Tooltip>
-  );
+  const tooltipContent = (() => {
+    if (isDragging || isDraggingOther) return "";
+
+    if (tooltipFormatter) return tooltipFormatter(title);
+
+    return title || "";
+  })();
+
+  return <Tooltip title={tooltipContent}>{imgEl}</Tooltip>;
 };
 
 export default memo(TileImg);

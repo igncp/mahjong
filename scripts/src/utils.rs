@@ -23,7 +23,7 @@ impl Shell {
         }
         let status = std::process::Command::new("bash")
             .arg("-c")
-            .arg(format!("{prefix}{cmd}"))
+            .arg(format!("set -e\n{prefix}{cmd}"))
             .status()
             .unwrap();
 
@@ -45,7 +45,7 @@ impl Shell {
 
         let output = std::process::Command::new("bash")
             .arg("-c")
-            .arg(format!("{prefix}{cmd}"))
+            .arg(format!("set -e\n{prefix}{cmd}"))
             .output()
             .unwrap();
 

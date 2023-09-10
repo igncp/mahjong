@@ -5,7 +5,7 @@ on:
     workflows: ["Checks"]
     types: [completed]
     branches:
-      - 'main'
+      - "main"
   workflow_dispatch:
     inputs:
 
@@ -16,14 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: cachix/install-nix-action@v22
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - name: Build script
-        run: |
-          cargo build --release -p scripts
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -33,14 +28,13 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
-      - name: Install wasm-pack
+      - name: Build script
         run: |
-          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          touch ./scripts/nix/is-docker-ci
+          nix develop path:$(pwd) -c rustup install stable
       - name: Build docker image
         env:
+          NEXT_PUBLIC_GITHUB_CLIENT_ID: 5b79179dd44f90e1a63a
           NEXT_PUBLIC_SERVICE_URL: https://mahjong-rust.com/api
         run: |
-          ./target/release/scripts docker
+          nix develop path:$(pwd) -c cargo run --release -p scripts docker

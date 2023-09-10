@@ -68,11 +68,25 @@ const Game = ({ gameId, userId }: IProps) => {
   const autoSortOptions: SelectOption[] = useMemo(
     () => [
       {
-        label: t("game.sort.yes", "Yes"),
+        label: t("game.option.yes"),
         value: "yes",
       },
       {
-        label: t("game.sort.no", "No"),
+        label: t("game.option.no"),
+        value: "no",
+      },
+    ],
+    [t]
+  );
+
+  const autoStopDrawMeldOptions: SelectOption[] = useMemo(
+    () => [
+      {
+        label: t("game.option.yes"),
+        value: "yes",
+      },
+      {
+        label: t("game.option.no"),
         value: "no",
       },
     ],
@@ -82,23 +96,23 @@ const Game = ({ gameId, userId }: IProps) => {
   const discardWaitMsOptions: SelectOption[] = useMemo(
     () => [
       {
-        label: t("game.wait.none", "None"),
+        label: t("game.wait.none"),
         value: "none",
       },
       {
-        label: t("game.wait.1sec", "1 second"),
+        label: t("game.wait.1sec"),
         value: "1s",
       },
       {
-        label: t("game.wait.10sec", "10 seconds"),
+        label: t("game.wait.10sec"),
         value: "10s",
       },
       {
-        label: t("game.wait.1min", "1 minute"),
+        label: t("game.wait.1min"),
         value: "1m",
       },
       {
-        label: t("game.wait.block", "Block"),
+        label: t("game.wait.block"),
         value: "block",
       },
     ],
@@ -198,10 +212,10 @@ const Game = ({ gameId, userId }: IProps) => {
   });
 
   const windToText: Record<Wind, string> = {
-    [Wind.East]: t("game.wind.east", "East"),
-    [Wind.North]: t("game.wind.north", "North"),
-    [Wind.South]: t("game.wind.south", "South"),
-    [Wind.West]: t("game.wind.west", "West"),
+    [Wind.East]: t("game.wind.east"),
+    [Wind.North]: t("game.wind.north"),
+    [Wind.South]: t("game.wind.south"),
+    [Wind.West]: t("game.wind.west"),
   };
 
   if (!serviceGameSummary) return null;
@@ -261,6 +275,15 @@ const Game = ({ gameId, userId }: IProps) => {
     });
   };
 
+  const onAutoStopDrawMeldChange = (value: string) => {
+    const boolValue = value === "yes";
+
+    serviceGameM.setGameSettings({
+      ...serviceGameSummary.settings,
+      auto_stop_claim_meld: boolValue,
+    });
+  };
+
   const dealerPlayerId =
     serviceGameSummary.game_summary.players[
       serviceGameSummary.game_summary.round.dealer_player_index
@@ -269,13 +292,22 @@ const Game = ({ gameId, userId }: IProps) => {
 
   const isDraggingOther = handTilesProps.some((props) => props.hasItemOver);
 
+  const canPassRound = serviceGameSummary.game_summary.board.length === 92;
+
   return (
     <PageContent>
       <Text style={{ marginTop: "20px" }}>
         <b style={{ fontSize: "20px" }}>{player.name}</b> (
-        {t("game.points", "{{count}} points", {
-          count: serviceGameSummary.game_summary.score[userId],
-        })}
+        <span
+          style={{
+            fontWeight:
+              serviceGameSummary.game_summary.score[userId] > 0 ? 700 : 400,
+          }}
+        >
+          {t("game.points", "{{count}} points", {
+            count: serviceGameSummary.game_summary.score[userId],
+          })}
+        </span>
         )
         {process.env.NODE_ENV !== "production" && (
           <>
@@ -285,19 +317,16 @@ const Game = ({ gameId, userId }: IProps) => {
         )}
       </Text>
       <Text>
-        {t("game.currentWind", "Current wind:")}{" "}
+        {t("game.currentWind")}{" "}
         <b>{windToText[serviceGameSummary.game_summary.round.wind]}</b>,{" "}
-        {t("game.currentDealer", "current dealer:")} <b>{dealerPlayer.name}</b>
+        {t("game.currentDealer")} <b>{dealerPlayer.name}</b>
       </Text>
       <span ref={boardDropRef}>
         <Card
           bodyStyle={{ padding: 0 }}
-          title={`${t("game.board", "Board")} (${
+          title={`${t("game.board")} (${
             serviceGameSummary.game_summary.board.length
-          } / ${
-            serviceGameSummary.game_summary.draw_wall_count +
-            serviceGameSummary.game_summary.board.length
-          })`}
+          } / 92)`}
         >
           <GameBoard
             activePlayer={turnPlayer.id}
@@ -323,9 +352,7 @@ const Game = ({ gameId, userId }: IProps) => {
               {t("game.currentTurn")}:{" "}
               <b>
                 {turnPlayer.name}
-                {turnPlayer.id === player.id
-                  ? ` (${t("game.itsYou", "it's you")})`
-                  : ""}
+                {turnPlayer.id === player.id ? ` (${t("game.itsYou")})` : ""}
               </b>
             </>
           }
@@ -354,7 +381,7 @@ const Game = ({ gameId, userId }: IProps) => {
                 }}
                 type="primary"
               >
-                {t("game.passTurn", "Pass turn")}
+                {t("game.passTurn")}
               </Button>
               <Button
                 disabled={disabled}
@@ -363,9 +390,19 @@ const Game = ({ gameId, userId }: IProps) => {
                 }}
                 type="primary"
               >
-                {t("game.claimTile", "Claim tile")}
+                {t("game.claimTile")}
                 {claimTileTitle ? `: ${claimTileTitle}` : ""}
               </Button>
+              {canPassRound && (
+                <Button
+                  onClick={() => {
+                    serviceGameM.passRound();
+                  }}
+                  type="primary"
+                >
+                  {t("game.passRound", "Pass round")}
+                </Button>
+              )}
             </div>
           );
         })()}
@@ -375,8 +412,7 @@ const Game = ({ gameId, userId }: IProps) => {
           title={
             <>
               <Tooltip title={t("game.discardInfo")}>
-                {t("game.hand", "Your hand")}: {hand.length}{" "}
-                <InfoCircleOutlined />
+                {t("game.hand")}: {hand.length} <InfoCircleOutlined rev="" />
               </Tooltip>
             </>
           }
@@ -432,55 +468,58 @@ const Game = ({ gameId, userId }: IProps) => {
                       serviceGameM.breakMeld(setId);
                     }}
                   >
-                    {t("game.breakMeld", "Break meld")}
+                    {t("game.breakMeld")}
                   </Button>
                 )}
               </div>
             </Card>
           );
         })}
-        {possibleMelds.map((possibleMeld, index) => (
-          <Card
-            className={styles.cardSmall}
-            key={index}
-            title={
-              <Text>
-                <b>{t("game.possibleMeld", "Possible meld")}</b>
-              </Text>
-            }
-          >
-            <div className={styles.possibleMeld}>
-              <div>
-                {possibleMeld.tiles.map((tileId) => {
-                  const tile = serviceGameM.getTile(tileId);
+        {possibleMelds.map((possibleMeld, index) => {
+          const meldByClaiming =
+            possibleMeld.tiles.filter(
+              (tileId) =>
+                serviceGameSummary.game_summary.hand.find(
+                  (handTile) => handTile.id === tileId
+                ) === undefined
+            ).length !== 0;
 
-                  return (
-                    <span key={tileId}>
-                      <TileImg tile={tile} />
-                    </span>
-                  );
-                })}
+          return (
+            <Card
+              className={styles.cardSmall}
+              key={index}
+              title={
+                <Text>
+                  <b>{t("game.possibleMeld")}</b>
+                  {meldByClaiming && ` (${t("game.claiming")})`}
+                </Text>
+              }
+            >
+              <div className={styles.possibleMeld}>
+                <div>
+                  {possibleMeld.tiles.map((tileId) => {
+                    const tile = serviceGameM.getTile(tileId);
+
+                    return (
+                      <span key={tileId}>
+                        <TileImg tile={tile} />
+                      </span>
+                    );
+                  })}
+                </div>
+                <Button
+                  disabled={loading || meldByClaiming}
+                  onClick={() => {
+                    serviceGameM.createMeld(possibleMeld.tiles);
+                  }}
+                  type="primary"
+                >
+                  {t("game.createMeld")}
+                </Button>
               </div>
-              <Button
-                disabled={
-                  loading ||
-                  possibleMeld.tiles.filter(
-                    (tileId) =>
-                      serviceGameSummary.game_summary.hand.find(
-                        (handTile) => handTile.id === tileId
-                      ) === undefined
-                  ).length !== 0
-                }
-                onClick={() => {
-                  serviceGameM.createMeld(possibleMeld.tiles);
-                }}
-                type="primary"
-              >
-                {t("game.createMeld", "Create meld")}
-              </Button>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
         {gameState[0]?.game_summary.players.reduce((acc, playerId) => {
           const playerHand = gameState[0]?.game_summary.other_hands[playerId];
 
@@ -505,7 +544,7 @@ const Game = ({ gameId, userId }: IProps) => {
                   title={
                     <Text>
                       <b>
-                        {t("game.visibleMeld", "Meld of {{player}}", {
+                        {t("game.visibleMeld", {
                           player: otherPlayer?.name,
                         })}
                       </b>
@@ -535,7 +574,7 @@ const Game = ({ gameId, userId }: IProps) => {
           className={styles.cardSmall}
           title={
             <Text>
-              <b>{t("game.actions", "Actions")}</b>
+              <b>{t("game.actions")}</b>
             </Text>
           }
         >
@@ -546,10 +585,7 @@ const Game = ({ gameId, userId }: IProps) => {
                 const sendErrorMessage = () => {
                   // TODO: Move to the error emitter
                   messageApi.open({
-                    content: t(
-                      "game.error.invalidDraw",
-                      "You can't draw a tile now. You can only draw a tile when it is your turn and you didn't draw yet. With the AI enabled, it will draw automatically."
-                    ),
+                    content: t("game.error.invalidDraw"),
                     type: "error",
                   });
                 };
@@ -567,7 +603,7 @@ const Game = ({ gameId, userId }: IProps) => {
                 });
               }}
             >
-              {t("game.drawTile", "Draw tile")}
+              {t("game.drawTile")}
             </Button>
             <Button
               disabled={loading}
@@ -575,7 +611,7 @@ const Game = ({ gameId, userId }: IProps) => {
                 serviceGameM.sortHands();
               }}
             >
-              {t("game.sortHand", "Sort hand")}
+              {t("game.sortHand")}
             </Button>
             <Button
               disabled={loading}
@@ -589,7 +625,7 @@ const Game = ({ gameId, userId }: IProps) => {
                 });
               }}
             >
-              {t("game.continueAI", "Continue AI")}
+              {t("game.continueAI")}
             </Button>
             <Button
               disabled={loading}
@@ -597,7 +633,7 @@ const Game = ({ gameId, userId }: IProps) => {
                 serviceGameM.sayMahjong();
               }}
             >
-              {t("game.sayMahjong", "Say Mahjong")}
+              {t("game.sayMahjong")}
             </Button>
           </div>
         </Card>
@@ -606,7 +642,7 @@ const Game = ({ gameId, userId }: IProps) => {
           className={`${styles.cardSmall} ${styles.cardOtherPlayers}`}
           title={
             <Text>
-              <b>{t("game.otherPlayers", "Other players")}</b>
+              <b>{t("game.otherPlayers")}</b>
             </Text>
           }
         >
@@ -629,7 +665,7 @@ const Game = ({ gameId, userId }: IProps) => {
                       }}
                     >
                       {player.name} ({" "}
-                      {t("game.points", "{{count}} points", {
+                      {t("game.points", {
                         count: serviceGameSummary.game_summary.score[playerId],
                       })}
                       )
@@ -641,16 +677,13 @@ const Game = ({ gameId, userId }: IProps) => {
             style={{ background: "white" }}
           />
         </Card>
-        <Card
-          className={styles.cardSmall}
-          title={t("game.settings.title", "Settings")}
-        >
+        <Card className={styles.cardSmall} title={t("game.settings.title")}>
           <form className={styles.cardContentSettings}>
             <div className={styles.settingsFormInner}>
               <Text>
-                <b>{t("game.AI.title", "AI")}</b>:{" "}
+                <b>{t("game.AI.title")}</b>:{" "}
                 <label style={{ marginRight: "10px" }}>
-                  {t("game.AI.enabled", "Enabled")}
+                  {t("game.AI.enabled")}
                   <input
                     checked={serviceGameSummary.settings.ai_enabled}
                     name="ai_enabled"
@@ -660,7 +693,7 @@ const Game = ({ gameId, userId }: IProps) => {
                   />
                 </label>
                 <label>
-                  {t("game.AI.disabled", "Disabled")}
+                  {t("game.AI.disabled")}
                   <input
                     checked={!serviceGameSummary.settings.ai_enabled}
                     name="ai_enabled"
@@ -682,7 +715,7 @@ const Game = ({ gameId, userId }: IProps) => {
                 options={discardWaitMsOptions}
                 style={{ width: 120 }}
               />
-              <Text>{t("game.autoSort", "Auto sort when drawing tile")}</Text>
+              <Text>{t("game.autoSort")}</Text>
               <Select
                 defaultValue={
                   serviceGameSummary.settings.auto_sort ? "yes" : "no"
@@ -690,6 +723,18 @@ const Game = ({ gameId, userId }: IProps) => {
                 disabled={false}
                 onChange={onAutoSortChange}
                 options={autoSortOptions}
+                style={{ width: 120 }}
+              />
+              <Text>{t("game.autoStopDrawMeld")}</Text>
+              <Select
+                defaultValue={
+                  serviceGameSummary.settings.auto_stop_claim_meld
+                    ? "yes"
+                    : "no"
+                }
+                disabled={false}
+                onChange={onAutoStopDrawMeldChange}
+                options={autoStopDrawMeldOptions}
                 style={{ width: 120 }}
               />
             </div>

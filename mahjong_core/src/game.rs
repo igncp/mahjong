@@ -110,7 +110,13 @@ impl Game {
     }
 
     pub fn pass_null_round(&mut self) -> bool {
-        debug_assert!(self.phase == GamePhase::Playing);
+        if !self.table.draw_wall.is_empty() || self.round.tile_claimed.is_some() {
+            for hand in self.table.hands.values() {
+                if hand.0.len() == 14 || hand.can_say_mahjong() {
+                    return false;
+                }
+            }
+        }
 
         self.round.move_after_draw();
         self.table = DEFAULT_DECK.create_table(&self.players);
@@ -122,19 +128,19 @@ impl Game {
         self.phase = GamePhase::Playing;
     }
 
-    fn get_possible_melds_for_player(
+    // If `check_for_mahjong` is true, then it will only check for mahjong, if is false, then it
+    // will check for melds that are not mahjong (they are exclusive)
+    pub fn get_possible_melds_for_player(
         &self,
         player: &PlayerId,
         check_for_mahjong: bool,
     ) -> Vec<PossibleMeld> {
         let mut melds: Vec<PossibleMeld> = vec![];
 
-        let tile_claimed = &self.round.get_claimable_tile(player);
-        let player_hand = self.table.hands.get(player).unwrap();
-        let can_claim_tile = tile_claimed.is_some() && player_hand.0.len() == 13;
+        let (can_claim_tile, tile_claimed, player_hand) = self.get_can_claim_tile(player);
 
         let hand = if can_claim_tile {
-            let mut hand = player_hand.clone();
+            let mut hand = player_hand.unwrap().clone();
             hand.0.push(HandTile {
                 concealed: true,
                 id: tile_claimed.unwrap(),
@@ -142,7 +148,7 @@ impl Game {
             });
             hand
         } else {
-            player_hand.clone()
+            player_hand.unwrap().clone()
         };
 
         let mut round = self.round.clone();
@@ -171,6 +177,20 @@ impl Game {
         }
 
         melds
+    }
+
+    pub fn get_can_claim_tile(&self, player: &PlayerId) -> (bool, Option<TileId>, Option<&Hand>) {
+        let tile_claimed = self.round.get_claimable_tile(player);
+        let player_hand = self.table.hands.get(player);
+
+        if player_hand.is_none() {
+            return (false, None, None);
+        }
+
+        let player_hand = player_hand.unwrap();
+        let can_claim_tile = tile_claimed.is_some() && player_hand.0.len() == 13;
+
+        (can_claim_tile, tile_claimed, Some(player_hand))
     }
 
     pub fn get_possible_melds(&self, early_return: bool) -> Vec<PossibleMeld> {

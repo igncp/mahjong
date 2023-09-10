@@ -2,17 +2,16 @@ import { Page } from "@playwright/test";
 import { tokenObserver } from "mahjong_sdk/dist/auth";
 import { setBaseUrl } from "mahjong_sdk/dist/http-client";
 
-import { TOKEN_KEY } from "src/lib/auth";
+import { TOKEN_KEY } from "src/lib/constants";
 
 export class API {
   constructor(private pageBaseURL: string, private page: Page) {}
 
   async setUpAuthTokenFromPage() {
-    const token = await this.page.evaluate(() => {
-      const token = localStorage.getItem("mahjongAuthToken");
-
-      return token;
-    }, [TOKEN_KEY]);
+    const token = await this.page.evaluate(
+      ([tokenKey]) => localStorage.getItem(tokenKey),
+      [TOKEN_KEY]
+    );
 
     if (token) {
       tokenObserver.next(token);

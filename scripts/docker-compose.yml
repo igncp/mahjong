@@ -4,6 +4,9 @@ services:
   server:
     image: igncp/mahjong_service:${DOCKER_TAG}
     environment:
+      FRONTEND_URL: ${FRONTEND_URL}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_SECRET: ${GITHUB_SECRET}
       MAHJONG_ADMIN_PASS: ${MAHJONG_ADMIN_PASS}
       MAHJONG_JWT_SECRET: ${MAHJONG_JWT_SECRET}
       MAHJONG_LOGGER_LEVEL: ${MAHJONG_LOGGER_LEVEL}

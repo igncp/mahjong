@@ -1,7 +1,8 @@
 {
   "auth": {
     "button": {
-      "submit": "提交"
+      "submit": "提交",
+      "submitGithub": "使用Github登錄"
     },
     "error": {
       "invalidUserPass": "無效的用戶名或密碼",
@@ -27,6 +28,7 @@
       "intro": "突出顯示的用戶是當前回合中應該玩的用戶"
     }
   },
+  "code": "代碼庫",
   "dashboard": {
     "cancel": "取消",
     "defaultPlayerName": "玩家 {{number}}",
@@ -59,18 +61,20 @@
       "title": "人工智能"
     },
     "autoSort": "繪製圖塊時自動排序",
+    "autoStopDrawMeld": "當可以領取牌進行融合時自動停止",
     "blockTime": {
       "desc": "棄牌後下一回合的格擋時間"
     },
     "board": "遊戲板",
     "breakMeld": "打破融合",
+    "claiming": "如果領取麻將牌",
     "claimTile": "認領瓷磚",
     "continueAI": "繼續人工智能",
     "createMeld": "創造融合",
     "currentDealer": "當前經銷商:",
     "currentTurn": "當前回合",
     "currentWind": "當前風:",
-    "discardInfo": "輪到您時，您可以通過將其中一塊瓷磚拖到板上來丟棄",
+    "discardInfo": "輪到您時，您可以通過將其中一個圖塊拖到棋盤上或雙擊圖塊來丟棄",
     "drawTile": "繪製瓷磚",
     "error": {
       "invalidDraw": "你現在不能畫瓷磚。 你只能在輪到你的時候畫一張牌，而你還沒有畫。 啟用AI後，它將自動繪製。",
@@ -83,17 +87,18 @@
       "open": "可見的",
       "title": "牌組合"
     },
+    "option": {
+      "no": "不",
+      "yes": "是的"
+    },
     "otherPlayers": "其他玩家",
+    "passRound": "進入下一輪",
     "passTurn": "轉彎",
     "points_other": "{{count}}分",
     "possibleMeld": "可能的融合",
     "sayMahjong": "說麻將",
     "settings": {
       "title": "設置"
-    },
-    "sort": {
-      "no": "不",
-      "yes": "是的"
     },
     "sortHand": "排序手牌",
     "visibleMeld": "{{player}}的牌融合",
@@ -169,6 +174,8 @@
     "white": "白（箭）",
     "winter": "冬天（季）"
   },
+  "tilesInBoard_other": "板上的瓷磚: {{count}}",
+  "tilesInMelds_other": "其他融合中的瓷磚: {{count}}",
   "ui": {
     "copied": "複製到剪貼板"
   }

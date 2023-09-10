@@ -10,10 +10,11 @@ mod test_ai;
 // Naive AI as a placeholder which can be extended later
 pub struct StandardAI<'a> {
     ai_players: FxHashSet<PlayerId>,
-    pub game: &'a mut Game,
-    pub can_pass_turn: bool,
+    pub auto_stop_claim_meld: FxHashSet<PlayerId>,
     pub can_draw_round: bool,
+    pub can_pass_turn: bool,
     pub draw_tile_for_real_player: bool,
+    pub game: &'a mut Game,
     pub sort_on_draw: bool,
 }
 
@@ -33,11 +34,16 @@ pub fn sort_by_is_mahjong(a: &PossibleMeld, b: &PossibleMeld) -> std::cmp::Order
 }
 
 impl<'a> StandardAI<'a> {
-    pub fn new(game: &'a mut Game, ai_players: FxHashSet<PlayerId>) -> Self {
+    pub fn new(
+        game: &'a mut Game,
+        ai_players: FxHashSet<PlayerId>,
+        auto_stop_claim_meld: FxHashSet<PlayerId>,
+    ) -> Self {
         Self {
             ai_players,
-            can_pass_turn: true,
+            auto_stop_claim_meld,
             can_draw_round: false,
+            can_pass_turn: true,
             draw_tile_for_real_player: true,
             game,
             sort_on_draw: false,
@@ -51,10 +57,6 @@ impl<'a> StandardAI<'a> {
                 tile_discarded: None,
             };
         }
-
-        // TODO: Check if any player can claim a tile that would produce a meld
-        // - Stop if a non-AI player could claim the tile for meld
-        // let possible_melds_with_discard = self.game.get_possible_melds_by_discard();
 
         // Check if any meld can be created with existing cards
         let mut melds = self.game.get_possible_melds(true);
@@ -160,6 +162,48 @@ impl<'a> StandardAI<'a> {
                     }
                 }
             } else if self.can_pass_turn {
+                let auto_stop_claim_meld = self.auto_stop_claim_meld.clone();
+                if !auto_stop_claim_meld.is_empty() {
+                    for player in auto_stop_claim_meld {
+                        if player.is_empty() {
+                            continue;
+                        }
+                        let (can_claim_tile, tile_claimed, _) =
+                            self.game.get_can_claim_tile(&player);
+
+                        if !can_claim_tile {
+                            continue;
+                        }
+
+                        let tile_claimed = tile_claimed.unwrap();
+
+                        let melds_mahjong = self.game.get_possible_melds_for_player(&player, true);
+                        let melds_with_draw_mahjong = melds_mahjong
+                            .iter()
+                            .filter(|meld| meld.tiles.contains(&tile_claimed))
+                            .collect::<Vec<&PossibleMeld>>();
+
+                        if !melds_with_draw_mahjong.is_empty() {
+                            return PlayActionResult {
+                                changed: false,
+                                tile_discarded: None,
+                            };
+                        }
+
+                        let melds_normal = self.game.get_possible_melds_for_player(&player, false);
+                        let melds_with_draw_normal = melds_normal
+                            .iter()
+                            .filter(|meld| meld.tiles.contains(&tile_claimed))
+                            .collect::<Vec<&PossibleMeld>>();
+
+                        if !melds_with_draw_normal.is_empty() {
+                            return PlayActionResult {
+                                changed: false,
+                                tile_discarded: None,
+                            };
+                        }
+                    }
+                }
                 let success = self.game.round.next(&self.game.table.hands);
 
                 if success {

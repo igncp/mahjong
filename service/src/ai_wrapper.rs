@@ -11,7 +11,12 @@ pub struct AIWrapper<'a> {
 impl<'a> AIWrapper<'a> {
     pub fn new(service_game: &'a mut ServiceGame, draw_tile_for_real_player: Option<bool>) -> Self {
         let ai_players = service_game.get_ai_players();
-        let mut standard_ai = StandardAI::new(&mut service_game.game, ai_players);
+
+        let mut standard_ai = StandardAI::new(
+            &mut service_game.game,
+            ai_players,
+            service_game.settings.auto_stop_claim_meld.clone(),
+        );
 
         if let Some(draw_tile_for_real_player) = draw_tile_for_real_player {
             standard_ai.draw_tile_for_real_player = draw_tile_for_real_player;

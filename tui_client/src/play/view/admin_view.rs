@@ -24,7 +24,7 @@ pub fn draw_admin_view<B: Backend>(f: &mut Frame<B>, app: &App, ui_state: &mut U
 
     match ui_state.screen {
         UIScreen::Init => {
-            let init_text = vec![
+            let init_text = [
                 "Welcome to Mahjong!",
                 "Input 'h' to display the help",
                 &ui_state.input,

@@ -3,13 +3,14 @@ import HttpApi from "i18next-http-backend";
 import { tokenObserver } from "mahjong_sdk/dist/auth";
 import { setBaseUrl } from "mahjong_sdk/dist/http-client";
 import type { AppProps } from "next/app";
+import qs from "qs";
 import { HTML5toTouch } from "rdndmb-html5-to-touch";
 import { DndProvider } from "react-dnd-multi-backend";
 import { initReactI18next } from "react-i18next";
 import { I18nextProvider } from "react-i18next";
 
 import { DnDPreview } from "src/containers/dnd-preview";
-import { TOKEN_KEY } from "src/lib/auth";
+import { TOKEN_KEY } from "src/lib/constants";
 import { env } from "src/lib/env";
 import "src/styles/global.css";
 
@@ -32,6 +33,14 @@ const setupApp = async () => {
   });
 
   if (typeof window !== "undefined") {
+    const query = qs.parse(window.location.search?.replace(/^\?/, "") || "");
+
+    if (query.token) {
+      localStorage.setItem(TOKEN_KEY, query.token as string);
+
+      window.location.replace("/");
+    }
+
     tokenObserver.next(localStorage.getItem(TOKEN_KEY));
 
     tokenObserver.subscribe((token) => {

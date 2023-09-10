@@ -38,7 +38,7 @@ const Header = () => {
         </Button>
         <Button className={styles.githubButton} style={spacing}>
           <Link href="https://github.com/igncp/mahjong" target="_blank">
-            GitHub
+            {t("code")}
           </Link>
         </Button>
         {isLoggedIn && (

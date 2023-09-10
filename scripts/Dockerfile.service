@@ -1,34 +1,18 @@
-FROM debian:bullseye-slim as builder
-USER root
-RUN apt-get update && apt-get install -y libssl-dev
-RUN useradd -m -s /bin/bash rust && mkdir -p /app && chown -R rust:rust /app
-
-RUN apt-get install -y curl pkg-config build-essential sqlite3 libsqlite3-dev
-
-USER rust
-
-WORKDIR /app
-
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup.sh \
-  && bash rustup.sh -y
-
-COPY --chown=rust:rust . .
-
-RUN . "$HOME/.cargo/env" \
-  && cargo build \
-    --release \
-    -p mahjong_service
-
-CMD find /app -type f -name "mahjong_service"
-
 FROM debian:bullseye-slim
 USER root
-RUN apt-get update && apt-get install -y libssl-dev libsqlite3-dev sqlite3
-RUN useradd -m -s /bin/bash rust && mkdir -p /app && chown -R rust:rust /app
+
+# libssl3 needs unstable
+RUN echo 'deb http://deb.debian.org/debian unstable main' >> /etc/apt/sources.list \
+  && apt-get update \
+  && apt-get install -y libssl-dev libsqlite3-dev sqlite3 ca-certificates libssl3
+
+RUN useradd -m -s /bin/bash rust \
+  && mkdir -p /app \
+  && chown -R rust:rust /app
 
 USER rust
 WORKDIR /app
 
-COPY --chown=rust:rust --from=builder /app/target/release/mahjong_service .
+COPY --chown=rust:rust service/target/release/mahjong_service .
 
 CMD ./mahjong_service

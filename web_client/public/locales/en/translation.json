@@ -1,7 +1,8 @@
 {
   "auth": {
     "button": {
-      "submit": "Submit"
+      "submit": "Submit",
+      "submitGithub": "Login with Github"
     },
     "error": {
       "invalidUserPass": "Invalid username or password",
@@ -27,6 +28,7 @@
       "intro": "The highlighted user is the one who should play in the current turn"
     }
   },
+  "code": "Code",
   "dashboard": {
     "cancel": "Cancel",
     "defaultPlayerName": "Player {{number}}",
@@ -60,18 +62,20 @@
       "title": "AI"
     },
     "autoSort": "Auto sort when drawing tile",
+    "autoStopDrawMeld": "Auto stop when can claim for meld",
     "blockTime": {
       "desc": "Block time for next turn pass after discard"
     },
     "board": "Board",
     "breakMeld": "Break meld",
+    "claiming": "claiming",
     "claimTile": "Claim tile",
     "continueAI": "Continue AI",
     "createMeld": "Create meld",
     "currentDealer": "current dealer:",
     "currentTurn": "Current turn",
     "currentWind": "Current wind:",
-    "discardInfo": "You can discard by dragging one of your tiles to the board when it is your turn",
+    "discardInfo": "You can discard by dragging one of your tiles to the board when it is your turn, or double-clicking into the tile.",
     "drawTile": "Draw tile",
     "error": {
       "invalidDraw": "You can't draw a tile now. You can only draw a tile when it is your turn and you didn't draw yet. With the AI enabled, it will draw automatically.",
@@ -84,7 +88,12 @@
       "open": "open",
       "title": "Meld"
     },
+    "option": {
+      "no": "No",
+      "yes": "Yes"
+    },
     "otherPlayers": "Other players",
+    "passRound": "Pass round",
     "passTurn": "Pass turn",
     "points_one": "{{count}} points",
     "points_other": "{{count}} points",
@@ -92,10 +101,6 @@
     "sayMahjong": "Say Mahjong",
     "settings": {
       "title": "Settings"
-    },
-    "sort": {
-      "no": "No",
-      "yes": "Yes"
     },
     "sortHand": "Sort hand",
     "visibleMeld": "Meld of {{player}}",
@@ -171,6 +176,10 @@
     "white": "White (Dragon)",
     "winter": "Winter (Season)"
   },
+  "tilesInBoard_one": "In board: {{count}}",
+  "tilesInBoard_other": "In board: {{count}}",
+  "tilesInMelds_one": "In other melds: {{count}}",
+  "tilesInMelds_other": "In other melds: {{count}}",
   "ui": {
     "copied": "copied"
   }

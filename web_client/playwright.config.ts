@@ -35,6 +35,10 @@ const config: PlaywrightTestConfig = {
   use: {
     baseURL,
   },
+  webServer: {
+    command: "npm run e2e:run",
+    port: 5000,
+  },
 };
 
 export default config;

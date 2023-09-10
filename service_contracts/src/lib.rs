@@ -12,10 +12,11 @@ mod service_player;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameSettings {
     pub ai_enabled: bool,
+    pub auto_sort_players: FxHashSet<PlayerId>,
+    pub auto_stop_claim_meld: FxHashSet<PlayerId>,
     pub discard_wait_ms: Option<i32>,
     pub fixed_settings: bool,
     pub last_discard_time: i128,
-    pub auto_sort_players: FxHashSet<PlayerId>,
 }
 
 impl Default for GameSettings {
@@ -23,6 +24,7 @@ impl Default for GameSettings {
         Self {
             ai_enabled: true,
             auto_sort_players: FxHashSet::default(),
+            auto_stop_claim_meld: FxHashSet::default(),
             discard_wait_ms: Some(1000),
             fixed_settings: false,
             last_discard_time: 0,
@@ -42,10 +44,11 @@ pub struct ServiceGame {
 #[derive(Debug, Clone, Serialize, Deserialize, juniper::GraphQLObject)]
 pub struct GameSettingsSummary {
     pub ai_enabled: bool,
+    pub auto_sort: bool,
+    pub auto_stop_claim_meld: bool,
     pub discard_wait_ms: Option<i32>,
     pub fixed_settings: bool,
     pub last_discard_time: String,
-    pub auto_sort: bool,
 }
 
 impl GameSettingsSummary {
@@ -53,6 +56,7 @@ impl GameSettingsSummary {
         Self {
             ai_enabled: settings.ai_enabled,
             auto_sort: settings.auto_sort_players.iter().any(|p| p == player_id),
+            auto_stop_claim_meld: settings.auto_stop_claim_meld.iter().any(|p| p == player_id),
             discard_wait_ms: settings.discard_wait_ms,
             fixed_settings: settings.fixed_settings,
             last_discard_time: settings.last_discard_time.to_string(),
@@ -66,6 +70,12 @@ impl GameSettingsSummary {
             new_settings.auto_sort_players.insert(player_id.clone());
         } else {
             new_settings.auto_sort_players.remove(player_id);
+        }
+
+        if self.auto_stop_claim_meld {
+            new_settings.auto_stop_claim_meld.insert(player_id.clone());
+        } else {
+            new_settings.auto_stop_claim_meld.remove(player_id);
         }
 
         new_settings.ai_enabled = self.ai_enabled;
@@ -298,6 +308,12 @@ pub struct UserPostSetAuthRequest {
 pub struct UserPostSetAuthResponse {
     pub token: String,
 }
+
+#[derive(Deserialize, Serialize)]
+pub struct UserPostPassRoundRequest {
+    pub player_id: PlayerId,
+}
+pub type UserPostPassRoundResponse = ServiceGameSummary;
 
 #[derive(Deserialize, Serialize)]
 pub struct UserGetInfoResponse {

@@ -1,9 +1,10 @@
 use super::models::{
-    DieselAuthInfo, DieselGame, DieselGameBoard, DieselGameDrawWall, DieselGameHand,
-    DieselGamePlayer, DieselGameScore, DieselGameSettings, DieselPlayer,
+    DieselAuthInfo, DieselAuthInfoEmail, DieselAuthInfoGithub, DieselGame, DieselGameBoard,
+    DieselGameDrawWall, DieselGameHand, DieselGamePlayer, DieselGameScore, DieselGameSettings,
+    DieselPlayer,
 };
 use super::schema;
-use crate::auth::AuthInfo;
+use crate::auth::{AuthInfo, AuthInfoData, AuthInfoEmail, AuthInfoGithub, Provider};
 use diesel::prelude::*;
 use diesel::SqliteConnection;
 use mahjong_core::round::{Round, RoundTileClaimed};
@@ -29,22 +30,215 @@ where
 }
 
 impl DieselAuthInfo {
-    pub fn into_raw(self) -> AuthInfo {
+    pub fn into_raw(self, data: &AuthInfoData) -> AuthInfo {
         AuthInfo {
-            hashed_pass: self.hashed_pass,
+            data: data.clone(),
             role: serde_json::from_str(&self.role).unwrap(),
             user_id: self.user_id,
-            username: self.username,
+        }
+    }
+
+    pub fn into_raw_get_data(self, connection: &mut SqliteConnection) -> AuthInfo {
+        let data = match self.provider.as_str() {
+            val if val == Provider::Email.to_string() => {
+                let data = DieselAuthInfoEmail::get_by_id(connection, &self.user_id)
+                    .expect("User not found");
+
+                AuthInfoData::Email(data.into_raw())
+            }
+            val if val == Provider::Github.to_string() => {
+                let data = DieselAuthInfoGithub::get_by_id(connection, &self.user_id)
+                    .expect("Github not found");
+
+                AuthInfoData::Github(data.into_raw())
+            }
+            _ => panic!("Unknown provider"),
+        };
+
+        AuthInfo {
+            data,
+            role: serde_json::from_str(&self.role).unwrap(),
+            user_id: self.user_id,
         }
     }
 
     pub fn from_raw(raw: &AuthInfo) -> Self {
         Self {
-            hashed_pass: raw.hashed_pass.clone(),
+            provider: match raw.data {
+                AuthInfoData::Email(_) => Provider::Email.to_string(),
+                AuthInfoData::Github(_) => Provider::Github.to_string(),
+            },
             role: serde_json::to_string(&raw.role).unwrap(),
             user_id: raw.user_id.clone(),
+        }
+    }
+
+    pub fn get_info_by_id(
+        connection: &mut SqliteConnection,
+        id: &String,
+    ) -> Result<Option<AuthInfo>, String> {
+        use schema::auth_info::dsl;
+
+        let auth_info = dsl::auth_info
+            .filter(dsl::user_id.eq(&id))
+            .limit(1)
+            .load::<Self>(connection)
+            .unwrap()
+            .get(0)
+            .map(|auth_info| auth_info.clone().into_raw_get_data(connection));
+
+        Ok(auth_info)
+    }
+
+    pub fn get_by_id_with_data(
+        connection: &mut SqliteConnection,
+        id: &String,
+        data: &AuthInfoData,
+    ) -> Option<AuthInfo> {
+        use super::schema::auth_info::dsl;
+
+        let auth_info = loop {
+            if let Ok(db_data) = dsl::auth_info
+                .filter(dsl::user_id.eq(id))
+                .limit(1)
+                .load::<Self>(connection)
+            {
+                break db_data;
+            }
+            wait_common();
+        }
+        .get(0)
+        .cloned();
+
+        auth_info.map(|auth_info_content| auth_info_content.into_raw(data))
+    }
+}
+
+impl DieselAuthInfoEmail {
+    pub fn into_raw(self) -> AuthInfoEmail {
+        AuthInfoEmail {
+            hashed_pass: self.hashed_pass,
+            id: self.user_id,
+            username: self.username,
+        }
+    }
+
+    pub fn from_raw(raw: &AuthInfoEmail) -> Self {
+        Self {
+            hashed_pass: raw.hashed_pass.clone(),
+            user_id: raw.id.clone(),
             username: raw.username.clone(),
         }
+    }
+
+    pub fn get_by_id(connection: &mut SqliteConnection, id: &String) -> Option<Self> {
+        use super::schema::auth_info_email::dsl;
+
+        loop {
+            if let Ok(data) = dsl::auth_info_email
+                .filter(dsl::user_id.eq(id))
+                .limit(1)
+                .load::<Self>(connection)
+            {
+                break data;
+            }
+            wait_common();
+        }
+        .get(0)
+        .cloned()
+    }
+
+    pub fn get_info_by_username(
+        connection: &mut SqliteConnection,
+        username: &String,
+    ) -> Result<Option<AuthInfo>, String> {
+        use schema::auth_info_email::dsl as email_dsl;
+
+        let auth_info_email = email_dsl::auth_info_email
+            .filter(email_dsl::username.eq(&username))
+            .limit(1)
+            .load::<Self>(connection)
+            .unwrap()
+            .get(0)
+            .map(|auth_info| auth_info.clone().into_raw());
+
+        if auth_info_email.is_none() {
+            return Ok(None);
+        }
+
+        let auth_info_email = auth_info_email.unwrap();
+
+        let auth_info = DieselAuthInfo::get_by_id_with_data(
+            connection,
+            &auth_info_email.id,
+            &AuthInfoData::Email(auth_info_email.clone()),
+        );
+
+        Ok(auth_info)
+    }
+}
+
+impl DieselAuthInfoGithub {
+    pub fn into_raw(self) -> AuthInfoGithub {
+        AuthInfoGithub {
+            id: self.user_id.clone(),
+            token: self.token.clone(),
+            username: self.username,
+        }
+    }
+
+    pub fn from_raw(raw: &AuthInfoGithub) -> Self {
+        Self {
+            token: raw.token.clone(),
+            user_id: raw.id.clone(),
+            username: raw.username.clone(),
+        }
+    }
+
+    pub fn get_by_id(connection: &mut SqliteConnection, id: &String) -> Option<Self> {
+        use super::schema::auth_info_github::dsl;
+
+        loop {
+            if let Ok(data) = dsl::auth_info_github
+                .filter(dsl::user_id.eq(id))
+                .limit(1)
+                .load::<Self>(connection)
+            {
+                break data;
+            }
+            wait_common();
+        }
+        .get(0)
+        .cloned()
+    }
+
+    pub fn get_info_by_username(
+        connection: &mut SqliteConnection,
+        username: &String,
+    ) -> Result<Option<AuthInfo>, String> {
+        use schema::auth_info_github::dsl as github_dsl;
+
+        let auth_info_github = github_dsl::auth_info_github
+            .filter(github_dsl::username.eq(&username))
+            .limit(1)
+            .load::<Self>(connection)
+            .unwrap()
+            .get(0)
+            .map(|auth_info| auth_info.clone().into_raw());
+
+        if auth_info_github.is_none() {
+            return Ok(None);
+        }
+
+        let auth_info_github = auth_info_github.unwrap();
+
+        let auth_info = DieselAuthInfo::get_by_id_with_data(
+            connection,
+            &auth_info_github.id,
+            &AuthInfoData::Github(auth_info_github.clone()),
+        );
+
+        Ok(auth_info)
     }
 }
 
@@ -744,6 +938,14 @@ impl DieselGameSettings {
             .collect::<Vec<_>>()
             .join(&','.to_string());
 
+        let auto_stop_claim_meld = service_game
+            .settings
+            .auto_stop_claim_meld
+            .clone()
+            .into_iter()
+            .collect::<Vec<_>>()
+            .join(&','.to_string());
+
         let settings = Self {
             last_discard_time: service_game.settings.last_discard_time as i64,
             ai_enabled: if service_game.settings.ai_enabled {
@@ -759,6 +961,7 @@ impl DieselGameSettings {
                 0
             },
             auto_sort_players,
+            auto_stop_claim_meld,
         };
 
         loop {
@@ -795,6 +998,11 @@ impl DieselGameSettings {
             discard_wait_ms: game_settings.discard_wait_ms,
             fixed_settings: game_settings.fixed_settings == 1,
             last_discard_time: game_settings.last_discard_time as i128,
+            auto_stop_claim_meld: game_settings
+                .auto_stop_claim_meld
+                .split(',')
+                .map(|s| s.to_string())
+                .collect(),
             auto_sort_players: game_settings
                 .auto_sort_players
                 .split(',')

@@ -1,8 +1,10 @@
 import { ServiceGameSummary, TileId } from "mahjong_sdk/dist/core";
 import { ModelServiceGameSummary } from "mahjong_sdk/dist/service-game-summary";
-import { useCallback, useMemo } from "react";
+import { MouseEventHandler, useCallback, useMemo } from "react";
 import { useDrop } from "react-dnd";
+import { useTranslation } from "react-i18next";
 import { Subject } from "rxjs";
+import { getIsSameTile } from "ts_sdk/dist/tile-content";
 
 export const DROP_BG = "#e7e7e7";
 export const DROP_BORDER = "2px solid #333";
@@ -24,10 +26,14 @@ export const useGameUI = ({
   serviceGameM,
   serviceGameSummary,
 }: Opts) => {
+  const { t } = useTranslation();
   const canDiscardTile = getCanDiscardTile();
   const handWithoutMelds = serviceGameSummary
     ? serviceGameM.getPlayerHandWithoutMelds()
     : [];
+  const handMelds = (serviceGameSummary?.game_summary.hand || []).filter(
+    (t) => !!t.set_id
+  );
   const [{ canDropInBoard }, boardDropRef] = useDrop(
     {
       accept: DropType.HAND_TILE,
@@ -91,13 +97,73 @@ export const useGameUI = ({
     [handHash]
   );
 
+  const handClickProps = useMemo(
+    () =>
+      handWithoutMelds.map((handTile) => {
+        const handler: MouseEventHandler<HTMLSpanElement> = (e) => {
+          const canDiscardTile = getCanDiscardTile();
+
+          if (e.detail === 2 && canDiscardTile) {
+            serviceGameM.discardTile(handTile.id);
+          }
+        };
+
+        return handler;
+      }),
+    [handHash]
+  );
+
+  const board = serviceGameSummary?.game_summary.board;
+  const visibleMelds = Object.values(
+    serviceGameSummary?.game_summary.other_hands || {}
+  )
+    .map((otherHand) => otherHand.visible)
+    .flat();
+
+  const tooltipFormatters = useMemo(
+    () =>
+      handWithoutMelds.map((handTile) =>
+        // eslint-disable-next-line react/display-name
+        (title?: string) => {
+          const tile = serviceGameM.getTile(handTile.id);
+          const sameTilesInBoard = board?.filter((t) => {
+            const boardTile = serviceGameM.getTile(t);
+            return getIsSameTile(boardTile, tile);
+          }).length;
+          const sameTilesInMelds = visibleMelds
+            .concat(handMelds)
+            .filter((otherHandTile) => {
+              const otherTile = serviceGameM.getTile(otherHandTile.id);
+              return getIsSameTile(otherTile, tile);
+            }).length;
+
+          return (
+            <>
+              {title}
+              <br />
+              {t("tilesInBoard", "In board: {{count}}", {
+                count: sameTilesInBoard,
+              })}
+              <br />
+              {t("tilesInMelds", "In other melds: {{count}}", {
+                count: sameTilesInMelds,
+              })}
+            </>
+          );
+        }
+      ),
+    [handHash, board, t, visibleMelds, handMelds]
+  );
+
   const handTilesProps = handWithoutMelds.map((_handTile, handTileIndex) => ({
     draggableItem: draggableItems[handTileIndex],
     draggableType: "handTile",
     dropRef: handDrops[handTileIndex][1],
     hasItemOver: handDrops[handTileIndex][0].isOver,
+    onClick: handClickProps[handTileIndex],
     onIsDraggingChange,
     tile: handTilesMemo[handTileIndex],
+    tooltipFormatter: tooltipFormatters[handTileIndex],
   }));
 
   return {

@@ -15,7 +15,8 @@ pub async fn run_simulation() {
         game.start_game();
 
         let ai_players = FxHashSet::from_iter(game.players.clone());
-        let mut game_ai = StandardAI::new(&mut game, ai_players);
+        let auto_stop_claim_meld = FxHashSet::default();
+        let mut game_ai = StandardAI::new(&mut game, ai_players, auto_stop_claim_meld);
 
         game_ai.can_draw_round = true;
 

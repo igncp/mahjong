@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 
 import Button from "src/ui/common/button";
 
@@ -12,22 +13,26 @@ type Props = {
   contentStyle?: React.CSSProperties;
 };
 
-const PageContent = ({ children, contentStyle, ...props }: Props) => (
-  <PageContentComp {...props}>
-    <div className={styles.headerWrapper}>
-      <Header />
-    </div>
-    <div className={styles.pageInner}>
-      <main style={contentStyle}>{children}</main>
-      <footer>
-        <Button className={styles.githubButton}>
-          <Link href="https://github.com/igncp/mahjong" target="_blank">
-            GitHub
-          </Link>
-        </Button>
-      </footer>
-    </div>
-  </PageContentComp>
-);
+const PageContent = ({ children, contentStyle, ...props }: Props) => {
+  const { t } = useTranslation();
+
+  return (
+    <PageContentComp {...props}>
+      <div className={styles.headerWrapper}>
+        <Header />
+      </div>
+      <div className={styles.pageInner}>
+        <main style={contentStyle}>{children}</main>
+        <footer>
+          <Button className={styles.githubButton}>
+            <Link href="https://github.com/igncp/mahjong" target="_blank">
+              {t("code")}
+            </Link>
+          </Button>
+        </footer>
+      </div>
+    </PageContentComp>
+  );
+};
 
 export default PageContent;

@@ -21,7 +21,7 @@ mod wasm;
 // This is specially convenient for maintaining the clippy rules, which need to be in each crate
 fn list(current_dir: &str) {
     let prefix = if current_dir == "scripts" { "../" } else { "" };
-    let list_str = vec![
+    let list_str = [
         "mahjong_core/src/lib.rs",
         "scripts/src/main.rs",
         "service/src/main.rs",

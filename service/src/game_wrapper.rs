@@ -6,7 +6,7 @@ use crate::{
 };
 use actix_web::{web, HttpResponse};
 use mahjong_core::{game::GameVersion, Game, PlayerId, TileId};
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use service_contracts::{
     AdminPostAIContinueRequest, AdminPostAIContinueResponse, AdminPostBreakMeldRequest,
     AdminPostBreakMeldResponse, AdminPostClaimTileResponse, AdminPostCreateMeldRequest,
@@ -16,8 +16,8 @@ use service_contracts::{
     SocketMessage, UserPostAIContinueRequest, UserPostAIContinueResponse, UserPostBreakMeldRequest,
     UserPostBreakMeldResponse, UserPostCreateGameResponse, UserPostCreateMeldRequest,
     UserPostCreateMeldResponse, UserPostDiscardTileResponse, UserPostDrawTileResponse,
-    UserPostMovePlayerResponse, UserPostSayMahjongResponse, UserPostSetGameSettingsResponse,
-    UserPostSortHandResponse,
+    UserPostMovePlayerResponse, UserPostPassRoundResponse, UserPostSayMahjongResponse,
+    UserPostSetGameSettingsResponse, UserPostSortHandResponse,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::debug;
@@ -261,6 +261,27 @@ impl<'a> GameWrapper<'a> {
             ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
 
         self.save_and_return(&response, "Error when drawing tile")
+            .await
+    }
+
+    pub async fn handle_user_pass_round(&mut self, player_id: &PlayerId) -> HttpResponse {
+        let current_player = self.service_game.game.get_current_player();
+        if &current_player != player_id {
+            return HttpResponse::BadRequest().body("Not your turn");
+        }
+
+        let success = self.service_game.game.pass_null_round();
+
+        if !success {
+            return HttpResponse::BadRequest().body("Error when passing round");
+        }
+
+        self.sync_game_updated();
+
+        let game_summary: UserPostPassRoundResponse =
+            ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
+
+        self.save_and_return(&game_summary, "Error passing round")
             .await
     }
 
@@ -664,11 +685,22 @@ fn create_game(
         }
     }
 
+    let mut auto_stop_claim_meld = FxHashSet::<PlayerId>::default();
+
+    if player.is_some() {
+        auto_stop_claim_meld.insert(player.as_ref().unwrap().id.clone());
+    }
+
+    let settings = GameSettings {
+        auto_stop_claim_meld,
+        ..GameSettings::default()
+    };
+
     ServiceGame {
         created_at: timestamp,
         game,
         players: players_set,
-        settings: GameSettings::default(),
+        settings,
         updated_at: timestamp,
     }
 }

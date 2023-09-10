@@ -52,6 +52,8 @@ import {
   TUserPostDrawTileResponse,
   TUserPostMovePlayerRequest,
   TUserPostMovePlayerResponse,
+  TUserPostPassRoundRequest,
+  TUserPostPassRoundResponse,
   TUserPostSayMahjongRequest,
   TUserPostSayMahjongResponse,
   TUserPostSetAuthRequest,
@@ -365,6 +367,18 @@ export const HttpClient = {
     return from(
       fetchJson<TUserPostMovePlayerResponse>(
         `/v1/user/game/${gameId}/move-player`,
+        {
+          body: JSON.stringify(body),
+          method: "POST",
+        }
+      )
+    );
+  },
+
+  userPassRound(gameId: GameId, body: TUserPostPassRoundRequest) {
+    return from(
+      fetchJson<TUserPostPassRoundResponse>(
+        `/v1/user/game/${gameId}/pass-round`,
         {
           body: JSON.stringify(body),
           method: "POST",

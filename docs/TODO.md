@@ -1,7 +1,6 @@
 ## Doing
 
-- Add settings for users
-    - Stop AI when there is a possible meld
+- Change player names when they are AI
 - Form to create AI game vs real players game
     - Link to invite players to game
 - Setup code-push and webview components in the mobile app

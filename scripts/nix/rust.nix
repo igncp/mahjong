@@ -1,6 +1,7 @@
 {
   pkgs,
   system,
+  is-docker-ci,
 }: let
   service_manifest = (pkgs.lib.importTOML ../../service/Cargo.toml).package;
 in {
@@ -9,15 +10,25 @@ in {
       sqlite
       openssl
       wasm-pack
-      wasm-bindgen-cli # Required in darwin
-      diesel-cli
-      cargo-flamegraph
       rustup
-      curl
     ]
     ++ (
+      if is-docker-ci
+      then []
+      else
+        with pkgs; [
+          curl
+          cargo-flamegraph
+          diesel-cli
+        ]
+    )
+    ++ (
       if system == "aarch64-darwin"
-      then [pkgs.libiconv pkgs.darwin.apple_sdk.frameworks.Security]
+      then [
+        pkgs.libiconv
+        pkgs.darwin.apple_sdk.frameworks.Security
+        wasm-bindgen-cli
+      ]
       else []
     );
   mahjong_service = pkgs.rustPlatform.buildRustPackage {

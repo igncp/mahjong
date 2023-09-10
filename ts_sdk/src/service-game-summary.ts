@@ -3,6 +3,7 @@ import { Subject } from "rxjs";
 import {
   Deck,
   GameSettingsSummary,
+  Hand,
   PossibleMeld,
   ServiceGameSummary,
   Tile,
@@ -73,7 +74,7 @@ export class ModelServiceGameSummary {
     });
   }
 
-  getPlayerHandWithoutMelds() {
+  getPlayerHandWithoutMelds(): Hand {
     const { hand } = this.gameState[0].game_summary;
 
     return hand.filter((tile) => !tile.set_id);
@@ -130,6 +131,20 @@ export class ModelServiceGameSummary {
     HttpClient.userDiscardTile(this.gameState[0].game_summary.id, {
       player_id: this.gameState[0].game_summary.player_id,
       tile_id: tileId,
+    }).subscribe({
+      error: () => {
+        this.handleError();
+      },
+      next: (serviceGame) => {
+        this.loadingState[1](false);
+        this.gameState[1](serviceGame);
+      },
+    });
+  }
+
+  passRound() {
+    HttpClient.userPassRound(this.gameState[0].game_summary.id, {
+      player_id: this.gameState[0].game_summary.player_id,
     }).subscribe({
       error: () => {
         this.handleError();

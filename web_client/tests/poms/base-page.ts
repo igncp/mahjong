@@ -16,6 +16,10 @@ export class BasePage {
     this.baseURL = options.baseURL || defaultBaseURL;
   }
 
+  logConsole() {
+    this.page.on("console", (msg) => console.log(msg.text()));
+  }
+
   navigate(path: string) {
     return this.page.goto(`${this.baseURL}${path}`);
   }

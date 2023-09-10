@@ -121,17 +121,21 @@ impl GameSummary {
         if can_claim_tile {
             let tile_id = self.round.discarded_tile.unwrap();
             let tile = HandTile {
-                concealed: false,
+                concealed: true,
                 id: tile_id,
                 set_id: None,
             };
 
             tested_hand.0.push(tile);
             claimed_tile = Some(tile_id);
-            player_diff = Some(player_index as i32 - current_player_index as i32);
+            player_diff = Some(match player_index as i32 - current_player_index as i32 {
+                -3 => 1,
+                val => val,
+            });
         }
 
         let mut raw_melds = tested_hand.get_possible_melds(player_diff, claimed_tile, true);
+
         tested_hand
             .get_possible_melds(player_diff, claimed_tile, false)
             .iter()

@@ -1,10 +1,10 @@
 use crate::{
-    auth::{AuthInfo, GetAuthInfo, Username},
+    auth::{AuthInfo, AuthInfoData, GetAuthInfo, Username},
     common::Storage,
     env::ENV_SQLITE_DB_KEY,
-    sqlite_storage::{
-        models::{DieselAuthInfo, DieselGame, DieselGamePlayer, DieselGameScore, DieselPlayer},
-        models_translation::wait_common,
+    sqlite_storage::models::{
+        DieselAuthInfo, DieselAuthInfoEmail, DieselAuthInfoGithub, DieselGame, DieselGamePlayer,
+        DieselGameScore, DieselPlayer,
     },
 };
 use async_trait::async_trait;
@@ -39,31 +39,21 @@ struct FileContent {
 #[async_trait]
 impl Storage for SQLiteStorage {
     async fn get_auth_info(&self, get_auth_info: GetAuthInfo) -> Result<Option<AuthInfo>, String> {
-        use schema::auth_info::dsl;
         let mut connection = SqliteConnection::establish(&self.db_path).unwrap();
 
-        let auth_info: Option<AuthInfo> = loop {
-            let data_load = match get_auth_info.to_owned() {
-                GetAuthInfo::Username(username) => dsl::auth_info
-                    .filter(dsl::username.eq(&username))
-                    .limit(1)
-                    .load::<DieselAuthInfo>(&mut connection),
-                GetAuthInfo::PlayerId(player_id) => dsl::auth_info
-                    .filter(dsl::user_id.eq(&player_id))
-                    .limit(1)
-                    .load::<DieselAuthInfo>(&mut connection),
-            };
-
-            if let Ok(data) = data_load {
-                break data;
-            }
-
-            wait_common();
+        if let GetAuthInfo::EmailUsername(username) = get_auth_info.to_owned() {
+            return DieselAuthInfoEmail::get_info_by_username(&mut connection, &username);
         }
-        .get(0)
-        .map(|auth_info| auth_info.clone().into_raw());
 
-        Ok(auth_info)
+        if let GetAuthInfo::GithubUsername(username) = get_auth_info.to_owned() {
+            return DieselAuthInfoGithub::get_info_by_username(&mut connection, &username);
+        }
+
+        if let GetAuthInfo::PlayerId(player_id) = get_auth_info.to_owned() {
+            return DieselAuthInfo::get_info_by_id(&mut connection, &player_id);
+        }
+
+        Err("Not implemented".to_owned())
     }
 
     async fn get_player_total_score(&self, player_id: &PlayerId) -> Result<i32, String> {
@@ -76,6 +66,9 @@ impl Storage for SQLiteStorage {
 
     async fn save_auth_info(&self, auth_info: &AuthInfo) -> Result<(), String> {
         use schema::auth_info::table;
+        use schema::auth_info_email::table as email_table;
+        use schema::auth_info_github::table as github_table;
+
         let mut connection = SqliteConnection::establish(&self.db_path).unwrap();
         let diesel_auth_info = DieselAuthInfo::from_raw(auth_info);
 
@@ -83,6 +76,25 @@ impl Storage for SQLiteStorage {
             .values(&diesel_auth_info)
             .execute(&mut connection)
             .unwrap();
+
+        match auth_info.data {
+            AuthInfoData::Email(ref email) => {
+                let diesel_auth_info_email = DieselAuthInfoEmail::from_raw(email);
+
+                diesel::insert_into(email_table)
+                    .values(&diesel_auth_info_email)
+                    .execute(&mut connection)
+                    .unwrap();
+            }
+            AuthInfoData::Github(ref github) => {
+                let diesel_auth_info_github = DieselAuthInfoGithub::from_raw(github);
+
+                diesel::insert_into(github_table)
+                    .values(&diesel_auth_info_github)
+                    .execute(&mut connection)
+                    .unwrap();
+            }
+        }
 
         Ok(())
     }

@@ -1,6 +1,14 @@
-use crate::{env::ENV_AUTH_JWT_SECRET_KEY, http_server::DataStorage, time::get_timestamp};
+use std::fmt::{self, Display};
+
+use crate::env::ENV_AUTH_JWT_SECRET_KEY;
+use crate::{
+    env::{ENV_FRONTEND_URL, ENV_GITHUB_CLIENT_ID, ENV_GITHUB_SECRET},
+    http_server::DataStorage,
+    time::get_timestamp,
+};
 use actix_web::{HttpRequest, HttpResponse};
 use argon2::{self, Config};
+pub use github::{GithubAuth, GithubCallbackQuery};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use mahjong_core::PlayerId;
 use serde::{Deserialize, Serialize};
@@ -8,11 +16,31 @@ use service_contracts::{ServicePlayer, UserPostSetAuthResponse};
 use tracing::{debug, error};
 use uuid::Uuid;
 
+mod github;
+
 pub type Username = String;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub enum Provider {
+    Email,
+    Github,
+}
+
+impl Display for Provider {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let result = match self {
+            Self::Email => "email".to_string(),
+            Self::Github => "github".to_string(),
+        };
+
+        write!(f, "{}", result)
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum GetAuthInfo {
-    Username(Username),
+    EmailUsername(Username),
+    GithubUsername(Username),
     PlayerId(PlayerId),
 }
 
@@ -23,11 +51,30 @@ pub enum UserRole {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct AuthInfo {
+pub struct AuthInfoGithub {
+    pub id: PlayerId,
+    pub token: Option<String>,
+    pub username: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AuthInfoEmail {
     pub hashed_pass: String,
+    pub id: PlayerId,
+    pub username: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum AuthInfoData {
+    Github(AuthInfoGithub),
+    Email(AuthInfoEmail),
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AuthInfo {
+    pub data: AuthInfoData,
     pub role: UserRole,
     pub user_id: PlayerId,
-    pub username: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -45,9 +92,10 @@ pub struct AuthHandler<'a> {
 
 impl<'a> AuthHandler<'a> {
     pub fn verify_setup() -> bool {
-        let content = std::env::var(ENV_AUTH_JWT_SECRET_KEY);
-
-        content.is_ok()
+        std::env::var(ENV_AUTH_JWT_SECRET_KEY).is_ok()
+            && std::env::var(ENV_GITHUB_CLIENT_ID).is_ok()
+            && std::env::var(ENV_GITHUB_SECRET).is_ok()
+            && std::env::var(ENV_FRONTEND_URL).is_ok()
     }
 
     pub fn new(storage: &'a DataStorage, req: &'a HttpRequest) -> Self {
@@ -58,12 +106,12 @@ impl<'a> AuthHandler<'a> {
         }
     }
 
-    pub async fn validate_user(
+    pub async fn validate_email_user(
         &mut self,
         username: &String,
         password: &String,
     ) -> Result<Option<bool>, String> {
-        let auth_info_opts = GetAuthInfo::Username(username.clone());
+        let auth_info_opts = GetAuthInfo::EmailUsername(username.clone());
         let auth_info = self.storage.get_auth_info(auth_info_opts).await?;
 
         if auth_info.is_none() {
@@ -71,8 +119,19 @@ impl<'a> AuthHandler<'a> {
             return Ok(None);
         }
 
-        let auth_info = auth_info.unwrap();
-        let matches = argon2::verify_encoded(&auth_info.hashed_pass, password.as_bytes());
+        let auth_info_content = auth_info.unwrap();
+        let auth_info_email = auth_info_content.data.clone();
+
+        let auth_info_email = match auth_info_email {
+            AuthInfoData::Email(email) => email,
+            _ => {
+                debug!("Unexpected auth_info for username: {username}");
+                return Ok(None);
+            }
+        };
+
+        let hash = auth_info_email.hashed_pass.clone();
+        let matches = argon2::verify_encoded(&hash, password.as_bytes());
 
         if matches.is_err() {
             let err_str = matches.err().unwrap().to_string();
@@ -82,12 +141,12 @@ impl<'a> AuthHandler<'a> {
 
         let matches = matches.unwrap();
 
-        self.auth_info = Some(auth_info);
+        self.auth_info = Some(auth_info_content);
 
         Ok(Some(matches))
     }
 
-    pub async fn create_user(
+    pub async fn create_email_user(
         &mut self,
         username: &Username,
         password: &String,
@@ -98,11 +157,16 @@ impl<'a> AuthHandler<'a> {
         let hash = argon2::hash_encoded(password.as_bytes(), salt.as_bytes(), &config).unwrap();
         let user_id = Uuid::new_v4().to_string();
 
+        let auth_info_email = AuthInfoEmail {
+            hashed_pass: hash.clone(),
+            id: user_id.clone(),
+            username: username.clone(),
+        };
+
         let auth_info = AuthInfo {
-            hashed_pass: hash,
+            data: AuthInfoData::Email(auth_info_email),
             role,
             user_id,
-            username: username.clone(),
         };
 
         self.storage.save_auth_info(&auth_info).await?;
@@ -110,6 +174,43 @@ impl<'a> AuthHandler<'a> {
         let player = ServicePlayer {
             id: auth_info.user_id.clone(),
             name: username.clone(),
+            created_at: get_timestamp().to_string(),
+
+            ..ServicePlayer::default()
+        };
+
+        self.storage.save_player(&player).await?;
+
+        self.auth_info = Some(auth_info);
+
+        Ok(())
+    }
+
+    pub async fn create_github_user(
+        &mut self,
+        username: &Username,
+        token: &str,
+        role: UserRole,
+    ) -> Result<(), String> {
+        let user_id = Uuid::new_v4().to_string();
+
+        let auth_info_github = AuthInfoGithub {
+            id: user_id.clone(),
+            token: Some(token.to_string()),
+            username: username.clone(),
+        };
+
+        let auth_info = AuthInfo {
+            data: AuthInfoData::Github(auth_info_github),
+            role,
+            user_id,
+        };
+
+        self.storage.save_auth_info(&auth_info).await?;
+
+        let player = ServicePlayer {
+            id: auth_info.user_id.clone(),
+            name: "Github user".to_string(),
             created_at: get_timestamp().to_string(),
 
             ..ServicePlayer::default()

@@ -30,13 +30,20 @@ pub fn run_sync_prod(shell: &mut Shell) {
     let role = "\"Admin\"";
 
     let auth_sql_query = format!(
-        "INSERT INTO auth_info (user_id, username, role, hashed_pass) VALUES ('{user_id}', '{username}', '{role}', '{hash}');",
+        "INSERT INTO auth_info (user_id, role, provider) VALUES ('{user_id}', '{role}', 'email');",
         user_id = user_id,
-        username = "admin",
         role = role,
-        hash = hash
     );
     std::fs::write("/tmp/mahjong_query.sql", auth_sql_query).expect("Unable to write file");
+    shell.run_status("cd service && sqlite3 mahjong_prod.db < /tmp/mahjong_query.sql");
+
+    let auth_email_sql_query = format!(
+        "INSERT INTO auth_info_email (user_id, username, hashed_pass) VALUES ('{user_id}', '{username}',  '{hash}');",
+        user_id = user_id,
+        username = "admin",
+        hash = hash
+    );
+    std::fs::write("/tmp/mahjong_query.sql", auth_email_sql_query).expect("Unable to write file");
     shell.run_status("cd service && sqlite3 mahjong_prod.db < /tmp/mahjong_query.sql");
 
     let player_sql_query = format!(
@@ -55,7 +62,7 @@ pub fn run_sync_prod(shell: &mut Shell) {
     shell.run_status("cd scripts && scp docker-compose.yml mahjong-rust.com:");
     shell.run_status("cd scripts && scp -r sql-queries mahjong-rust.com:");
 
-    let ssh_cmd = vec![
+    let ssh_cmd = [
         "docker compose down",
         "rm -rf data/mahjong.db",
         "cp data/mahjong_prod.db data/mahjong.db",

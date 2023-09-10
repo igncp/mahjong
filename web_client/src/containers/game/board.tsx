@@ -97,7 +97,7 @@ const GameBoard = ({
                         " "
                       )}
                     >
-                      <DealerIcon />
+                      <DealerIcon rev="" />
                     </span>
                   )}
                 </span>
@@ -121,26 +121,21 @@ const GameBoard = ({
           className={styles.helpModalTrigger}
           onClick={() => setDisplayHelpModal(true)}
         >
-          <QuestionCircleOutlined />
+          <QuestionCircleOutlined rev="" />
         </span>
         <Modal
           footer={null}
           onCancel={() => setDisplayHelpModal(false)}
           open={displayHelpModal}
         >
-          <p>
-            {t(
-              "board.help.intro",
-              "The highlighted user is the one who should play in the current turn"
-            )}
-          </p>
-          <p>{t("symbols", "The meaning of the symbols:")}</p>
+          <p>{t("board.help.intro")}</p>
+          <p>{t("symbols")}</p>
           <ul>
             <li>
               <span className={[styles.dealerIcon, styles.helpIcon].join(" ")}>
-                <DealerIcon />
+                <DealerIcon rev="" />
               </span>{" "}
-              {t("board.help.dealer", "Dealer player")}
+              {t("board.help.dealer")}
             </li>
           </ul>
         </Modal>

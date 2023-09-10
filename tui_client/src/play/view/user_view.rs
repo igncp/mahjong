@@ -24,7 +24,7 @@ pub fn draw_user_view<B: Backend>(f: &mut Frame<B>, app: &App, ui_state: &mut UI
 
     match ui_state.screen {
         UIScreen::Init => {
-            let init_text = vec![
+            let init_text = [
                 "Welcome to Mahjong!",
                 "Input 'h' to display the help",
                 &ui_state.input,
@@ -149,7 +149,7 @@ pub fn draw_user_view<B: Backend>(f: &mut Frame<B>, app: &App, ui_state: &mut UI
                         .for_each(|s| secondary_strs.push(s.to_string()));
                 }
 
-                vec![
+                [
                     format!(
                         "- Draw wall tiles left: {}",
                         game.game_summary.draw_wall_count
