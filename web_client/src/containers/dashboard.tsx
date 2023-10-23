@@ -2,14 +2,16 @@ import { tokenObserver } from "mahjong_sdk/dist/auth";
 import { UserRole } from "mahjong_sdk/dist/core";
 import { useUserTokenClaims } from "mahjong_sdk/dist/hooks";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { FC, useEffect, useState } from "react";
+
+import type { TProps as TDashboardPlayerProps } from "./dashboard-player";
 
 const DashboardAdmin = dynamic(() => import("./dashboard-admin"), {
   ssr: false,
-});
+}) as FC;
 const DashboardPlayer = dynamic(() => import("./dashboard-player"), {
   ssr: false,
-});
+}) as FC<TDashboardPlayerProps>;
 
 const Dashboard = () => {
   const [token, setToken] = useState(tokenObserver.getValue());

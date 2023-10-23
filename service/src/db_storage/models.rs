@@ -38,19 +38,21 @@ pub struct DieselAuthInfoGithub {
     pub username: String,
 }
 
-#[derive(Insertable, Queryable, Selectable, Identifiable, PartialEq, Clone, Debug)]
+#[derive(Insertable, AsChangeset, Queryable, Selectable, Identifiable, PartialEq, Clone, Debug)]
+#[diesel(treat_none_as_null = true)]
 #[diesel(table_name = player)]
 pub struct DieselPlayer {
-    pub created_at: String,
+    pub created_at: chrono::NaiveDateTime,
     pub id: PlayerId,
     pub is_ai: i32,
     pub name: String,
 }
 
-#[derive(Insertable, Queryable, Selectable, Identifiable, PartialEq, Clone, Debug)]
+#[derive(Insertable, AsChangeset, Queryable, Selectable, Identifiable, PartialEq, Clone, Debug)]
+#[diesel(treat_none_as_null = true)]
 #[diesel(table_name = game)]
 pub struct DieselGame {
-    pub created_at: String,
+    pub created_at: chrono::NaiveDateTime,
     pub id: GameId,
     pub name: String,
     pub phase: String,
@@ -62,7 +64,7 @@ pub struct DieselGame {
     pub round_player_index: i32,
     pub round_wall_tile_drawn: Option<i32>,
     pub round_wind: String,
-    pub updated_at: String,
+    pub updated_at: chrono::NaiveDateTime,
     pub version: GameVersion,
 }
 
@@ -112,7 +114,8 @@ pub struct DieselGameHand {
     pub tile_index: i32,
 }
 
-#[derive(Insertable, Queryable, Clone)]
+#[derive(Insertable, AsChangeset, Queryable, Clone)]
+#[diesel(treat_none_as_null = true)]
 #[diesel(table_name = game_settings)]
 pub struct DieselGameSettings {
     pub ai_enabled: i32,

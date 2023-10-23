@@ -1,14 +1,18 @@
 import { GameId, PlayerId } from "mahjong_sdk/dist/core";
 import dynamic from "next/dynamic";
+import { FC } from "react";
+
+import type { IProps as IGameAdminProps } from "src/containers/game/admin";
+import type { IProps as IGamePlayerProps } from "src/containers/game/player";
 
 const GameAdmin = dynamic(() => import("src/containers/game/admin"), {
   ssr: false,
-});
+}) as FC<IGameAdminProps>;
 const GamePlayer = dynamic(() => import("src/containers/game/player"), {
   ssr: false,
-});
+}) as FC<IGamePlayerProps>;
 
-interface IProps {
+export interface IProps {
   gameId: GameId;
   userId?: PlayerId;
   gameType: string;

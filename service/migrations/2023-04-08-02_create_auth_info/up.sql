@@ -10,7 +10,9 @@ CREATE TABLE IF NOT EXISTS auth_info (
         id
     ) ON DELETE CASCADE,
     role TEXT NOT NULL,
-    user_id TEXT NOT NULL UNIQUE PRIMARY KEY
+    user_id TEXT NOT NULL UNIQUE PRIMARY KEY REFERENCES player (
+        id
+    ) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS auth_info_email (

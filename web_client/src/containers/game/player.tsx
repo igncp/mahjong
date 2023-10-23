@@ -3,7 +3,6 @@ import { message } from "antd";
 import {
   Board,
   GameId,
-  GameSettings,
   PlayerId,
   ServiceGameSummary,
   SetId,
@@ -27,11 +26,8 @@ import Alert from "src/ui/common/alert";
 import Button from "src/ui/common/button";
 import Card from "src/ui/common/card";
 import CopyToClipboard from "src/ui/common/copy-to-clipboard";
-import List, { ListItem } from "src/ui/common/list";
-import Select, { SelectOption } from "src/ui/common/select";
 import Text from "src/ui/common/text";
 import Tooltip from "src/ui/common/tooltip";
-import UserAvatar from "src/ui/common/user-avatar";
 import { useGameUI } from "src/ui/game/use-game-ui";
 import TileImg from "src/ui/tile-img";
 
@@ -39,19 +35,10 @@ import PageContent from "../page-content";
 import GameBoard, { BoardPlayer } from "./board";
 import styles from "./player.module.scss";
 
-interface IProps {
+export interface IProps {
   gameId: GameId;
   userId: PlayerId;
 }
-
-const convertDiscardWaitMsValue = (value: GameSettings["discard_wait_ms"]) => {
-  if (value === null) return "none";
-  if (value === 1000) return "1s";
-  if (value === 10000) return "10s";
-  if (value === 60000) return "1m";
-  if (value === -1) return "block";
-  return "none";
-};
 
 const Game = ({ gameId, userId }: IProps) => {
   const { t, i18n } = useTranslation();
@@ -64,60 +51,6 @@ const Game = ({ gameId, userId }: IProps) => {
 
   const [serviceGameSummary, setServiceGame] = gameState;
   const [loading] = loadingState;
-
-  const autoSortOptions: SelectOption[] = useMemo(
-    () => [
-      {
-        label: t("game.option.yes"),
-        value: "yes",
-      },
-      {
-        label: t("game.option.no"),
-        value: "no",
-      },
-    ],
-    [t]
-  );
-
-  const autoStopDrawMeldOptions: SelectOption[] = useMemo(
-    () => [
-      {
-        label: t("game.option.yes"),
-        value: "yes",
-      },
-      {
-        label: t("game.option.no"),
-        value: "no",
-      },
-    ],
-    [t]
-  );
-
-  const discardWaitMsOptions: SelectOption[] = useMemo(
-    () => [
-      {
-        label: t("game.wait.none"),
-        value: "none",
-      },
-      {
-        label: t("game.wait.1sec"),
-        value: "1s",
-      },
-      {
-        label: t("game.wait.10sec"),
-        value: "10s",
-      },
-      {
-        label: t("game.wait.1min"),
-        value: "1m",
-      },
-      {
-        label: t("game.wait.block"),
-        value: "block",
-      },
-    ],
-    [t]
-  );
 
   useEffect(() => {
     const socket$ = HttpClient.connectToSocket({
@@ -234,56 +167,6 @@ const Game = ({ gameId, userId }: IProps) => {
   const turnPlayer = serviceGameM.getTurnPlayer();
   const possibleMelds = serviceGameM.getPossibleMelds();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const onAIEnabledChanged = (event: any) => {
-    const aiEnabled = event.target.value === "enabled";
-
-    serviceGameM.setGameSettings({
-      ...serviceGameSummary.settings,
-      ai_enabled: aiEnabled,
-    });
-  };
-
-  const onDiscardWaitMsChanged = (value: string) => {
-    const msValue = (() => {
-      switch (value) {
-        case "1s":
-          return 1000;
-        case "10s":
-          return 10000;
-        case "1m":
-          return 60000;
-        case "block":
-          return -1;
-        default:
-          return null;
-      }
-    })();
-
-    serviceGameM.setGameSettings({
-      ...serviceGameSummary.settings,
-      discard_wait_ms: msValue,
-    });
-  };
-
-  const onAutoSortChange = (value: string) => {
-    const boolValue = value === "yes";
-
-    serviceGameM.setGameSettings({
-      ...serviceGameSummary.settings,
-      auto_sort: boolValue,
-    });
-  };
-
-  const onAutoStopDrawMeldChange = (value: string) => {
-    const boolValue = value === "yes";
-
-    serviceGameM.setGameSettings({
-      ...serviceGameSummary.settings,
-      auto_stop_claim_meld: boolValue,
-    });
-  };
-
   const dealerPlayerId =
     serviceGameSummary.game_summary.players[
       serviceGameSummary.game_summary.round.dealer_player_index
@@ -293,6 +176,8 @@ const Game = ({ gameId, userId }: IProps) => {
   const isDraggingOther = handTilesProps.some((props) => props.hasItemOver);
 
   const canPassRound = serviceGameSummary.game_summary.board.length === 92;
+  const canDrawTile =
+    player.id === userId && serviceGameSummary.game_summary.hand.length < 14;
 
   return (
     <PageContent>
@@ -345,6 +230,34 @@ const Game = ({ gameId, userId }: IProps) => {
           />
         </Card>
       </span>
+      <div>
+        <Card
+          title={
+            <>
+              <Tooltip title={t("game.discardInfo")}>
+                {t("game.hand")}: {hand.length} <InfoCircleOutlined rev="" />
+              </Tooltip>
+            </>
+          }
+        >
+          <div className={styles.handTiles}>
+            {handWithoutMelds.map((handTile, handTileIndex) => {
+              const { hasItemOver, ...handTileProps } =
+                handTilesProps[handTileIndex];
+
+              return (
+                <Fragment key={`${handTile.id}-${handTileIndex}`}>
+                  <TileImg
+                    {...handTileProps}
+                    isDraggingOther={isDraggingOther}
+                    paddingLeft={hasItemOver ? 10 : 0}
+                  />
+                </Fragment>
+              );
+            })}
+          </div>
+        </Card>
+      </div>
       <div className={styles.topInfo}>
         <Alert
           message={
@@ -403,37 +316,67 @@ const Game = ({ gameId, userId }: IProps) => {
                   {t("game.passRound", "Pass round")}
                 </Button>
               )}
+              <Button
+                disabled={loading || !canDrawTile}
+                onClick={() => {
+                  const sendErrorMessage = () => {
+                    // TODO: Move to the error emitter
+                    messageApi.open({
+                      content: t("game.error.invalidDraw"),
+                      type: "error",
+                    });
+                  };
+
+                  HttpClient.userDrawTile(gameId, {
+                    game_version: serviceGameSummary.game_summary.version,
+                    player_id: userId,
+                  }).subscribe({
+                    error: () => {
+                      sendErrorMessage();
+                    },
+                    next: (gameSummary) => {
+                      setServiceGame(gameSummary);
+                    },
+                  });
+                }}
+              >
+                {t("game.drawTile")}
+              </Button>
+              <Button
+                disabled={loading}
+                onClick={() => {
+                  serviceGameM.sortHands();
+                }}
+              >
+                {t("game.sortHand")}
+              </Button>
+              {!serviceGameSummary.settings.ai_enabled && (
+                <Button
+                  disabled={loading}
+                  onClick={() => {
+                    HttpClient.userContinueAI(gameId, {
+                      player_id: userId,
+                    }).subscribe({
+                      next: ({ service_game_summary: newGame }) => {
+                        setServiceGame(newGame);
+                      },
+                    });
+                  }}
+                >
+                  {t("game.continueAI")}
+                </Button>
+              )}
+              <Button
+                disabled={loading}
+                onClick={() => {
+                  serviceGameM.sayMahjong();
+                }}
+              >
+                {t("game.sayMahjong")}
+              </Button>
             </div>
           );
         })()}
-      </div>
-      <div>
-        <Card
-          title={
-            <>
-              <Tooltip title={t("game.discardInfo")}>
-                {t("game.hand")}: {hand.length} <InfoCircleOutlined rev="" />
-              </Tooltip>
-            </>
-          }
-        >
-          <div className={styles.handTiles}>
-            {handWithoutMelds.map((handTile, handTileIndex) => {
-              const { hasItemOver, ...handTileProps } =
-                handTilesProps[handTileIndex];
-
-              return (
-                <Fragment key={`${handTile.id}-${handTileIndex}`}>
-                  <TileImg
-                    {...handTileProps}
-                    isDraggingOther={isDraggingOther}
-                    paddingLeft={hasItemOver ? 10 : 0}
-                  />
-                </Fragment>
-              );
-            })}
-          </div>
-        </Card>
       </div>
       <div className={styles.smallGrid}>
         {Array.from(setsIds).map((setId) => {
@@ -570,176 +513,6 @@ const Game = ({ gameId, userId }: IProps) => {
 
           return acc;
         }, [] as React.ReactElement[])}
-        <Card
-          className={styles.cardSmall}
-          title={
-            <Text>
-              <b>{t("game.actions")}</b>
-            </Text>
-          }
-        >
-          <div className={styles.actionsPanel}>
-            <Button
-              disabled={loading}
-              onClick={() => {
-                const sendErrorMessage = () => {
-                  // TODO: Move to the error emitter
-                  messageApi.open({
-                    content: t("game.error.invalidDraw"),
-                    type: "error",
-                  });
-                };
-
-                HttpClient.userDrawTile(gameId, {
-                  game_version: serviceGameSummary.game_summary.version,
-                  player_id: userId,
-                }).subscribe({
-                  error: () => {
-                    sendErrorMessage();
-                  },
-                  next: (gameSummary) => {
-                    setServiceGame(gameSummary);
-                  },
-                });
-              }}
-            >
-              {t("game.drawTile")}
-            </Button>
-            <Button
-              disabled={loading}
-              onClick={() => {
-                serviceGameM.sortHands();
-              }}
-            >
-              {t("game.sortHand")}
-            </Button>
-            <Button
-              disabled={loading}
-              onClick={() => {
-                HttpClient.userContinueAI(gameId, {
-                  player_id: userId,
-                }).subscribe({
-                  next: ({ service_game_summary: newGame }) => {
-                    setServiceGame(newGame);
-                  },
-                });
-              }}
-            >
-              {t("game.continueAI")}
-            </Button>
-            <Button
-              disabled={loading}
-              onClick={() => {
-                serviceGameM.sayMahjong();
-              }}
-            >
-              {t("game.sayMahjong")}
-            </Button>
-          </div>
-        </Card>
-
-        <Card
-          className={`${styles.cardSmall} ${styles.cardOtherPlayers}`}
-          title={
-            <Text>
-              <b>{t("game.otherPlayers")}</b>
-            </Text>
-          }
-        >
-          <List
-            dataSource={serviceGameSummary.game_summary.players.filter(
-              (p) => p !== userId
-            )}
-            renderItem={(playerId) => {
-              const player = serviceGameSummary.players[playerId];
-
-              return (
-                <ListItem>
-                  <div className={styles.otherPlayer}>
-                    <UserAvatar />
-                    <Text
-                      style={{
-                        alignItems: "center",
-                        display: "flex",
-                        marginLeft: "10px",
-                      }}
-                    >
-                      {player.name} ({" "}
-                      {t("game.points", {
-                        count: serviceGameSummary.game_summary.score[playerId],
-                      })}
-                      )
-                    </Text>
-                  </div>
-                </ListItem>
-              );
-            }}
-            style={{ background: "white" }}
-          />
-        </Card>
-        <Card className={styles.cardSmall} title={t("game.settings.title")}>
-          <form className={styles.cardContentSettings}>
-            <div className={styles.settingsFormInner}>
-              <Text>
-                <b>{t("game.AI.title")}</b>:{" "}
-                <label style={{ marginRight: "10px" }}>
-                  {t("game.AI.enabled")}
-                  <input
-                    checked={serviceGameSummary.settings.ai_enabled}
-                    name="ai_enabled"
-                    onChange={onAIEnabledChanged}
-                    type="radio"
-                    value={"enabled"}
-                  />
-                </label>
-                <label>
-                  {t("game.AI.disabled")}
-                  <input
-                    checked={!serviceGameSummary.settings.ai_enabled}
-                    name="ai_enabled"
-                    onChange={onAIEnabledChanged}
-                    type="radio"
-                    value={"disabled"}
-                  />
-                </label>
-              </Text>
-              <Text>{t("game.blockTime.desc")}: </Text>
-              <Select
-                defaultValue={
-                  convertDiscardWaitMsValue(
-                    serviceGameSummary.settings.discard_wait_ms
-                  ) || "none"
-                }
-                disabled={!serviceGameSummary.settings.ai_enabled}
-                onChange={onDiscardWaitMsChanged}
-                options={discardWaitMsOptions}
-                style={{ width: 120 }}
-              />
-              <Text>{t("game.autoSort")}</Text>
-              <Select
-                defaultValue={
-                  serviceGameSummary.settings.auto_sort ? "yes" : "no"
-                }
-                disabled={false}
-                onChange={onAutoSortChange}
-                options={autoSortOptions}
-                style={{ width: 120 }}
-              />
-              <Text>{t("game.autoStopDrawMeld")}</Text>
-              <Select
-                defaultValue={
-                  serviceGameSummary.settings.auto_stop_claim_meld
-                    ? "yes"
-                    : "no"
-                }
-                disabled={false}
-                onChange={onAutoStopDrawMeldChange}
-                options={autoStopDrawMeldOptions}
-                style={{ width: 120 }}
-              />
-            </div>
-          </form>
-        </Card>
       </div>
       {contextHolder}
     </PageContent>

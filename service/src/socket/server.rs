@@ -89,10 +89,7 @@ impl Handler<SocketMessageConnect> for MahjongWebsocketServer {
         let id = self.rng.gen::<usize>();
         self.sessions.insert(id, msg.addr);
 
-        self.rooms
-            .entry(msg.room)
-            .or_insert_with(FxHashSet::default)
-            .insert(id);
+        self.rooms.entry(msg.room).or_default().insert(id);
 
         id
     }

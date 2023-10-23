@@ -1,4 +1,9 @@
-import { QuestionCircleOutlined, ThunderboltOutlined } from "@ant-design/icons";
+import {
+  CaretRightFilled,
+  QuestionCircleOutlined,
+  SettingFilled,
+  ThunderboltOutlined,
+} from "@ant-design/icons";
 import { ServiceGameSummary } from "mahjong_sdk/dist/core";
 import { ModelServiceGameSummary } from "mahjong_sdk/dist/service-game-summary";
 import { memo, useState } from "react";
@@ -17,6 +22,7 @@ import {
 import TileImg from "src/ui/tile-img";
 
 import styles from "./board.module.scss";
+import Settings from "./settings";
 
 export type BoardPlayer = {
   id: string;
@@ -33,6 +39,7 @@ interface IProps {
 }
 
 const DealerIcon = ThunderboltOutlined;
+const MeldIcon = CaretRightFilled;
 
 const GameBoard = ({
   activePlayer,
@@ -43,6 +50,7 @@ const GameBoard = ({
   serviceGameSummary,
 }: IProps) => {
   const [displayHelpModal, setDisplayHelpModal] = useState(false);
+  const [displaySettingsModal, setDisplaySettingsModal] = useState(false);
   const { t } = useTranslation();
 
   return (
@@ -81,6 +89,32 @@ const GameBoard = ({
             styles.userRight,
           ][playerIndex];
 
+          const isCurrentPlayer =
+            player.id === serviceGameSummary.game_summary.player_id;
+
+          const playerVisibleMelds = new Set(
+            isCurrentPlayer
+              ? serviceGameSummary.game_summary.hand
+                  .filter((h) => !h.concealed)
+                  .map((h) => h.set_id)
+                  .filter(Boolean)
+              : serviceGameSummary.game_summary.other_hands[player.id]?.visible
+                  .map((handTile) => handTile.set_id)
+                  .filter(Boolean)
+          ).size;
+
+          const tooltip = (
+            <>
+              <span>{player.name}</span>
+              <br />
+              <span>
+                {t("game.points", {
+                  count: serviceGameSummary.game_summary.score[player.id],
+                })}
+              </span>
+            </>
+          );
+
           return (
             <span
               className={[styles.userWrapper, userStyle]
@@ -88,18 +122,32 @@ const GameBoard = ({
                 .join(" ")}
               key={player.id}
             >
-              <Tooltip title={player.name}>
+              <Tooltip title={tooltip}>
                 <span className={styles.userItem}>
                   <UserAvatar />
-                  {dealerPlayer === player.id && (
-                    <span
-                      className={[styles.dealerIcon, styles.boardIcon].join(
-                        " "
-                      )}
-                    >
-                      <DealerIcon rev="" />
-                    </span>
-                  )}
+                  <span className={styles.userIcons}>
+                    {dealerPlayer === player.id && (
+                      <span
+                        className={[styles.dealerIcon, styles.boardIcon].join(
+                          " "
+                        )}
+                      >
+                        <DealerIcon rev="" />
+                      </span>
+                    )}
+                    {Array.from({ length: playerVisibleMelds }).map(
+                      (_, index) => (
+                        <span
+                          className={[styles.meldIcon, styles.boardIcon].join(
+                            " "
+                          )}
+                          key={index}
+                        >
+                          <MeldIcon rev="" />
+                        </span>
+                      )
+                    )}
+                  </span>
                 </span>
               </Tooltip>
             </span>
@@ -123,6 +171,12 @@ const GameBoard = ({
         >
           <QuestionCircleOutlined rev="" />
         </span>
+        <span
+          className={styles.settingsModalTrigger}
+          onClick={() => setDisplaySettingsModal(true)}
+        >
+          <SettingFilled rev="" />
+        </span>
         <Modal
           footer={null}
           onCancel={() => setDisplayHelpModal(false)}
@@ -137,7 +191,23 @@ const GameBoard = ({
               </span>{" "}
               {t("board.help.dealer")}
             </li>
+            <li>
+              <span className={[styles.meldIcon, styles.helpIcon].join(" ")}>
+                <MeldIcon rev="" />
+              </span>{" "}
+              {t("board.help.meld", "Visible meld")}
+            </li>
           </ul>
+        </Modal>
+        <Modal
+          footer={null}
+          onCancel={() => setDisplaySettingsModal(false)}
+          open={displaySettingsModal}
+        >
+          <Settings
+            serviceGameM={serviceGameM}
+            serviceGameSummary={serviceGameSummary}
+          />
         </Modal>
       </span>
     </Text>

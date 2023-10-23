@@ -10,7 +10,7 @@ import CopyToClipboard from "src/ui/common/copy-to-clipboard";
 
 import PageContent from "../page-content";
 
-interface IProps {
+export interface IProps {
   gameId: string;
 }
 

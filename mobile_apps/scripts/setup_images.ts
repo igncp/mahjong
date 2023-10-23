@@ -4,7 +4,7 @@ import { Tile } from "mahjong_sdk/dist/core";
 import { getTileInfo } from "mahjong_sdk/dist/tile-content";
 import { getAllUniqueTiles } from "mahjong_sdk/dist/tiles";
 
-import { getTileImageName } from "../src/lib/assets";
+import { getTileImageName } from "../src/lib/assets-utils";
 
 const list: [string, Tile][] = getAllUniqueTiles().map((tile) => [
   getTileImageName(tile),
@@ -15,6 +15,9 @@ const getSvgFilePage = (fileName: string) => `./assets/svgs/${fileName}.svg`;
 const getPngFilePage = (fileName: string) => `./assets/pngs/${fileName}.png`;
 
 const main = async () => {
+  fs.mkdirSync("./assets/svgs", { recursive: true });
+  fs.mkdirSync("./assets/pngs", { recursive: true });
+
   await list.reduce(async (promise, [imageName, tile]) => {
     await promise;
     const svgPath = getSvgFilePage(imageName);

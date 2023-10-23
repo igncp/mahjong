@@ -24,7 +24,7 @@ import { SiteUrls } from "../lib/site/urls";
 import styles from "./dashboard-player.module.scss";
 import PageContent from "./page-content";
 
-type TProps = {
+export type TProps = {
   userId: string;
 };
 

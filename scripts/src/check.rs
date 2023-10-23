@@ -10,7 +10,7 @@ pub fn run_check(shell: &Shell) {
 
     run_clippy(shell);
 
-    shell.run_status("cd service && sqlfluff fix --dialect sqlite migrations/**/*.sql");
+    shell.run_status("cd service && sqlfluff fix --dialect postgres migrations/**/*.sql");
 
     run_pack_wasm(shell);
 

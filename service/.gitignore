@@ -1,5 +1,4 @@
-mahjong.db
-mahjong.json
+mahjong_db
 .env
 /result
 /target

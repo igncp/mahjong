@@ -269,9 +269,9 @@ impl ServiceHTTPClient {
         &self,
         user: Option<&PlayerId>,
     ) -> Result<Vec<ServicePlayerGame>, String> {
-        let url = if user.is_some() {
+        let url = if let Some(user) = user {
             let query = UserGetGamesQuery {
-                player_id: user.unwrap().to_string(),
+                player_id: user.to_string(),
             };
             format!(
                 "{}/v1/user/game?{}",

@@ -598,7 +598,6 @@ async fn user_post_game_sort_hand(
     game_id: web::Path<GameId>,
     body: web::Json<UserPostSortHandRequest>,
     srv: DataSocketServer,
-    manager: GamesManagerData,
     req: HttpRequest,
 ) -> impl Responder {
     let auth_handler = AuthHandler::new(&storage, &req);
@@ -607,11 +606,7 @@ async fn user_post_game_sort_hand(
         return AuthHandler::get_unauthorized();
     }
 
-    let game_lock = {
-        let mut manager_lock = manager.lock().unwrap();
-        manager_lock.get_game_mutex(&game_id)
-    };
-    let _game_lock = game_lock.lock().unwrap();
+    debug!("Sorting hand for user: {:?}", &body.player_id);
 
     let game_wrapper =
         GameWrapper::from_storage(&storage, &game_id, srv, Some(&body.game_version)).await;

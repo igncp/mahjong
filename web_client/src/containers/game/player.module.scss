@@ -123,13 +123,6 @@ $card-row-offset: 55px;
   background-color: white;
 }
 
-.settingsFormInner {
-  display: flex;
-  flex-direction: column;
-  gap: $common-gap;
-  padding: $common-gap;
-}
-
 .topInfo {
   @include mobile {
     justify-content: center;

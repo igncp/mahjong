@@ -9,6 +9,7 @@ $desktop-max-width: 1060px;
 
 $color-darkgreen: #006400;
 $color-lightgreen: #73bc73;
+$color-darkred: #8b0000;
 
 @mixin desktop-above() {
   @media (min-width: $bp-tablet-max) {

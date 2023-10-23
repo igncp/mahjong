@@ -6,24 +6,31 @@ use super::models::{
 use super::schema;
 use crate::auth::{AuthInfo, AuthInfoData, AuthInfoEmail, AuthInfoGithub, Provider};
 use diesel::prelude::*;
-use diesel::SqliteConnection;
+use diesel::PgConnection;
 use mahjong_core::round::{Round, RoundTileClaimed};
 use mahjong_core::{Board, DrawWall, Game, GameId, Hand, HandTile, Hands, PlayerId, Score, TileId};
 use rustc_hash::FxHashMap;
 use schema::player::dsl as player_dsl;
 use service_contracts::{GameSettings, ServiceGame, ServicePlayer, ServicePlayerGame};
+use tracing::debug;
 
 pub fn wait_common() {
     std::thread::sleep(std::time::Duration::from_millis(1));
 }
 
-fn db_loop<A, B, C>(mut func: A)
+fn db_request<A, B, C>(mut func: A)
 where
     A: FnMut() -> Result<B, C>,
+    B: std::fmt::Debug,
+    C: std::fmt::Debug,
 {
     loop {
-        if func().is_ok() {
+        let result = func();
+
+        if result.is_ok() {
             break;
+        } else {
+            debug!("DB request failed: {:?}", result);
         }
         wait_common();
     }
@@ -38,7 +45,7 @@ impl DieselAuthInfo {
         }
     }
 
-    pub fn into_raw_get_data(self, connection: &mut SqliteConnection) -> AuthInfo {
+    pub fn into_raw_get_data(self, connection: &mut PgConnection) -> AuthInfo {
         let data = match self.provider.as_str() {
             val if val == Provider::Email.to_string() => {
                 let data = DieselAuthInfoEmail::get_by_id(connection, &self.user_id)
@@ -74,7 +81,7 @@ impl DieselAuthInfo {
     }
 
     pub fn get_info_by_id(
-        connection: &mut SqliteConnection,
+        connection: &mut PgConnection,
         id: &String,
     ) -> Result<Option<AuthInfo>, String> {
         use schema::auth_info::dsl;
@@ -91,7 +98,7 @@ impl DieselAuthInfo {
     }
 
     pub fn get_by_id_with_data(
-        connection: &mut SqliteConnection,
+        connection: &mut PgConnection,
         id: &String,
         data: &AuthInfoData,
     ) -> Option<AuthInfo> {
@@ -131,7 +138,7 @@ impl DieselAuthInfoEmail {
         }
     }
 
-    pub fn get_by_id(connection: &mut SqliteConnection, id: &String) -> Option<Self> {
+    pub fn get_by_id(connection: &mut PgConnection, id: &String) -> Option<Self> {
         use super::schema::auth_info_email::dsl;
 
         loop {
@@ -149,7 +156,7 @@ impl DieselAuthInfoEmail {
     }
 
     pub fn get_info_by_username(
-        connection: &mut SqliteConnection,
+        connection: &mut PgConnection,
         username: &String,
     ) -> Result<Option<AuthInfo>, String> {
         use schema::auth_info_email::dsl as email_dsl;
@@ -195,7 +202,7 @@ impl DieselAuthInfoGithub {
         }
     }
 
-    pub fn get_by_id(connection: &mut SqliteConnection, id: &String) -> Option<Self> {
+    pub fn get_by_id(connection: &mut PgConnection, id: &String) -> Option<Self> {
         use super::schema::auth_info_github::dsl;
 
         loop {
@@ -213,7 +220,7 @@ impl DieselAuthInfoGithub {
     }
 
     pub fn get_info_by_username(
-        connection: &mut SqliteConnection,
+        connection: &mut PgConnection,
         username: &String,
     ) -> Result<Option<AuthInfo>, String> {
         use schema::auth_info_github::dsl as github_dsl;
@@ -245,7 +252,7 @@ impl DieselAuthInfoGithub {
 impl DieselPlayer {
     pub fn into_raw(self) -> ServicePlayer {
         ServicePlayer {
-            created_at: self.created_at,
+            created_at: self.created_at.timestamp_millis().to_string(),
             id: self.id,
             is_ai: self.is_ai == 1,
             name: self.name,
@@ -254,7 +261,10 @@ impl DieselPlayer {
 
     pub fn from_raw(raw: &ServicePlayer) -> Self {
         Self {
-            created_at: raw.created_at.to_string(),
+            created_at: chrono::NaiveDateTime::from_timestamp_millis(
+                raw.created_at.parse::<i64>().unwrap(),
+            )
+            .unwrap(),
             id: raw.id.clone(),
             is_ai: if raw.is_ai { 1 } else { 0 },
             name: raw.name.clone(),
@@ -262,7 +272,7 @@ impl DieselPlayer {
     }
 
     pub fn read_from_ids(
-        connection: &mut SqliteConnection,
+        connection: &mut PgConnection,
         ids: &Vec<PlayerId>,
     ) -> FxHashMap<PlayerId, ServicePlayer> {
         loop {
@@ -279,7 +289,7 @@ impl DieselPlayer {
         .collect::<FxHashMap<PlayerId, ServicePlayer>>()
     }
 
-    pub fn update_from_game(connection: &mut SqliteConnection, service_game: &ServiceGame) {
+    pub fn update_from_game(connection: &mut PgConnection, service_game: &ServiceGame) {
         use super::schema::player::table as player_table;
 
         let players = service_game
@@ -288,55 +298,36 @@ impl DieselPlayer {
             .map(Self::from_raw)
             .collect::<Vec<Self>>();
 
-        loop {
-            if diesel::delete(player_table)
-                .filter(
-                    schema::player::dsl::id.eq_any(
-                        players
-                            .iter()
-                            .map(|player| player.id.clone())
-                            .collect::<Vec<PlayerId>>(),
-                    ),
-                )
-                .execute(connection)
-                .is_ok()
-            {
-                break;
-            }
-            wait_common();
-        }
+        for player in players {
+            loop {
+                let result = diesel::insert_into(player_table)
+                    .values(&player)
+                    .on_conflict(player_dsl::id)
+                    .do_update()
+                    .set(&player)
+                    .execute(connection);
 
-        loop {
-            if diesel::insert_into(player_table)
-                .values(&players)
-                .execute(connection)
-                .is_ok()
-            {
-                break;
+                if result.is_ok() {
+                    break;
+                } else {
+                    debug!("Error saving player: {:?}", result.err());
+                }
+                wait_common();
             }
-            wait_common();
         }
     }
 
-    pub fn save(connection: &mut SqliteConnection, player: &ServicePlayer) {
+    pub fn save(connection: &mut PgConnection, player: &ServicePlayer) {
         use super::schema::player::table as player_table;
 
         let player = Self::from_raw(player);
 
         loop {
-            if diesel::delete(player_table)
-                .filter(schema::player::dsl::id.eq(player.id.clone()))
-                .execute(connection)
-                .is_ok()
-            {
-                break;
-            }
-            wait_common();
-        }
-
-        loop {
             if diesel::insert_into(player_table)
                 .values(&player)
+                .on_conflict(player_dsl::id)
+                .do_update()
+                .set(&player)
                 .execute(connection)
                 .is_ok()
             {
@@ -346,10 +337,7 @@ impl DieselPlayer {
         }
     }
 
-    pub fn read_from_id_raw(
-        connection: &mut SqliteConnection,
-        player_id: &PlayerId,
-    ) -> Option<Self> {
+    pub fn read_from_id_raw(connection: &mut PgConnection, player_id: &PlayerId) -> Option<Self> {
         loop {
             if let Ok(player) = player_dsl::player
                 .filter(player_dsl::id.eq(player_id))
@@ -365,7 +353,7 @@ impl DieselPlayer {
     }
 
     pub fn read_from_id(
-        connection: &mut SqliteConnection,
+        connection: &mut PgConnection,
         player_id: &PlayerId,
     ) -> Option<ServicePlayer> {
         loop {
@@ -385,8 +373,8 @@ impl DieselPlayer {
 
 pub struct DieselGameExtra {
     pub game: Game,
-    pub created_at: u128,
-    pub updated_at: u128,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
 }
 
 impl DieselGame {
@@ -415,13 +403,13 @@ impl DieselGame {
 
         DieselGameExtra {
             game,
-            created_at: self.created_at.parse::<u128>().unwrap(),
-            updated_at: self.updated_at.parse::<u128>().unwrap(),
+            created_at: self.created_at,
+            updated_at: self.updated_at,
         }
     }
 
     pub fn read_from_id(
-        connection: &mut SqliteConnection,
+        connection: &mut PgConnection,
         game_id: &GameId,
     ) -> Option<DieselGameExtra> {
         use schema::game::dsl as game_dsl;
@@ -440,7 +428,7 @@ impl DieselGame {
         .map(|game| game.clone().into_raw())
     }
 
-    pub fn read_player_games(connection: &mut SqliteConnection) -> Vec<ServicePlayerGame> {
+    pub fn read_player_games(connection: &mut PgConnection) -> Vec<ServicePlayerGame> {
         use schema::game::dsl as game_dsl;
 
         loop {
@@ -451,30 +439,22 @@ impl DieselGame {
         }
         .into_iter()
         .map(|game| ServicePlayerGame {
+            created_at: game.created_at.timestamp_millis().to_string(),
             id: game.id,
-            created_at: game.created_at.to_string(),
-            updated_at: game.updated_at.to_string(),
+            updated_at: game.updated_at.timestamp_millis().to_string(),
         })
         .collect()
     }
 
-    pub fn update(&self, connection: &mut SqliteConnection) {
+    pub fn update(&self, connection: &mut PgConnection) {
         use super::schema::game::table as game_table;
-
-        loop {
-            if diesel::delete(game_table)
-                .filter(schema::game::dsl::id.eq(&self.id))
-                .execute(connection)
-                .is_ok()
-            {
-                break;
-            }
-            wait_common();
-        }
 
         loop {
             if diesel::insert_into(game_table)
                 .values(self)
+                .on_conflict(super::schema::game::dsl::id)
+                .do_update()
+                .set(self)
                 .execute(connection)
                 .is_ok()
             {
@@ -488,7 +468,7 @@ impl DieselGame {
         let raw = &extra.game;
 
         Self {
-            created_at: extra.created_at.to_string(),
+            created_at: extra.created_at,
             id: raw.id.clone(),
             name: raw.name.clone(),
             phase: serde_json::to_string(&raw.phase).unwrap(),
@@ -500,13 +480,13 @@ impl DieselGame {
             round_player_index: raw.round.player_index as i32,
             round_wall_tile_drawn: raw.round.wall_tile_drawn,
             round_wind: serde_json::to_string(&raw.round.wind).unwrap(),
-            updated_at: extra.updated_at.to_string(),
+            updated_at: extra.updated_at,
             version: raw.version.clone(),
         }
     }
 
-    pub fn delete_games(connection: &mut SqliteConnection, game_ids: &[GameId]) {
-        db_loop(|| {
+    pub fn delete_games(connection: &mut PgConnection, game_ids: &[GameId]) {
+        db_request(|| {
             diesel::delete(schema::game::table)
                 .filter(schema::game::dsl::id.eq_any(game_ids))
                 .execute(connection)
@@ -527,7 +507,7 @@ impl DieselGamePlayer {
             .collect::<Vec<Self>>()
     }
 
-    pub fn read_from_game(connection: &mut SqliteConnection, game_id: &GameId) -> Vec<PlayerId> {
+    pub fn read_from_game(connection: &mut PgConnection, game_id: &GameId) -> Vec<PlayerId> {
         use schema::game_player::dsl as game_player_dsl;
         loop {
             if let Ok(data) = game_player_dsl::game_player
@@ -545,7 +525,7 @@ impl DieselGamePlayer {
     }
 
     pub fn read_from_player(
-        connection: &mut SqliteConnection,
+        connection: &mut PgConnection,
         player_id: &PlayerId,
     ) -> Vec<ServicePlayerGame> {
         let player = DieselPlayer::read_from_id_raw(connection, player_id);
@@ -569,31 +549,31 @@ impl DieselGamePlayer {
         }
         .into_iter()
         .map(|game| ServicePlayerGame {
-            created_at: game.created_at,
+            created_at: game.created_at.timestamp_millis().to_string(),
             id: game.id,
-            updated_at: game.updated_at,
+            updated_at: game.updated_at.timestamp_millis().to_string(),
         })
         .collect::<Vec<_>>()
     }
 
-    pub fn update(connection: &mut SqliteConnection, diesel_game_players: &Vec<Self>, game: &Game) {
+    pub fn update(connection: &mut PgConnection, diesel_game_players: &Vec<Self>, game: &Game) {
         use schema::game_player::table as game_player_table;
 
-        db_loop(|| {
+        db_request(|| {
             diesel::delete(game_player_table)
                 .filter(schema::game_player::dsl::game_id.eq(&game.id))
                 .execute(connection)
         });
 
-        db_loop(|| {
+        db_request(|| {
             diesel::insert_into(game_player_table)
                 .values(diesel_game_players)
                 .execute(connection)
         });
     }
 
-    pub fn delete_games(connection: &mut SqliteConnection, game_ids: &[GameId]) {
-        db_loop(|| {
+    pub fn delete_games(connection: &mut PgConnection, game_ids: &[GameId]) {
+        db_request(|| {
             diesel::delete(schema::game_player::table)
                 .filter(schema::game_player::dsl::game_id.eq_any(game_ids))
                 .execute(connection)
@@ -602,7 +582,7 @@ impl DieselGamePlayer {
 }
 
 impl DieselGameScore {
-    pub fn update_from_game(connection: &mut SqliteConnection, service_game: &ServiceGame) {
+    pub fn update_from_game(connection: &mut PgConnection, service_game: &ServiceGame) {
         use schema::game_score::table as game_score_table;
 
         loop {
@@ -639,7 +619,7 @@ impl DieselGameScore {
         }
     }
 
-    pub fn read_from_game(connection: &mut SqliteConnection, game_id: &GameId) -> Score {
+    pub fn read_from_game(connection: &mut PgConnection, game_id: &GameId) -> Score {
         use schema::game_score::dsl as game_score_dsl;
 
         loop {
@@ -660,7 +640,7 @@ impl DieselGameScore {
         .collect::<Score>()
     }
 
-    pub fn read_total_from_player(connection: &mut SqliteConnection, player_id: &PlayerId) -> i32 {
+    pub fn read_total_from_player(connection: &mut PgConnection, player_id: &PlayerId) -> i32 {
         use schema::game_score::dsl as game_score_dsl;
 
         loop {
@@ -677,8 +657,8 @@ impl DieselGameScore {
         .sum()
     }
 
-    pub fn delete_games(connection: &mut SqliteConnection, game_ids: &[GameId]) {
-        db_loop(|| {
+    pub fn delete_games(connection: &mut PgConnection, game_ids: &[GameId]) {
+        db_request(|| {
             diesel::delete(schema::game_score::table)
                 .filter(schema::game_score::dsl::game_id.eq_any(game_ids))
                 .execute(connection)
@@ -687,7 +667,7 @@ impl DieselGameScore {
 }
 
 impl DieselGameBoard {
-    pub fn update_from_game(connection: &mut SqliteConnection, service_game: &ServiceGame) {
+    pub fn update_from_game(connection: &mut PgConnection, service_game: &ServiceGame) {
         use schema::game_board::table as game_board_table;
 
         loop {
@@ -726,7 +706,7 @@ impl DieselGameBoard {
         }
     }
 
-    pub fn read_from_game(connection: &mut SqliteConnection, game_id: &GameId) -> Board {
+    pub fn read_from_game(connection: &mut PgConnection, game_id: &GameId) -> Board {
         use schema::game_board::dsl as game_board_dsl;
 
         loop {
@@ -744,8 +724,8 @@ impl DieselGameBoard {
         .collect::<Board>()
     }
 
-    pub fn delete_games(connection: &mut SqliteConnection, game_ids: &[GameId]) {
-        db_loop(|| {
+    pub fn delete_games(connection: &mut PgConnection, game_ids: &[GameId]) {
+        db_request(|| {
             diesel::delete(schema::game_board::table)
                 .filter(schema::game_board::dsl::game_id.eq_any(game_ids))
                 .execute(connection)
@@ -754,7 +734,7 @@ impl DieselGameBoard {
 }
 
 impl DieselGameDrawWall {
-    pub fn update_from_game(connection: &mut SqliteConnection, service_game: &ServiceGame) {
+    pub fn update_from_game(connection: &mut PgConnection, service_game: &ServiceGame) {
         use schema::game_draw_wall::table as game_draw_wall_table;
 
         loop {
@@ -793,7 +773,7 @@ impl DieselGameDrawWall {
         }
     }
 
-    pub fn read_from_game(connection: &mut SqliteConnection, game_id: &GameId) -> DrawWall {
+    pub fn read_from_game(connection: &mut PgConnection, game_id: &GameId) -> DrawWall {
         use schema::game_draw_wall::dsl as game_draw_wall_dsl;
 
         loop {
@@ -811,8 +791,8 @@ impl DieselGameDrawWall {
         .collect::<DrawWall>()
     }
 
-    pub fn delete_games(connection: &mut SqliteConnection, game_ids: &[GameId]) {
-        db_loop(|| {
+    pub fn delete_games(connection: &mut PgConnection, game_ids: &[GameId]) {
+        db_request(|| {
             diesel::delete(schema::game_draw_wall::table)
                 .filter(schema::game_draw_wall::dsl::game_id.eq_any(game_ids))
                 .execute(connection)
@@ -821,7 +801,7 @@ impl DieselGameDrawWall {
 }
 
 impl DieselGameHand {
-    pub fn update_from_game(connection: &mut SqliteConnection, service_game: &ServiceGame) {
+    pub fn update_from_game(connection: &mut PgConnection, service_game: &ServiceGame) {
         use schema::game_hand::table as game_hand_table;
 
         loop {
@@ -873,7 +853,7 @@ impl DieselGameHand {
         }
     }
 
-    pub fn read_from_game(connection: &mut SqliteConnection, game_id: &GameId) -> Hands {
+    pub fn read_from_game(connection: &mut PgConnection, game_id: &GameId) -> Hands {
         use schema::game_hand::dsl as game_hand_dsl;
         let mut hands = Hands::default();
 
@@ -906,8 +886,8 @@ impl DieselGameHand {
         hands
     }
 
-    pub fn delete_games(connection: &mut SqliteConnection, game_ids: &[GameId]) {
-        db_loop(|| {
+    pub fn delete_games(connection: &mut PgConnection, game_ids: &[GameId]) {
+        db_request(|| {
             diesel::delete(schema::game_hand::table)
                 .filter(schema::game_hand::dsl::game_id.eq_any(game_ids))
                 .execute(connection)
@@ -916,19 +896,8 @@ impl DieselGameHand {
 }
 
 impl DieselGameSettings {
-    pub fn update_from_game(connection: &mut SqliteConnection, service_game: &ServiceGame) {
+    pub fn update_from_game(connection: &mut PgConnection, service_game: &ServiceGame) {
         use schema::game_settings::table as game_settings_table;
-
-        loop {
-            if diesel::delete(game_settings_table)
-                .filter(schema::game_settings::dsl::game_id.eq(&service_game.game.id))
-                .execute(connection)
-                .is_ok()
-            {
-                break;
-            }
-            wait_common();
-        }
 
         let auto_sort_players = service_game
             .settings
@@ -967,6 +936,9 @@ impl DieselGameSettings {
         loop {
             if diesel::insert_into(game_settings_table)
                 .values(&settings)
+                .on_conflict(schema::game_settings::dsl::game_id)
+                .do_update()
+                .set(&settings)
                 .execute(connection)
                 .is_ok()
             {
@@ -976,10 +948,7 @@ impl DieselGameSettings {
         }
     }
 
-    pub fn read_from_game(
-        connection: &mut SqliteConnection,
-        game_id: &GameId,
-    ) -> Option<GameSettings> {
+    pub fn read_from_game(connection: &mut PgConnection, game_id: &GameId) -> Option<GameSettings> {
         use schema::game_settings::dsl as game_settings_dsl;
 
         loop {
@@ -1011,8 +980,8 @@ impl DieselGameSettings {
         })
     }
 
-    pub fn delete_games(connection: &mut SqliteConnection, game_ids: &[GameId]) {
-        db_loop(|| {
+    pub fn delete_games(connection: &mut PgConnection, game_ids: &[GameId]) {
+        db_request(|| {
             diesel::delete(schema::game_settings::table)
                 .filter(schema::game_settings::dsl::game_id.eq_any(game_ids))
                 .execute(connection)

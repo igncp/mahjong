@@ -1,0 +1,8 @@
+@import "../../ui/styles";
+
+.settingsFormInner {
+  display: flex;
+  flex-direction: column;
+  gap: $common-gap;
+  padding: $common-gap;
+}

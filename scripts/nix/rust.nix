@@ -7,7 +7,6 @@
 in {
   extra-shell-packages = with pkgs;
     [
-      sqlite
       openssl
       wasm-pack
       rustup
@@ -40,7 +39,6 @@ in {
 
     buildInputs = with pkgs; [
       openssl
-      sqlite
     ];
     nativeBuildInputs = [pkgs.pkgconfig];
   };

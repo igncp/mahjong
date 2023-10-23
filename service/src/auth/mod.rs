@@ -163,16 +163,8 @@ impl<'a> AuthHandler<'a> {
             username: username.clone(),
         };
 
-        let auth_info = AuthInfo {
-            data: AuthInfoData::Email(auth_info_email),
-            role,
-            user_id,
-        };
-
-        self.storage.save_auth_info(&auth_info).await?;
-
         let player = ServicePlayer {
-            id: auth_info.user_id.clone(),
+            id: user_id.clone(),
             name: username.clone(),
             created_at: get_timestamp().to_string(),
 
@@ -180,6 +172,14 @@ impl<'a> AuthHandler<'a> {
         };
 
         self.storage.save_player(&player).await?;
+
+        let auth_info = AuthInfo {
+            data: AuthInfoData::Email(auth_info_email),
+            role,
+            user_id,
+        };
+
+        self.storage.save_auth_info(&auth_info).await?;
 
         self.auth_info = Some(auth_info);
 
@@ -200,16 +200,8 @@ impl<'a> AuthHandler<'a> {
             username: username.clone(),
         };
 
-        let auth_info = AuthInfo {
-            data: AuthInfoData::Github(auth_info_github),
-            role,
-            user_id,
-        };
-
-        self.storage.save_auth_info(&auth_info).await?;
-
         let player = ServicePlayer {
-            id: auth_info.user_id.clone(),
+            id: user_id.clone(),
             name: "Github user".to_string(),
             created_at: get_timestamp().to_string(),
 
@@ -217,6 +209,14 @@ impl<'a> AuthHandler<'a> {
         };
 
         self.storage.save_player(&player).await?;
+
+        let auth_info = AuthInfo {
+            data: AuthInfoData::Github(auth_info_github),
+            role,
+            user_id,
+        };
+
+        self.storage.save_auth_info(&auth_info).await?;
 
         self.auth_info = Some(auth_info);
 

@@ -1,6 +1,7 @@
 import { getAllUniqueTiles } from "mahjong_sdk/dist/tiles";
 
-import { getTileImageName, imageNameToImport } from "../assets";
+import { imageNameToImport } from "../assets";
+import { getTileImageName } from "../assets-utils";
 
 const tiles = getAllUniqueTiles();
 const tileNames = tiles.map((tile) => getTileImageName(tile));

@@ -1,15 +1,15 @@
 use crate::{
     auth::{AuthInfo, AuthInfoData, GetAuthInfo, Username},
     common::Storage,
-    env::ENV_SQLITE_DB_KEY,
-    sqlite_storage::models::{
+    db_storage::models::{
         DieselAuthInfo, DieselAuthInfoEmail, DieselAuthInfoGithub, DieselGame, DieselGamePlayer,
         DieselGameScore, DieselPlayer,
     },
+    env::ENV_PG_URL,
 };
 use async_trait::async_trait;
+use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use diesel::sqlite::SqliteConnection;
 use mahjong_core::{Game, GameId, PlayerId};
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
@@ -25,7 +25,7 @@ mod models;
 mod models_translation;
 mod schema;
 
-pub struct SQLiteStorage {
+pub struct DBStorage {
     db_path: String,
 }
 
@@ -37,9 +37,9 @@ struct FileContent {
 }
 
 #[async_trait]
-impl Storage for SQLiteStorage {
+impl Storage for DBStorage {
     async fn get_auth_info(&self, get_auth_info: GetAuthInfo) -> Result<Option<AuthInfo>, String> {
-        let mut connection = SqliteConnection::establish(&self.db_path).unwrap();
+        let mut connection = PgConnection::establish(&self.db_path).unwrap();
 
         if let GetAuthInfo::EmailUsername(username) = get_auth_info.to_owned() {
             return DieselAuthInfoEmail::get_info_by_username(&mut connection, &username);
@@ -57,7 +57,7 @@ impl Storage for SQLiteStorage {
     }
 
     async fn get_player_total_score(&self, player_id: &PlayerId) -> Result<i32, String> {
-        let mut connection = SqliteConnection::establish(&self.db_path).unwrap();
+        let mut connection = PgConnection::establish(&self.db_path).unwrap();
 
         let total_score = DieselGameScore::read_total_from_player(&mut connection, player_id);
 
@@ -69,7 +69,7 @@ impl Storage for SQLiteStorage {
         use schema::auth_info_email::table as email_table;
         use schema::auth_info_github::table as github_table;
 
-        let mut connection = SqliteConnection::establish(&self.db_path).unwrap();
+        let mut connection = PgConnection::establish(&self.db_path).unwrap();
         let diesel_auth_info = DieselAuthInfo::from_raw(auth_info);
 
         diesel::insert_into(table)
@@ -100,11 +100,21 @@ impl Storage for SQLiteStorage {
     }
 
     async fn save_game(&self, service_game: &ServiceGame) -> Result<(), String> {
-        let mut connection = SqliteConnection::establish(&self.db_path).unwrap();
+        let mut connection = PgConnection::establish(&self.db_path).unwrap();
 
         DieselPlayer::update_from_game(&mut connection, service_game);
 
-        // This could be a transaction
+        let diesel_game_extra = DieselGameExtra {
+            created_at: chrono::NaiveDateTime::from_timestamp_millis(service_game.created_at)
+                .unwrap(),
+            game: service_game.game.clone(),
+            updated_at: chrono::NaiveDateTime::from_timestamp_millis(service_game.updated_at)
+                .unwrap(),
+        };
+
+        let diesel_game = DieselGame::from_raw(&diesel_game_extra);
+
+        diesel_game.update(&mut connection);
 
         let diesel_game_players = DieselGamePlayer::from_game(&service_game.game);
         DieselGamePlayer::update(&mut connection, &diesel_game_players, &service_game.game);
@@ -114,20 +124,11 @@ impl Storage for SQLiteStorage {
         DieselGameHand::update_from_game(&mut connection, service_game);
         DieselGameSettings::update_from_game(&mut connection, service_game);
 
-        let diesel_game_extra = DieselGameExtra {
-            created_at: service_game.created_at,
-            game: service_game.game.clone(),
-            updated_at: service_game.updated_at,
-        };
-        let diesel_game = DieselGame::from_raw(&diesel_game_extra);
-
-        diesel_game.update(&mut connection);
-
         Ok(())
     }
 
     async fn get_game(&self, id: &GameId) -> Result<Option<ServiceGame>, String> {
-        let mut connection = SqliteConnection::establish(&self.db_path).unwrap();
+        let mut connection = PgConnection::establish(&self.db_path).unwrap();
 
         let result = DieselGame::read_from_id(&mut connection, id);
 
@@ -157,11 +158,11 @@ impl Storage for SQLiteStorage {
         game.table.draw_wall = draw_wall;
 
         let service_game = ServiceGame {
-            created_at: game_extra.created_at,
+            created_at: game_extra.created_at.timestamp_millis(),
             game,
             players,
             settings: settings.unwrap(),
-            updated_at: game_extra.updated_at,
+            updated_at: game_extra.updated_at.timestamp_millis(),
         };
 
         Ok(Some(service_game))
@@ -171,7 +172,7 @@ impl Storage for SQLiteStorage {
         &self,
         player_id: &Option<PlayerId>,
     ) -> Result<Vec<ServicePlayerGame>, String> {
-        let mut connection = SqliteConnection::establish(&self.db_path).unwrap();
+        let mut connection = PgConnection::establish(&self.db_path).unwrap();
 
         if player_id.is_some() {
             let result =
@@ -186,7 +187,7 @@ impl Storage for SQLiteStorage {
     }
 
     async fn get_player(&self, player_id: &PlayerId) -> Result<Option<ServicePlayer>, String> {
-        let mut connection = SqliteConnection::establish(&self.db_path).unwrap();
+        let mut connection = PgConnection::establish(&self.db_path).unwrap();
 
         let player = DieselPlayer::read_from_id(&mut connection, player_id);
 
@@ -194,7 +195,7 @@ impl Storage for SQLiteStorage {
     }
 
     async fn save_player(&self, player: &ServicePlayer) -> Result<(), String> {
-        let mut connection = SqliteConnection::establish(&self.db_path).unwrap();
+        let mut connection = PgConnection::establish(&self.db_path).unwrap();
 
         DieselPlayer::save(&mut connection, player);
 
@@ -202,7 +203,7 @@ impl Storage for SQLiteStorage {
     }
 
     async fn delete_games(&self, ids: &[GameId]) -> Result<(), String> {
-        let mut connection = SqliteConnection::establish(&self.db_path).unwrap();
+        let mut connection = PgConnection::establish(&self.db_path).unwrap();
 
         DieselGamePlayer::delete_games(&mut connection, ids);
         DieselGameScore::delete_games(&mut connection, ids);
@@ -216,12 +217,13 @@ impl Storage for SQLiteStorage {
     }
 }
 
-impl SQLiteStorage {
+impl DBStorage {
     #[allow(dead_code)]
     pub fn new_dyn() -> Box<dyn Storage> {
-        let db_path = std::env::var(ENV_SQLITE_DB_KEY).unwrap_or("sqlite://mahjong.db".to_string());
+        let db_path = std::env::var(ENV_PG_URL)
+            .unwrap_or("postgres://postgres:postgres@localhost/mahjong".to_string());
 
-        debug!("SQLiteStorage: {}", db_path);
+        debug!("DBStorage: {}", db_path);
 
         let file_storage = Self { db_path };
 

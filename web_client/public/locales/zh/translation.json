@@ -25,7 +25,8 @@
   "board": {
     "help": {
       "dealer": "莊家玩家",
-      "intro": "突出顯示的用戶是當前回合中應該玩的用戶"
+      "intro": "突出顯示的用戶是當前回合中應該玩的用戶",
+      "meld": "可見麻將牌"
     }
   },
   "code": "代碼庫",
@@ -54,7 +55,6 @@
     "yes": "繼續"
   },
   "game": {
-    "actions": "動作",
     "AI": {
       "disabled": "禁用",
       "enabled": "啟用",
@@ -91,15 +91,11 @@
       "no": "不",
       "yes": "是的"
     },
-    "otherPlayers": "其他玩家",
     "passRound": "進入下一輪",
     "passTurn": "轉彎",
     "points_other": "{{count}}分",
     "possibleMeld": "可能的融合",
     "sayMahjong": "說麻將",
-    "settings": {
-      "title": "設置"
-    },
     "sortHand": "排序手牌",
     "visibleMeld": "{{player}}的牌融合",
     "wait": {

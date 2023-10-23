@@ -1,6 +1,6 @@
 pub const ENV_AUTH_JWT_SECRET_KEY: &str = "MAHJONG_JWT_SECRET";
 
-pub const ENV_SQLITE_DB_KEY: &str = "MAHJONG_STORAGE_SQLITE_DB";
+pub const ENV_PG_URL: &str = "DATABASE_URL";
 
 pub const ENV_LOGGER_LEVEL: &str = "MAHJONG_LOGGER_LEVEL";
 

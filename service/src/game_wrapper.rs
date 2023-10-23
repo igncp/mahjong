@@ -67,8 +67,8 @@ impl<'a> GameWrapper<'a> {
         player_id: Option<PlayerId>,
         ai_player_names: &Option<Vec<String>>,
     ) -> Result<GameWrapper<'a>, String> {
-        let service_player = if player_id.is_some() {
-            let player = storage.get_player(&player_id.unwrap()).await;
+        let service_player = if let Some(player_id) = player_id {
+            let player = storage.get_player(&player_id).await;
 
             if player.is_err() {
                 debug!("Player not found with error");
@@ -594,6 +594,8 @@ impl<'a> GameWrapper<'a> {
 
         let response: UserPostSortHandResponse =
             ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
+
+        debug!("Sorted hand for player: {:?}", player_id);
 
         self.save_and_return(&response, "Error sorting hand").await
     }

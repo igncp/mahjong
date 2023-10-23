@@ -34,11 +34,11 @@ impl Default for GameSettings {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceGame {
-    pub created_at: u128,
+    pub created_at: i64,
     pub game: Game,
     pub players: FxHashMap<PlayerId, ServicePlayer>,
     pub settings: GameSettings,
-    pub updated_at: u128,
+    pub updated_at: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, juniper::GraphQLObject)]

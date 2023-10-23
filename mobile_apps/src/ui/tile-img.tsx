@@ -3,7 +3,8 @@ import { getTileInfo } from "mahjong_sdk/dist/tile-content";
 import React from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 
-import { getTileImageName, imageNameToImport } from "../lib/assets";
+import { imageNameToImport } from "../lib/assets";
+import { getTileImageName } from "../lib/assets-utils";
 
 type Props = {
   tile: Tile;

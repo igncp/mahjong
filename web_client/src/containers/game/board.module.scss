@@ -10,16 +10,23 @@ $user-gap: 10px;
 
 .dealerIcon {
   color: yellow;
+}
 
-  &.boardIcon {
-    position: absolute;
-    right: -18px;
-    bottom: -2px;
-  }
+.helpIcon {
+  background-color: $color-lightgreen;
+}
 
-  &.helpIcon {
-    background-color: $color-lightgreen;
-  }
+.meldIcon {
+  font-weight: bold;
+  color: $color-darkred;
+}
+
+.userIcons {
+  display: flex;
+  flex-direction: row;
+  gap: 5px;
+  align-items: center;
+  justify-content: center;
 }
 
 .discardedTile {
@@ -28,25 +35,11 @@ $user-gap: 10px;
 }
 
 .helpModalTrigger {
-  cursor: pointer;
-
-  position: absolute;
-  right: 0;
   bottom: 0;
+}
 
-  padding: $user-gap;
-
-  font-size: 30px;
-  color: #777;
-
-  opacity: 0.5;
-
-  transition: all 0.3s ease-in-out;
-
-  &:hover {
-    color: #333;
-    opacity: 1;
-  }
+.settingsModalTrigger {
+  top: 0;
 }
 
 .userItem {
@@ -75,6 +68,13 @@ $user-gap: 10px;
 
   &.userBottom {
     bottom: $user-gap;
+
+    .userIcons {
+      position: absolute;
+      right: -5px;
+      bottom: 0;
+      transform: translateX(100%);
+    }
   }
 
   &.userTop {
@@ -108,4 +108,26 @@ $user-gap: 10px;
   padding: 60px;
 
   background: $color-lightgreen;
+}
+
+.helpModalTrigger,
+.settingsModalTrigger {
+  cursor: pointer;
+
+  position: absolute;
+  right: 0;
+
+  padding: $user-gap;
+
+  font-size: 25px;
+  color: #777;
+
+  opacity: 0.5;
+
+  transition: all 0.3s ease-in-out;
+
+  &:hover {
+    color: #333;
+    opacity: 1;
+  }
 }
