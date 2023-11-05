@@ -2,8 +2,7 @@
 
 ![Checks](https://github.com/igncp/mahjong/actions/workflows/checks.yml/badge.svg) ![Deploy](https://github.com/igncp/mahjong/actions/workflows/deploy.yml/badge.svg)
 
-Proof of concept project to practice Rust and TypeScript programming. The idea is to include
-these subpackages:
+Hong Kong style mahjong web and mobile applications. They use a common server which handles most of the game mechanics.
 
 1. Core library with the game utilities and tests
 1. Service that persists and handles games for clients
@@ -18,9 +17,6 @@ these subpackages:
 1. React Native apps which reuse some code with the web code
 1. A Rust TUI application as a prototype for playing games and running simulations
 
-The game uses Hong Kong style Mahjong. The goal is to write it as much as
-possible in Rust, except the web client frontend where it uses TypeScript.
-
 > This is WIP, the subprojects will remain v0.x until the project reaches the MVP state
 
 ## Development
@@ -33,4 +29,4 @@ manager installed.
 Once you have cloned the repository there are a few things to setup:
 
 1. Generate the `.env` files where present by copying the templates
-1. Install the dev dependencies: `cd scripts && cargo run -- dev_install`
+1. Install the dev dependencies: `cd scripts && bash src/main.sh dev_install`

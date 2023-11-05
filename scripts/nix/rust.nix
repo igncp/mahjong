@@ -8,6 +8,7 @@ in {
   extra-shell-packages = with pkgs;
     [
       openssl
+      pkg-config
       wasm-pack
       rustup
     ]

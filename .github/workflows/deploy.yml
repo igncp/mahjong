@@ -37,4 +37,4 @@ jobs:
           NEXT_PUBLIC_GITHUB_CLIENT_ID: 5b79179dd44f90e1a63a
           NEXT_PUBLIC_SERVICE_URL: https://mahjong-rust.com/api
         run: |
-          nix develop path:$(pwd) -c cargo run --release -p scripts docker
+          nix develop path:$(pwd) -c bash -c 'cd scripts && bash src/main.sh docker'

@@ -8,6 +8,8 @@
 
 ## Improvements
 
+- Move docker images to alpine
+- Move other projects bash scripts to the main scripts dir
 - Convert DB operations into transactions
 - Consider using redis
 - Random user position (especially with other players)

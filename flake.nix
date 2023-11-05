@@ -12,6 +12,7 @@
   }:
     flake-utils.lib.eachDefaultSystem (system: let
       is-docker-ci = builtins.pathExists ./scripts/nix/is-docker-ci;
+      is-checks-ci = builtins.pathExists ./scripts/nix/is-checks-ci;
       pkgs = import unstable {
         inherit system;
         config = {
@@ -32,7 +33,12 @@
             ++ (
               if is-docker-ci
               then []
-              else with pkgs-stable; [sqlfluff inkscape pkgs.nodejs jdk]
+              else [sqlfluff inkscape pkgs.nodejs jdk]
+            )
+            ++ (
+              if is-docker-ci == false && is-checks-ci == false
+              then [libargon2]
+              else []
             )
             ++ android.extra-shell-packages
             ++ rust.extra-shell-packages;

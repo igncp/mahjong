@@ -1,7 +1,6 @@
 [workspace]
 members = [
     "mahjong_core",
-    "scripts",
     "service",
     "service_contracts",
     "tui_client",
