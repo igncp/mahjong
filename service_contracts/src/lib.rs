@@ -1,4 +1,6 @@
 #![deny(clippy::use_self, clippy::shadow_unrelated)]
+use std::fmt::{self, Display};
+
 use mahjong_core::{
     game::GameVersion, game_summary::GameSummary, hand::SetIdContent, Game, GameId, Hand, Hands,
     PlayerId, TileId,
@@ -41,7 +43,7 @@ pub struct ServiceGame {
     pub updated_at: i64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, juniper::GraphQLObject)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameSettingsSummary {
     pub ai_enabled: bool,
     pub auto_sort: bool,
@@ -309,6 +311,15 @@ pub struct UserPostSetAuthResponse {
     pub token: String,
 }
 
+#[derive(Deserialize, Serialize, Debug)]
+pub struct UserPostSetAuthAnonRequest {
+    pub id_token: String,
+}
+#[derive(Deserialize, Serialize)]
+pub struct UserPostSetAuthAnonResponse {
+    pub token: String,
+}
+
 #[derive(Deserialize, Serialize)]
 pub struct UserPostPassRoundRequest {
     pub player_id: PlayerId,
@@ -322,7 +333,54 @@ pub struct UserGetInfoResponse {
 }
 
 #[derive(Deserialize, Serialize)]
+pub struct DashboardPlayer {
+    pub id: String,
+    pub name: String,
+    pub created_at: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct DashboardGame {
+    pub id: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub enum Provider {
+    Anonymous,
+    Email,
+    Github,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+pub struct AuthInfoSummary {
+    pub provider: Provider,
+    pub username: Option<String>,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct UserGetDashboardResponse {
+    pub auth_info: AuthInfoSummary,
+    pub player: DashboardPlayer,
+    pub player_games: Vec<DashboardGame>,
+    pub player_total_score: i32,
+}
+
+#[derive(Deserialize, Serialize)]
 pub struct UserPatchInfoRequest {
     pub name: String,
 }
 pub type UserPatchInfoResponse = UserGetInfoResponse;
+
+impl Display for Provider {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let result = match self {
+            Self::Anonymous => "anonymous".to_string(),
+            Self::Email => "email".to_string(),
+            Self::Github => "github".to_string(),
+        };
+
+        write!(f, "{}", result)
+    }
+}

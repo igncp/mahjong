@@ -1,5 +1,12 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { message } from "antd";
+import { useRouter } from "next/router";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { first } from "rxjs";
+
+import { SiteUrls } from "src/lib/site/urls";
+import { getTileInfo } from "src/lib/tile-info";
 import {
   Board,
   GameId,
@@ -8,20 +15,13 @@ import {
   SetId,
   TUserLoadGameResponse,
   Wind,
-} from "mahjong_sdk/dist/core";
-import { HttpClient } from "mahjong_sdk/dist/http-client";
+} from "src/sdk/core";
+import { HttpClient } from "src/sdk/http-client";
 import {
   ModelServiceGameSummary,
   ModelServiceGameSummaryError,
   ModelState,
-} from "mahjong_sdk/dist/service-game-summary";
-import { useRouter } from "next/router";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { first } from "rxjs";
-
-import { SiteUrls } from "src/lib/site/urls";
-import { getTileInfo } from "src/lib/tile-info";
+} from "src/sdk/service-game-summary";
 import Alert from "src/ui/common/alert";
 import Button from "src/ui/common/button";
 import Card from "src/ui/common/card";
@@ -41,8 +41,8 @@ export interface IProps {
 }
 
 const Game = ({ gameId, userId }: IProps) => {
-  const { t, i18n } = useTranslation();
-  const gameState = useState<TUserLoadGameResponse | null>(null);
+  const { i18n, t } = useTranslation();
+  const gameState = useState<null | TUserLoadGameResponse>(null);
   const loadingState = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -138,7 +138,7 @@ const Game = ({ gameId, userId }: IProps) => {
     [serviceGameSummary?.game_summary.players.join("")]
   );
 
-  const { boardDropRef, handTilesProps, canDropInBoard } = useGameUI({
+  const { boardDropRef, canDropInBoard, handTilesProps } = useGameUI({
     getCanDiscardTile,
     serviceGameM,
     serviceGameSummary,

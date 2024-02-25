@@ -1,11 +1,11 @@
 import { Modal as AntdModal } from "antd";
 
 type Props = {
-  title?: string;
+  children: React.ReactNode;
+  footer?: null | React.ReactNode[];
   onCancel: () => void;
   open: boolean;
-  children: React.ReactNode;
-  footer?: React.ReactNode[] | null;
+  title?: string;
 };
 
 const Modal = (props: Props) => <AntdModal {...props} />;

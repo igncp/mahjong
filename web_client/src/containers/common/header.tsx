@@ -1,4 +1,3 @@
-import { tokenObserver } from "mahjong_sdk/dist/auth";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import React, { memo } from "react";
@@ -6,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { getIsLoggedIn } from "src/lib/auth";
 import { SiteUrls } from "src/lib/site/urls";
+import { tokenObserver } from "src/sdk/auth";
 import Button from "src/ui/common/button";
 import HeaderComp from "src/ui/common/header";
 

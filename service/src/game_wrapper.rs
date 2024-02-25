@@ -30,13 +30,14 @@ pub struct GameWrapper<'a> {
 }
 
 impl<'a> GameWrapper<'a> {
-    pub async fn from_storage(
+    async fn from_storage_base(
         storage: &'a DataStorage,
         game_id: &web::Path<String>,
         socket_server: DataSocketServer,
         game_version: Option<&'a GameVersion>,
+        use_cache: bool,
     ) -> Result<GameWrapper<'a>, HttpResponse> {
-        let game = storage.get_game(&game_id.to_string()).await;
+        let game = storage.get_game(&game_id.to_string(), use_cache).await;
 
         if game.is_err() {
             return Err(HttpResponse::InternalServerError().body("Error loading game"));
@@ -59,6 +60,24 @@ impl<'a> GameWrapper<'a> {
             service_game,
             socket_server,
         })
+    }
+
+    pub async fn from_storage(
+        storage: &'a DataStorage,
+        game_id: &web::Path<String>,
+        socket_server: DataSocketServer,
+        game_version: Option<&'a GameVersion>,
+    ) -> Result<GameWrapper<'a>, HttpResponse> {
+        Self::from_storage_base(storage, game_id, socket_server, game_version, true).await
+    }
+
+    pub async fn from_storage_no_cache(
+        storage: &'a DataStorage,
+        game_id: &web::Path<String>,
+        socket_server: DataSocketServer,
+        game_version: Option<&'a GameVersion>,
+    ) -> Result<GameWrapper<'a>, HttpResponse> {
+        Self::from_storage_base(storage, game_id, socket_server, game_version, false).await
     }
 
     pub async fn from_new_game(

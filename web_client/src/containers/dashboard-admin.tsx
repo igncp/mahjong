@@ -1,17 +1,17 @@
-import { TAdminGetGamesResponse } from "mahjong_sdk/dist/core";
-import { HttpClient } from "mahjong_sdk/dist/http-client";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { MouseEventHandler, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { TAdminGetGamesResponse } from "src/sdk/core";
+import { HttpClient } from "src/sdk/http-client";
 import List, { ListItem } from "src/ui/common/list";
 
 import { SiteUrls } from "../lib/site/urls";
 import PageContent from "./page-content";
 
 const DashboardAdmin = () => {
-  const [page, setPage] = useState<TAdminGetGamesResponse | null>(null);
+  const [page, setPage] = useState<null | TAdminGetGamesResponse>(null);
   const { t } = useTranslation();
   const router = useRouter();
 

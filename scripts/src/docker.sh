@@ -6,16 +6,14 @@ run_docker() (
   web() {
     run_pack_wasm
 
-    (cd ts_sdk && bun run sync_sdk)
-
-    (cd web_client && bun run build)
+    (cd web_client && bun install && bun run build)
   }
 
   docker_service() {
     (
       cd service
       cargo build --release --target-dir target
-      patchelf --set-interpreter /lib/x86_64-linux-gnu/ld-linux-$(uname -m).so.2 \
+      patchelf --set-interpreter /lib/x86_64-linux-gnu/ld-linux-$(uname -m | sed 's|_|-|g').so.2 \
         ./target/release/mahjong_service
     )
 
@@ -40,7 +38,30 @@ run_docker() (
       igncp/mahjong_front:$DOCKER_IMAGE_TAG
   }
 
-  web
-  docker_front
-  docker_service
+  echo "DEPLOY_SKIP='$DEPLOY_SKIP'"
+  echo "DEPLOY_ONLY='$DEPLOY_ONLY'"
+
+  if [ -z "$(echo "$DEPLOY_SKIP" | grep 'web' || true)" ] &&
+    [ -z "$(echo "$DEPLOY_ONLY" | grep -v 'web' || true)" ]; then
+    web
+  fi
+
+  if [ -z "$(echo "$DEPLOY_SKIP" | grep 'front' || true)" ] &&
+    [ -z "$(echo "$DEPLOY_ONLY" | grep -v 'front' || true)" ]; then
+    docker_front
+  fi
+
+  if [ -z "$(echo "$DEPLOY_SKIP" | grep 'service' || true)" ] &&
+    [ -z "$(echo "$DEPLOY_ONLY" | grep -v 'service' || true)" ]; then
+    docker_service
+  fi
 )
+
+run_check_docker() {
+  cp -r /base /app
+  cd /app/base
+  cp -r /target .
+  cp -r /web_client_modules web_client/node_modules
+  cd /app/base
+  nix develop path:$(pwd) -c bash -c 'cd scripts && bash src/main.sh check'
+}

@@ -15,3 +15,14 @@
 
   display: inline-block;
 }
+
+.displayName {
+  display: flex;
+  flex-flow: row wrap;
+  gap: 10px;
+  align-items: center;
+
+  small {
+    font-size: 0.8em;
+  }
+}

@@ -3,8 +3,8 @@ import { ColumnsType } from "antd/es/table";
 
 type Props<A extends object> = {
   className?: string;
-  dataSource: A[];
   columns: ColumnsType<A>;
+  dataSource: A[];
   onRow?: (record: A) => React.HTMLAttributes<HTMLElement>;
 };
 

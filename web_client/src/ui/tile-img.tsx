@@ -1,10 +1,10 @@
-import { Tile } from "mahjong_sdk/dist/core";
-import { useEffectExceptOnMount } from "mahjong_sdk/dist/hooks";
 import { MouseEventHandler, memo, useMemo } from "react";
 import { ConnectDropTarget, useDrag } from "react-dnd";
 import { useTranslation } from "react-i18next";
 
 import { getTileInfo } from "src/lib/tile-info";
+import { Tile } from "src/sdk/core";
+import { useEffectExceptOnMount } from "src/sdk/hooks";
 
 import Tooltip from "./common/tooltip";
 

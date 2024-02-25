@@ -1,6 +1,7 @@
 import { expect, test as setup } from "@playwright/test";
-import { testDeleteGamesMutation } from "mahjong_sdk/dist/graphql/test-delete-games-mutation";
 import { lastValueFrom } from "rxjs";
+
+import { HttpClient } from "src/sdk/http-client";
 
 import { API } from "./poms/api";
 import { AuthPage } from "./poms/auth-page";
@@ -9,7 +10,7 @@ import { authFile } from "./utils";
 // https://playwright.dev/docs/test-global-setup-teardown
 // https://playwright.dev/docs/auth
 
-setup("Login and clear test games", async ({ page, baseURL }) => {
+setup("Login and clear test games", async ({ baseURL, page }) => {
   // Keeping this log for visibility in the tests
   console.log("debug: global.setup.ts: baseURL", baseURL);
 
@@ -25,9 +26,9 @@ setup("Login and clear test games", async ({ page, baseURL }) => {
   api.setUpClientURL();
   await api.setUpAuthTokenFromPage();
 
-  const result = await lastValueFrom(testDeleteGamesMutation());
+  const result = await lastValueFrom(HttpClient.testDeleteGames());
 
-  expect(result.testDeleteGames).toEqual(true);
+  expect(result.test_delete_games).toEqual(true);
 
   await page.context().storageState({ path: authFile });
 });

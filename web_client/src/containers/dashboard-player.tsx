@@ -1,17 +1,16 @@
 import { EditOutlined, PlusCircleOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { tokenObserver } from "mahjong_sdk/dist/auth";
-import {
-  DashboardQueryResponse,
-  queryDashboardUserQuery,
-} from "mahjong_sdk/dist/graphql/dashboard-user-query";
-import { HttpClient } from "mahjong_sdk/dist/http-client";
 import Head from "next/head";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { first } from "rxjs";
+import { string } from "zod";
 
+import { tokenObserver } from "src/sdk/auth";
+import type { TUserDashboardResponse } from "src/sdk/core";
+import { HttpClient } from "src/sdk/http-client";
 import Button from "src/ui/common/button";
 import Card from "src/ui/common/card";
 import Input from "src/ui/common/input";
@@ -41,7 +40,7 @@ const simpleFormatDate = (timestamp: string): string => {
 const DashboardUser = ({ userId }: TProps) => {
   const { t } = useTranslation();
   const [dashboardQueryResponse, setDashboardQueryResponse] =
-    useState<DashboardQueryResponse | null>(null);
+    useState<null | TUserDashboardResponse>(null);
   const [editName, setEditName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -51,7 +50,7 @@ const DashboardUser = ({ userId }: TProps) => {
   const router = useRouter();
 
   useEffect(() => {
-    const subscription = queryDashboardUserQuery().subscribe({
+    const subscription = HttpClient.getUserDashboard().subscribe({
       error: () => {
         tokenObserver.next(null);
         subscription.unsubscribe();
@@ -68,7 +67,11 @@ const DashboardUser = ({ userId }: TProps) => {
 
   if (!dashboardQueryResponse) return null;
 
-  const { player, playerGames, playerTotalScore } = dashboardQueryResponse;
+  const {
+    player,
+    player_games: playerGames,
+    player_total_score: playerTotalScore,
+  } = dashboardQueryResponse;
 
   const isSaveNameDisabled = !nameInput || isLoading;
 
@@ -147,20 +150,86 @@ const DashboardUser = ({ userId }: TProps) => {
         </Space>
       ) : (
         <Title
+          className={styles.displayName}
           data-name="display-name"
           level={2}
-          onClick={() => {
-            setNameInput(player.name);
-            setEditName(true);
-          }}
-          style={{ cursor: "pointer", margin: "10px 0" }}
+          style={{ margin: "10px 0" }}
         >
-          <span data-name="display-name-content">{player.name}</span>{" "}
-          <EditOutlined rev="" style={{ fontSize: "16px" }} /> (
+          <span
+            data-name="display-name-content"
+            onClick={() => {
+              setNameInput(player.name);
+              setEditName(true);
+            }}
+            style={{
+              alignItems: "center",
+              cursor: "pointer",
+              display: "flex",
+              gap: 10,
+            }}
+          >
+            {player.name}
+            <EditOutlined rev="" style={{ fontSize: "16px" }} />
+          </span>{" "}
+          (
           {t("dashboard.userPoints", "{{count}} points", {
             count: playerTotalScore,
           })}
           )
+          {!!dashboardQueryResponse?.auth_info &&
+            (() => {
+              const { auth_info } = dashboardQueryResponse;
+              const { provider, username } = auth_info;
+
+              if (!provider || !username) return null;
+
+              const [text, link] = (() => {
+                switch (provider) {
+                  case "Email": {
+                    const isEmail = string()
+                      .email()
+                      .safeParse(username).success;
+
+                    return [
+                      isEmail
+                        ? username
+                        : `${t(
+                            "dashboard.authUsername",
+                            "Auth username"
+                          )}: ${username}`,
+                      isEmail ? `mailto:${username}` : null,
+                    ];
+                  }
+                  case "Github":
+                    return [
+                      `${username}@github`,
+                      `https://github.com/${username}`,
+                    ];
+                  case "Anonymous":
+                    return [];
+                  default:
+                    return [];
+                }
+              })();
+
+              if (!text) return null;
+
+              return (
+                <small
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                >
+                  {link ? (
+                    <Link href={link} rel="noreferrer" target="_blank">
+                      {text}
+                    </Link>
+                  ) : (
+                    text
+                  )}
+                </small>
+              );
+            })()}
         </Title>
       )}
       <div className={styles.newGameButton}>
@@ -221,12 +290,12 @@ const DashboardUser = ({ userId }: TProps) => {
             title: t("dashboard.table.id", "ID"),
           },
           {
-            key: "updatedAt",
+            key: "updated_at",
             render: (record) => (
               <>
-                <b>{simpleFormatDate(record.updatedAt)}</b>
+                <b>{simpleFormatDate(record.updated_at)}</b>
                 <br />
-                {simpleFormatDate(record.createdAt)}
+                {simpleFormatDate(record.created_at)}
               </>
             ),
             responsive: ["xs"],
@@ -235,15 +304,15 @@ const DashboardUser = ({ userId }: TProps) => {
             )}`,
           },
           {
-            dataIndex: "updatedAt",
-            key: "updatedAt",
+            dataIndex: "updated_at",
+            key: "updated_at",
             render: (text) => simpleFormatDate(text),
             responsive: ["sm"],
             title: t("dashboard.table.played", "Last played at"),
           },
           {
-            dataIndex: "createdAt",
-            key: "createdAt",
+            dataIndex: "created_at",
+            key: "created_at",
             render: (text) => simpleFormatDate(text),
             responsive: ["sm"],
             title: t("dashboard.table.created", "Created at"),

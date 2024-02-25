@@ -8,7 +8,7 @@ if [ ! -f .env ]; then
 fi
 
 if [ -z "$(docker ps | grep mahjong_db || true)" ]; then
-  bash scripts/local_db.sh
+  bash scripts/local_env.sh
   sleep 6
 fi
 

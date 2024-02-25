@@ -9,6 +9,13 @@ diesel::table! {
 }
 
 diesel::table! {
+    auth_info_anonymous (user_id) {
+        hashed_token -> Text,
+        user_id -> Text,
+    }
+}
+
+diesel::table! {
     auth_info_email (user_id) {
         hashed_pass -> Text,
         user_id -> Text,
@@ -115,6 +122,7 @@ diesel::table! {
 
 diesel::joinable!(auth_info -> auth_info_providers (provider));
 diesel::joinable!(auth_info -> player (user_id));
+diesel::joinable!(auth_info_anonymous -> auth_info (user_id));
 diesel::joinable!(auth_info_email -> auth_info (user_id));
 diesel::joinable!(auth_info_github -> auth_info (user_id));
 diesel::joinable!(game_board -> game (game_id));
@@ -129,6 +137,7 @@ diesel::joinable!(game_settings -> game (game_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     auth_info,
+    auth_info_anonymous,
     auth_info_email,
     auth_info_github,
     auth_info_providers,

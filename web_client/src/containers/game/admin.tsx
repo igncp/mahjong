@@ -1,10 +1,10 @@
-import { SetId, TAdminGetGameResponse } from "mahjong_sdk/dist/core";
-import { HttpClient } from "mahjong_sdk/dist/http-client";
 import { useRouter } from "next/router";
 import { Fragment, useEffect, useState } from "react";
 
 import { ModelServiceGame } from "src/lib/models/service-game";
 import { SiteUrls } from "src/lib/site/urls";
+import { SetId, TAdminGetGameResponse } from "src/sdk/core";
+import { HttpClient } from "src/sdk/http-client";
 import Button from "src/ui/common/button";
 import CopyToClipboard from "src/ui/common/copy-to-clipboard";
 
@@ -16,7 +16,7 @@ export interface IProps {
 
 const Game = ({ gameId }: IProps) => {
   const router = useRouter();
-  const [serviceGame, setServiceGame] = useState<TAdminGetGameResponse | null>(
+  const [serviceGame, setServiceGame] = useState<null | TAdminGetGameResponse>(
     null
   );
 

@@ -1,5 +1,3 @@
-use std::fmt::{self, Display};
-
 use crate::env::ENV_AUTH_JWT_SECRET_KEY;
 use crate::{
     env::{ENV_FRONTEND_URL, ENV_GITHUB_CLIENT_ID, ENV_GITHUB_SECRET},
@@ -12,7 +10,7 @@ pub use github::{GithubAuth, GithubCallbackQuery};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use mahjong_core::PlayerId;
 use serde::{Deserialize, Serialize};
-use service_contracts::{ServicePlayer, UserPostSetAuthResponse};
+use service_contracts::{AuthInfoSummary, Provider, ServicePlayer, UserPostSetAuthResponse};
 use tracing::{debug, error};
 use uuid::Uuid;
 
@@ -21,25 +19,9 @@ mod github;
 pub type Username = String;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-pub enum Provider {
-    Email,
-    Github,
-}
-
-impl Display for Provider {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let result = match self {
-            Self::Email => "email".to_string(),
-            Self::Github => "github".to_string(),
-        };
-
-        write!(f, "{}", result)
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum GetAuthInfo {
     EmailUsername(Username),
+    AnonymousToken(String),
     GithubUsername(Username),
     PlayerId(PlayerId),
 }
@@ -65,9 +47,16 @@ pub struct AuthInfoEmail {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AuthInfoAnonymous {
+    pub hashed_token: String,
+    pub id: PlayerId,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum AuthInfoData {
-    Github(AuthInfoGithub),
+    Anonymous(AuthInfoAnonymous),
     Email(AuthInfoEmail),
+    Github(AuthInfoGithub),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -146,6 +135,30 @@ impl<'a> AuthHandler<'a> {
         Ok(Some(matches))
     }
 
+    pub async fn validate_anon_user(&mut self, id_token: &String) -> Result<Option<bool>, String> {
+        let salt = Uuid::new_v4().to_string();
+        let config = Config::default();
+        let hashed_token =
+            argon2::hash_encoded(id_token.as_bytes(), salt.as_bytes(), &config).unwrap();
+
+        let auth_info_opts = GetAuthInfo::AnonymousToken(hashed_token.clone());
+        let auth_info = self.storage.get_auth_info(auth_info_opts).await?;
+
+        if auth_info.is_none() {
+            debug!("Not found auth_info for id_token: {id_token}");
+            return Ok(None);
+        }
+
+        let auth_info_content = auth_info.unwrap();
+        let auth_info_anonymous = auth_info_content.data.clone();
+
+        if let AuthInfoData::Anonymous(_) = auth_info_anonymous {
+            Ok(Some(true))
+        } else {
+            Ok(None)
+        }
+    }
+
     pub async fn create_email_user(
         &mut self,
         username: &Username,
@@ -175,6 +188,44 @@ impl<'a> AuthHandler<'a> {
 
         let auth_info = AuthInfo {
             data: AuthInfoData::Email(auth_info_email),
+            role,
+            user_id,
+        };
+
+        self.storage.save_auth_info(&auth_info).await?;
+
+        self.auth_info = Some(auth_info);
+
+        Ok(())
+    }
+
+    pub async fn create_anonymous_user(
+        &mut self,
+        token: &String,
+        role: UserRole,
+    ) -> Result<(), String> {
+        let salt = Uuid::new_v4().to_string();
+        let config = Config::default();
+        let hash = argon2::hash_encoded(token.as_bytes(), salt.as_bytes(), &config).unwrap();
+        let user_id = Uuid::new_v4().to_string();
+
+        let auth_info_anonymous = AuthInfoAnonymous {
+            hashed_token: hash.clone(),
+            id: user_id.clone(),
+        };
+
+        let player = ServicePlayer {
+            id: user_id.clone(),
+            name: "Anonymous User".to_string(),
+            created_at: get_timestamp().to_string(),
+
+            ..ServicePlayer::default()
+        };
+
+        self.storage.save_player(&player).await?;
+
+        let auth_info = AuthInfo {
+            data: AuthInfoData::Anonymous(auth_info_anonymous),
             role,
             user_id,
         };
@@ -351,5 +402,40 @@ impl<'a> AuthHandler<'a> {
 
     pub fn get_unauthorized() -> HttpResponse {
         HttpResponse::Unauthorized().body("Unauthorized")
+    }
+
+    pub async fn get_auth_info_summary(&self) -> Option<AuthInfoSummary> {
+        let user_id = self.get_user_from_token()?;
+
+        let user = self
+            .storage
+            .get_auth_info(GetAuthInfo::PlayerId(user_id.clone()))
+            .await;
+
+        if user.is_err() {
+            return None;
+        }
+
+        let user = user.unwrap();
+
+        user.as_ref()?;
+
+        let user = user.unwrap();
+        let summary = match user.data {
+            AuthInfoData::Anonymous(_) => AuthInfoSummary {
+                provider: Provider::Anonymous,
+                username: None,
+            },
+            AuthInfoData::Email(email) => AuthInfoSummary {
+                provider: Provider::Email,
+                username: Some(email.username),
+            },
+            AuthInfoData::Github(github) => AuthInfoSummary {
+                provider: Provider::Github,
+                username: Some(github.username),
+            },
+        };
+
+        Some(summary)
     }
 }

@@ -76,14 +76,14 @@ impl Default for Game {
 }
 
 impl Game {
-    pub fn set_players(&mut self, players: &Vec<PlayerId>) {
+    pub fn set_players(&mut self, players: &[PlayerId]) {
         if players.len() != self.players.len() {
             return;
         }
 
         let current_players = self.players.clone();
 
-        self.players = players.clone();
+        self.players = players.to_owned();
 
         for (index, player) in self.players.iter().enumerate() {
             let current_player = current_players.get(index).unwrap();

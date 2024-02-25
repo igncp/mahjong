@@ -1,6 +1,9 @@
 use crate::http_server::DataStorage;
-use actix_web::{web, HttpResponse};
-use service_contracts::{ServicePlayer, UserGetInfoResponse, UserPatchInfoRequest};
+use actix_web::HttpResponse;
+use service_contracts::{
+    AuthInfoSummary, DashboardGame, DashboardPlayer, ServicePlayer, UserGetDashboardResponse,
+    UserGetInfoResponse, UserPatchInfoRequest,
+};
 
 pub struct UserWrapper<'a> {
     storage: &'a DataStorage,
@@ -10,7 +13,7 @@ pub struct UserWrapper<'a> {
 impl<'a> UserWrapper<'a> {
     pub async fn from_storage(
         storage: &'a DataStorage,
-        player_id: &web::Path<String>,
+        player_id: &String,
     ) -> Result<UserWrapper<'a>, HttpResponse> {
         let user = storage.get_player(&player_id.to_string()).await;
 
@@ -48,6 +51,45 @@ impl<'a> UserWrapper<'a> {
         let info = self.get_info_data().await;
 
         HttpResponse::Ok().json(info)
+    }
+
+    pub async fn get_dashboard(&self, auth_info_summary: &AuthInfoSummary) -> HttpResponse {
+        let player = DashboardPlayer {
+            created_at: self.player.created_at.clone(),
+            id: self.player.id.clone(),
+            name: self.player.name.clone(),
+        };
+
+        let info = self.get_info_data().await;
+
+        let games = self
+            .storage
+            .get_player_games(&Some(self.player.id.clone()))
+            .await;
+
+        if games.is_err() {
+            return HttpResponse::InternalServerError().body("Error loading player games");
+        }
+
+        let games = games.unwrap();
+
+        let player_games = games
+            .into_iter()
+            .map(|game| DashboardGame {
+                created_at: game.created_at,
+                id: game.id,
+                updated_at: game.updated_at,
+            })
+            .collect();
+
+        let dashboard = UserGetDashboardResponse {
+            auth_info: auth_info_summary.clone(),
+            player,
+            player_games,
+            player_total_score: info.unwrap().total_score,
+        };
+
+        HttpResponse::Ok().json(dashboard)
     }
 
     pub async fn update_info(&mut self, new_data: &UserPatchInfoRequest) -> HttpResponse {

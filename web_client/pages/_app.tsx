@@ -1,7 +1,5 @@
 import i18n from "i18next";
 import HttpApi from "i18next-http-backend";
-import { tokenObserver } from "mahjong_sdk/dist/auth";
-import { setBaseUrl } from "mahjong_sdk/dist/http-client";
 import type { AppProps } from "next/app";
 import qs from "qs";
 import { HTML5toTouch } from "rdndmb-html5-to-touch";
@@ -12,6 +10,8 @@ import { I18nextProvider } from "react-i18next";
 import { DnDPreview } from "src/containers/dnd-preview";
 import { TOKEN_KEY } from "src/lib/constants";
 import { env } from "src/lib/env";
+import { tokenObserver } from "src/sdk/auth";
+import { setBaseUrl } from "src/sdk/http-client";
 import "src/styles/global.css";
 
 if (typeof window !== "undefined") {
@@ -66,7 +66,8 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <I18nextProvider i18n={i18n}>
       <DndProvider options={HTML5toTouch}>
-        {/* @ts-expect-error Outdated react types */}
+        {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
+        {/* @ts-ignore React typings  */}
         <Component {...pageProps} />
         <DnDPreview />
       </DndProvider>

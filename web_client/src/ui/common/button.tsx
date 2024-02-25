@@ -7,7 +7,7 @@ type TProps = {
   disabled?: boolean;
   onClick?: () => void;
   style?: React.CSSProperties;
-  type?: "link" | "primary" | "dashed";
+  type?: "dashed" | "default" | "link" | "primary";
 };
 
 const Button = (props: TProps) => <AntdButton {...props} />;

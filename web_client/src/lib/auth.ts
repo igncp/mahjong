@@ -1,7 +1,10 @@
-import { tokenObserver } from "mahjong_sdk/dist/auth";
 import qs from "query-string";
 
+import { tokenObserver } from "src/sdk/auth";
+import { HttpClient } from "src/sdk/http-client";
+
 import { env } from "./env";
+import { uuid } from "./utils";
 
 export const getIsLoggedIn = () => {
   const token = tokenObserver.getValue();
@@ -19,5 +22,15 @@ export const githubAuth = {
     });
 
     window.location.href = `https://github.com/login/oauth/authorize?${params}`;
+  },
+};
+
+export const anonymousAuth = {
+  login: () => {
+    const token = uuid();
+
+    return HttpClient.setAuthAnonymous({
+      id_token: token,
+    });
   },
 };

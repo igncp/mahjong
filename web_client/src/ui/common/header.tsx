@@ -10,7 +10,7 @@ interface IProps {
   text: string;
 }
 
-const Header = ({ linkPath, text, children }: IProps) => (
+const Header = ({ children, linkPath, text }: IProps) => (
   <Title className={styles.wrapper} level={1}>
     <span className={styles.inner}>
       <Link className={styles.mainLink} href={linkPath}>

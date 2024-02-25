@@ -1,10 +1,11 @@
-import { ServiceGameSummary, TileId } from "mahjong_sdk/dist/core";
-import { ModelServiceGameSummary } from "mahjong_sdk/dist/service-game-summary";
 import { MouseEventHandler, useCallback, useMemo } from "react";
 import { useDrop } from "react-dnd";
 import { useTranslation } from "react-i18next";
 import { Subject } from "rxjs";
-import { getIsSameTile } from "ts_sdk/dist/tile-content";
+
+import { ServiceGameSummary, TileId } from "src/sdk/core";
+import { ModelServiceGameSummary } from "src/sdk/service-game-summary";
+import { getIsSameTile } from "src/sdk/tile-content";
 
 export const DROP_BG = "#e7e7e7";
 export const DROP_BORDER = "2px solid #333";
@@ -18,7 +19,7 @@ enum DropType {
 type Opts = {
   getCanDiscardTile: () => boolean;
   serviceGameM: ModelServiceGameSummary;
-  serviceGameSummary: ServiceGameSummary | null;
+  serviceGameSummary: null | ServiceGameSummary;
 };
 
 export const useGameUI = ({

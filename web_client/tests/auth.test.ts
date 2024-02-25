@@ -21,8 +21,8 @@ test("Page title", async ({ baseURL, page }) => {
 });
 
 test("After signup/login it lands on the dashboard", async ({
-  page,
   baseURL,
+  page,
 }) => {
   const authPage = new AuthPage({ baseURL, page });
   const dashboardPage = new DashboardPage({ baseURL, page });

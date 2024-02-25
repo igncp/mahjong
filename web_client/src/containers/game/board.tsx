@@ -4,11 +4,11 @@ import {
   SettingFilled,
   ThunderboltOutlined,
 } from "@ant-design/icons";
-import { ServiceGameSummary } from "mahjong_sdk/dist/core";
-import { ModelServiceGameSummary } from "mahjong_sdk/dist/service-game-summary";
 import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ServiceGameSummary } from "src/sdk/core";
+import { ModelServiceGameSummary } from "src/sdk/service-game-summary";
 import Modal from "src/ui/common/modal";
 import Text from "src/ui/common/text";
 import Tooltip from "src/ui/common/tooltip";

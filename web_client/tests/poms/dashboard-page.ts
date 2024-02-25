@@ -11,30 +11,21 @@ const selectors = {
 };
 
 export class DashboardPage {
-  static expectedTitle = "Mahjong Dashboard";
+  basePage: BasePage;
   static expectedPath = "/";
 
-  basePage: BasePage;
+  static expectedTitle = "Mahjong Dashboard";
 
   constructor(options: CommonPageOptions) {
     this.basePage = new BasePage(options);
   }
 
-  async navigate() {
-    await this.basePage.navigate("/");
-    await this.waitForTitle();
-  }
+  async clickCreateGame(): Promise<void> {
+    const button = this.basePage.page.locator(selectors.createGameButton);
 
-  getDisplayName() {
-    return this.basePage.page.locator(selectors.displayNameContent).innerText();
-  }
+    await button.click();
 
-  async getNewDisplayName() {
-    const existingName = await this.getDisplayName();
-
-    return existingName.includes("Variant 1")
-      ? "Test Name Variant 2"
-      : "Test Name Variant 1";
+    await this.waitForTitle(false);
   }
 
   async editDisplayName(newName: string) {
@@ -48,6 +39,24 @@ export class DashboardPage {
     await this.basePage.page.locator(selectors.displayNameButton).click();
 
     await this.basePage.page.waitForSelector(selectors.displayNameContent);
+  }
+
+  getDisplayName() {
+    return this.basePage.page.locator(selectors.displayNameContent).innerText();
+  }
+
+  async getGamesCount(): Promise<number> {
+    const items = this.basePage.page.locator(selectors.gameItem);
+
+    return await items.count();
+  }
+
+  async getNewDisplayName() {
+    const existingName = await this.getDisplayName();
+
+    return existingName.includes("Variant 1")
+      ? "Test Name Variant 2"
+      : "Test Name Variant 1";
   }
 
   async isOnPage(): Promise<[boolean, string]> {
@@ -69,18 +78,9 @@ export class DashboardPage {
     ];
   }
 
-  async getGamesCount(): Promise<number> {
-    const items = this.basePage.page.locator(selectors.gameItem);
-
-    return await items.count();
-  }
-
-  async clickCreateGame(): Promise<void> {
-    const button = this.basePage.page.locator(selectors.createGameButton);
-
-    await button.click();
-
-    await this.waitForTitle(false);
+  async navigate() {
+    await this.basePage.navigate("/");
+    await this.waitForTitle();
   }
 
   private async waitForTitle(isEqual = true) {

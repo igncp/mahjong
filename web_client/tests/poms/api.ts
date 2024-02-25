@@ -1,8 +1,8 @@
 import { Page } from "@playwright/test";
-import { tokenObserver } from "mahjong_sdk/dist/auth";
-import { setBaseUrl } from "mahjong_sdk/dist/http-client";
 
 import { TOKEN_KEY } from "src/lib/constants";
+import { tokenObserver } from "src/sdk/auth";
+import { setBaseUrl } from "src/sdk/http-client";
 
 export class API {
   constructor(private pageBaseURL: string, private page: Page) {}

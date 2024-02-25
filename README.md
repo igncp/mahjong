@@ -8,14 +8,12 @@ Hong Kong style mahjong web and mobile applications. They use a common server wh
 1. Service that persists and handles games for clients
     - Can be communicated via an HTTP API
     - It creates a WebSocket per active game, to process the game and communicate with clients
-    - It has a GraphQL endpoint to reduce the number of requests
 1. Scripts to handle different tasks related to the code deployment and tests
     - For example running linting, tests, and deploying to Docker
 1. Web client to play, both for desktop and mobile web
     - It uses a drag-n-drop UI to play, and it has translated texts
     - Includes E2E tests
-1. React Native apps which reuse some code with the web code
-1. A Rust TUI application as a prototype for playing games and running simulations
+1. A Rust cli for running simulations and do operations
 
 > This is WIP, the subprojects will remain v0.x until the project reaches the MVP state
 

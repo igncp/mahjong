@@ -1,12 +1,12 @@
 import { useFormik } from "formik";
-import { tokenObserver } from "mahjong_sdk/dist/auth";
-import { HttpClient } from "mahjong_sdk/dist/http-client";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { first } from "rxjs";
 import z from "zod";
 
-import { githubAuth } from "src/lib/auth";
+import { anonymousAuth, githubAuth } from "src/lib/auth";
+import { tokenObserver } from "src/sdk/auth";
+import { HttpClient } from "src/sdk/http-client";
 import Alert from "src/ui/common/alert";
 import Button from "src/ui/common/button";
 import Card from "src/ui/common/card";
@@ -18,13 +18,30 @@ import styles from "./auth-form.module.scss";
 import PageContent from "./page-content";
 
 type FormState = {
-  username: string;
   password: string;
+  username: string;
 };
 
 const AuthForm = () => {
   const { t } = useTranslation();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<null | string>(null);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const onPlayAnonymously = useCallback(() => {
+    setIsLoading(true);
+
+    anonymousAuth
+      .login()
+      .pipe(first())
+      .subscribe(({ token }) => {
+        setIsLoading(false);
+
+        if (token) {
+          tokenObserver.next(token);
+        }
+      });
+  }, []);
 
   const formSchema = useMemo(
     () =>
@@ -65,7 +82,7 @@ const AuthForm = () => {
       username: "",
     },
     onSubmit: (values, { setSubmitting }) => {
-      const { username, password } = values;
+      const { password, username } = values;
 
       HttpClient.setAuth({
         password,
@@ -116,11 +133,15 @@ const AuthForm = () => {
         <div className={styles.wave} />
       </div>
       <div className={styles.content}>
-        <Text>{t("auth.intro1")}</Text>
-        <Text>{t("auth.intro2")}</Text>
-        <Space style={{ maxWidth: 500 }}>
-          <Alert message={t("auth.warning")} type="info" />
-        </Space>
+        {showPasswordForm && (
+          <>
+            <Text>{t("auth.intro1")}</Text>
+            <Text>{t("auth.intro2")}</Text>
+            <Space style={{ maxWidth: 500 }}>
+              <Alert message={t("auth.warning")} type="info" />
+            </Space>
+          </>
+        )}
         <div className={styles.formWrapper}>
           <Card style={{ width: "100%" }}>
             <form
@@ -132,50 +153,75 @@ const AuthForm = () => {
               }}
               onSubmit={formik.handleSubmit}
             >
-              {error && (
-                <Space>
-                  <Alert message={error} type="error" />
-                </Space>
-              )}
-              <Text style={{ alignSelf: "flex-start" }}>
-                {t("auth.label.user")}
-              </Text>
-              <Input
-                data-name="username"
-                type="text"
-                {...formik.getFieldProps("username")}
-              />
-              {formik.touched.username && formik.errors.username?.length ? (
-                <Alert
-                  message={formik.errors.username[0]}
-                  style={{ alignSelf: "flex-start" }}
-                  type="error"
-                />
-              ) : null}
-              <Text style={{ alignSelf: "flex-start" }}>
-                {t("auth.label.pass")}
-              </Text>
-              <Input
-                data-name="password"
-                type="password"
-                {...formik.getFieldProps("password")}
-              />
-              {formik.touched.password && formik.errors.password?.length ? (
-                <Alert
-                  message={formik.errors.password[0]}
-                  style={{ alignSelf: "flex-start" }}
-                  type="error"
-                />
-              ) : null}
               <Button
-                data-name="auth-submit"
-                disabled={formik.isSubmitting || !formik.isValid}
-                onClick={formik.submitForm}
-                style={{ maxWidth: 150 }}
-                type="primary"
+                data-name="auth-submit-password"
+                disabled={formik.isSubmitting || isLoading}
+                onClick={onPlayAnonymously}
+                type="default"
               >
-                {t("auth.button.submit")}
+                {t("auth.button.playAnonymously")}
               </Button>
+              {showPasswordForm ? (
+                <>
+                  {error && (
+                    <Space>
+                      <Alert message={error} type="error" />
+                    </Space>
+                  )}
+                  <Text style={{ alignSelf: "flex-start" }}>
+                    {t("auth.label.user")}
+                  </Text>
+                  <Input
+                    data-name="username"
+                    type="text"
+                    {...formik.getFieldProps("username")}
+                  />
+                  {formik.touched.username && formik.errors.username?.length ? (
+                    <Alert
+                      message={formik.errors.username[0]}
+                      style={{ alignSelf: "flex-start" }}
+                      type="error"
+                    />
+                  ) : null}
+                  <Text style={{ alignSelf: "flex-start" }}>
+                    {t("auth.label.pass")}
+                  </Text>
+                  <Input
+                    data-name="password"
+                    type="password"
+                    {...formik.getFieldProps("password")}
+                  />
+                  {formik.touched.password && formik.errors.password?.length ? (
+                    <Alert
+                      message={formik.errors.password[0]}
+                      style={{ alignSelf: "flex-start" }}
+                      type="error"
+                    />
+                  ) : null}
+                  <Button
+                    data-name="auth-submit"
+                    disabled={
+                      formik.isSubmitting || !formik.isValid || isLoading
+                    }
+                    onClick={formik.submitForm}
+                    style={{ maxWidth: 150 }}
+                    type="primary"
+                  >
+                    {t("auth.button.submit")}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  data-name="auth-submit-password"
+                  disabled={formik.isSubmitting}
+                  onClick={() => {
+                    setShowPasswordForm(true);
+                  }}
+                  type="primary"
+                >
+                  {t("auth.button.showUsernamePass")}
+                </Button>
+              )}
               <Button
                 data-name="auth-submit-github"
                 disabled={formik.isSubmitting}

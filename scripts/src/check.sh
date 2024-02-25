@@ -3,7 +3,7 @@
 set -e
 
 run_clippy() {
-  cargo clippy --all-targets --all-features -- -D warnings
+  cargo clippy --release --all-features -- -D warnings
 }
 
 run_fix() {
@@ -18,19 +18,15 @@ run_check() {
 
   run_clippy
 
-  (cd service && sqlfluff fix --dialect postgres migrations/**/*.sql)
+  (cd service && sqlfluff lint --dialect postgres migrations/**/*.sql)
 
   run_pack_wasm
 
-  (cd ts_sdk && bun run sync_sdk && bun run lint)
-
   (cd web_client &&
+    bun install &&
     bun run lint &&
     bun run test &&
     bun run build)
 
-  (cd mobile_apps &&
-    bun run typecheck &&
-    bun run lint &&
-    bun run test)
+  echo "All checks passed"
 }

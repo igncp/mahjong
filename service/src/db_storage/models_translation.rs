@@ -1,17 +1,17 @@
 use super::models::{
-    DieselAuthInfo, DieselAuthInfoEmail, DieselAuthInfoGithub, DieselGame, DieselGameBoard,
-    DieselGameDrawWall, DieselGameHand, DieselGamePlayer, DieselGameScore, DieselGameSettings,
-    DieselPlayer,
+    DieselAuthInfo, DieselAuthInfoAnonymous, DieselAuthInfoEmail, DieselAuthInfoGithub, DieselGame,
+    DieselGameBoard, DieselGameDrawWall, DieselGameHand, DieselGamePlayer, DieselGameScore,
+    DieselGameSettings, DieselPlayer,
 };
 use super::schema;
-use crate::auth::{AuthInfo, AuthInfoData, AuthInfoEmail, AuthInfoGithub, Provider};
+use crate::auth::{AuthInfo, AuthInfoAnonymous, AuthInfoData, AuthInfoEmail, AuthInfoGithub};
 use diesel::prelude::*;
 use diesel::PgConnection;
 use mahjong_core::round::{Round, RoundTileClaimed};
 use mahjong_core::{Board, DrawWall, Game, GameId, Hand, HandTile, Hands, PlayerId, Score, TileId};
 use rustc_hash::FxHashMap;
 use schema::player::dsl as player_dsl;
-use service_contracts::{GameSettings, ServiceGame, ServicePlayer, ServicePlayerGame};
+use service_contracts::{GameSettings, Provider, ServiceGame, ServicePlayer, ServicePlayerGame};
 use tracing::debug;
 
 pub fn wait_common() {
@@ -74,6 +74,7 @@ impl DieselAuthInfo {
             provider: match raw.data {
                 AuthInfoData::Email(_) => Provider::Email.to_string(),
                 AuthInfoData::Github(_) => Provider::Github.to_string(),
+                AuthInfoData::Anonymous(_) => Provider::Anonymous.to_string(),
             },
             role: serde_json::to_string(&raw.role).unwrap(),
             user_id: raw.user_id.clone(),
@@ -91,7 +92,7 @@ impl DieselAuthInfo {
             .limit(1)
             .load::<Self>(connection)
             .unwrap()
-            .get(0)
+            .first()
             .map(|auth_info| auth_info.clone().into_raw_get_data(connection));
 
         Ok(auth_info)
@@ -114,7 +115,7 @@ impl DieselAuthInfo {
             }
             wait_common();
         }
-        .get(0)
+        .first()
         .cloned();
 
         auth_info.map(|auth_info_content| auth_info_content.into_raw(data))
@@ -151,7 +152,7 @@ impl DieselAuthInfoEmail {
             }
             wait_common();
         }
-        .get(0)
+        .first()
         .cloned()
     }
 
@@ -166,7 +167,7 @@ impl DieselAuthInfoEmail {
             .limit(1)
             .load::<Self>(connection)
             .unwrap()
-            .get(0)
+            .first()
             .map(|auth_info| auth_info.clone().into_raw());
 
         if auth_info_email.is_none() {
@@ -179,6 +180,68 @@ impl DieselAuthInfoEmail {
             connection,
             &auth_info_email.id,
             &AuthInfoData::Email(auth_info_email.clone()),
+        );
+
+        Ok(auth_info)
+    }
+}
+
+impl DieselAuthInfoAnonymous {
+    pub fn into_raw(self) -> AuthInfoAnonymous {
+        AuthInfoAnonymous {
+            hashed_token: self.hashed_token,
+            id: self.user_id,
+        }
+    }
+
+    pub fn from_raw(raw: &AuthInfoAnonymous) -> Self {
+        Self {
+            hashed_token: raw.hashed_token.clone(),
+            user_id: raw.id.clone(),
+        }
+    }
+
+    pub fn get_by_id(connection: &mut PgConnection, id: &String) -> Option<Self> {
+        use super::schema::auth_info_anonymous::dsl;
+
+        loop {
+            if let Ok(data) = dsl::auth_info_anonymous
+                .filter(dsl::user_id.eq(id))
+                .limit(1)
+                .load::<Self>(connection)
+            {
+                break data;
+            }
+            wait_common();
+        }
+        .first()
+        .cloned()
+    }
+
+    pub fn get_info_by_hashed_token(
+        connection: &mut PgConnection,
+        hashed_token: &String,
+    ) -> Result<Option<AuthInfo>, String> {
+        use schema::auth_info_anonymous::dsl as anonymous_dsl;
+
+        let auth_info_email = anonymous_dsl::auth_info_anonymous
+            .filter(anonymous_dsl::hashed_token.eq(&hashed_token))
+            .limit(1)
+            .load::<Self>(connection)
+            .unwrap()
+            .first()
+            .map(|auth_info| auth_info.clone().into_raw());
+
+        if auth_info_email.is_none() {
+            return Ok(None);
+        }
+
+        let auth_info_anonymous = auth_info_email.unwrap();
+
+        let auth_info = DieselAuthInfo::get_by_id_with_data(
+            connection,
+            &auth_info_anonymous.id,
+            &AuthInfoData::Anonymous(auth_info_anonymous.clone()),
         );
 
         Ok(auth_info)
@@ -215,7 +278,7 @@ impl DieselAuthInfoGithub {
             }
             wait_common();
         }
-        .get(0)
+        .first()
         .cloned()
     }
 
@@ -230,7 +293,7 @@ impl DieselAuthInfoGithub {
             .limit(1)
             .load::<Self>(connection)
             .unwrap()
-            .get(0)
+            .first()
             .map(|auth_info| auth_info.clone().into_raw());
 
         if auth_info_github.is_none() {
@@ -348,7 +411,7 @@ impl DieselPlayer {
             }
             wait_common();
         }
-        .get(0)
+        .first()
         .cloned()
     }
 
@@ -366,7 +429,7 @@ impl DieselPlayer {
             }
             wait_common();
         }
-        .get(0)
+        .first()
         .map(|player| player.clone().into_raw())
     }
 }
@@ -424,7 +487,7 @@ impl DieselGame {
             }
             wait_common();
         }
-        .get(0)
+        .first()
         .map(|game| game.clone().into_raw())
     }
 
@@ -961,7 +1024,7 @@ impl DieselGameSettings {
             }
             wait_common();
         }
-        .get(0)
+        .first()
         .map(|game_settings| GameSettings {
             ai_enabled: game_settings.ai_enabled == 1,
             discard_wait_ms: game_settings.discard_wait_ms,

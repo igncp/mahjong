@@ -1,6 +1,8 @@
 {
   "auth": {
     "button": {
+      "playAnonymously": "匿名玩",
+      "showUsernamePass": "使用使用者名稱+密碼",
       "submit": "提交",
       "submitGithub": "使用Github登錄"
     },
@@ -31,6 +33,7 @@
   },
   "code": "代碼庫",
   "dashboard": {
+    "authUsername": "認證使用者名稱",
     "cancel": "取消",
     "defaultPlayerName": "玩家 {{number}}",
     "editName": "編輯名稱",

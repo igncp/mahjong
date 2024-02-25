@@ -6,7 +6,7 @@ type TProps = {
   onChange?: (value: ChangeEvent<HTMLInputElement>) => void;
   onPressEnter?: () => void;
   placeholder?: string;
-  type?: "text" | "password";
+  type?: "password" | "text";
   value?: string;
 };
 

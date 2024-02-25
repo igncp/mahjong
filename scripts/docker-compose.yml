@@ -4,13 +4,14 @@ services:
   server:
     image: igncp/mahjong_service:${DOCKER_TAG}
     environment:
+      DATABASE_URL: ${DATABASE_URL}
       FRONTEND_URL: ${FRONTEND_URL}
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
       GITHUB_SECRET: ${GITHUB_SECRET}
       MAHJONG_ADMIN_PASS: ${MAHJONG_ADMIN_PASS}
       MAHJONG_JWT_SECRET: ${MAHJONG_JWT_SECRET}
       MAHJONG_LOGGER_LEVEL: ${MAHJONG_LOGGER_LEVEL}
-      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
     restart: always
   db:
     image: postgres:16
@@ -21,10 +22,13 @@ services:
     volumes:
       - ./mahjong_db:/var/lib/postgresql/data
     restart: always
+  redis:
+    image: redis:7
+    restart: always
   front:
     image: igncp/mahjong_front:${DOCKER_TAG}
     volumes:
-      - /etc/letsencrypt:/etc/letsencrypt
+      - ./letsencrypt:/etc/letsencrypt
     ports:
       - 80:80
       - 443:443

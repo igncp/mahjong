@@ -17,6 +17,7 @@ cd "$SCRIPTPATH/../.."
 USAGE="bash src/main.sh <command>
 Run various scripts for the Mahjong project
   - check: Run all checks
+  - check_docker: Run all checks inside docker
   - clippy: Run only clippy checks
   - dev_install: Install some dependencies for development (alias: install_dev)
   - docker: Build docker images
@@ -41,6 +42,9 @@ main() {
   case "$1" in
   check)
     run_check
+    ;;
+  check_docker)
+    run_check_docker
     ;;
   clippy)
     run_clippy

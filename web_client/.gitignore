@@ -1,5 +1,4 @@
 .env.e2e
-ts_sdk
 .env
 tests-results
 tests/**/*.png

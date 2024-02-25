@@ -1,6 +1,7 @@
 mahjong.json
 Dockerfile.service
 .git
-node_modules
 .next
 out
+**/mahjong_db
+**/node_modules

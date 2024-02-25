@@ -1,4 +1,4 @@
-import { GameId, PlayerId } from "mahjong_sdk/dist/core";
+import { GameId, PlayerId } from "src/sdk/core";
 
 export const SiteUrls = {
   adminGame: (gameId: GameId) => `/#/game/${gameId}/admin`,

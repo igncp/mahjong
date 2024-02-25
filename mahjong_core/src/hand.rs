@@ -1,7 +1,7 @@
 use crate::{
     deck::DEFAULT_DECK,
     meld::{get_is_chow, get_is_kong, get_is_pair, get_is_pung, PlayerDiff, SetCheckOpts},
-    TileId,
+    Tile, TileId,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,7 @@ pub struct HandPossibleMeld {
     pub tiles: Vec<TileId>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, juniper::GraphQLObject)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct HandTile {
     pub concealed: bool,
     pub id: TileId,
@@ -124,7 +124,7 @@ impl Hand {
             return false;
         }
 
-        let tiles_without_meld = self
+        let tiles_without_meld: Vec<&Tile> = self
             .0
             .iter()
             .filter(|t| t.set_id.is_none())

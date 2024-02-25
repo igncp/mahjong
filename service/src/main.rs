@@ -16,7 +16,6 @@ mod db_storage;
 mod env;
 mod game_wrapper;
 mod games_loop;
-mod graphql;
 mod http_server;
 mod logs;
 mod socket;

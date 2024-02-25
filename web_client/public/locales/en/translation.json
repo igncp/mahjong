@@ -1,6 +1,8 @@
 {
   "auth": {
     "button": {
+      "playAnonymously": "Play anonymously",
+      "showUsernamePass": "Use username + password",
       "submit": "Submit",
       "submitGithub": "Login with Github"
     },
@@ -31,6 +33,7 @@
   },
   "code": "Code",
   "dashboard": {
+    "authUsername": "Auth username",
     "cancel": "Cancel",
     "defaultPlayerName": "Player {{number}}",
     "editName": "Edit the name",

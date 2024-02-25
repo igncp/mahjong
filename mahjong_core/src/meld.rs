@@ -197,7 +197,7 @@ pub fn remove_meld(opts: RemoveMeldOpts) {
     });
 }
 
-pub fn get_is_pair(hand: &Vec<&Tile>) -> bool {
+pub fn get_is_pair(hand: &[&Tile]) -> bool {
     if hand.len() != 2 {
         return false;
     }

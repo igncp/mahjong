@@ -1,11 +1,9 @@
 {
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/23.05";
     unstable.url = "github:nixos/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
   outputs = {
-    nixpkgs,
     unstable,
     flake-utils,
     ...
@@ -15,38 +13,33 @@
       is-checks-ci = builtins.pathExists ./scripts/nix/is-checks-ci;
       pkgs = import unstable {
         inherit system;
-        config = {
-          allowUnfree = true;
-          android_sdk.accept_license = true;
-        };
-      };
-      pkgs-stable = import nixpkgs {
-        inherit system;
       };
 
-      android = import ./scripts/nix/android.nix {inherit pkgs system is-docker-ci;};
-      rust = import ./scripts/nix/rust.nix {inherit pkgs system is-docker-ci;};
-    in rec {
-      devShell = pkgs.mkShell ({
-          packages = with pkgs-stable;
-            [pkgs.bun pkgs.patchelf pkgs.postgresql]
-            ++ (
-              if is-docker-ci
-              then []
-              else [sqlfluff inkscape pkgs.nodejs jdk]
-            )
-            ++ (
-              if is-docker-ci == false && is-checks-ci == false
-              then [libargon2]
-              else []
-            )
-            ++ android.extra-shell-packages
-            ++ rust.extra-shell-packages;
-        }
-        // android.extra-shell);
-
-      packages.mahjong_service = rust.mahjong_service;
-
-      defaultPackage = packages.mahjong_service;
+      rust = import ./scripts/nix/rust.nix {inherit pkgs system is-docker-ci is-checks-ci;};
+    in {
+      devShell = pkgs.mkShell {
+        shellHook =
+          ''
+            export PATH=$PATH:$HOME/.cargo/bin
+          ''
+          + (
+            if (is-docker-ci || is-checks-ci)
+            then ""
+            else rust.dev-hook
+          );
+        packages = with pkgs;
+          [bun patchelf postgresql nodejs_20] # without nodejs_20 prettier throws an error
+          ++ (
+            if is-docker-ci
+            then []
+            else [sqlfluff]
+          )
+          ++ (
+            if is-docker-ci == false && is-checks-ci == false
+            then [libargon2]
+            else []
+          )
+          ++ rust.extra-shell-packages;
+      };
     });
 }

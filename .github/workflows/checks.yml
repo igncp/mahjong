@@ -16,7 +16,6 @@ jobs:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Run checks
         run: |
-          touch ./scripts/nix/without-android
           touch ./scripts/nix/is-checks-ci
           nix develop path:$(pwd) -c rustup install stable
           nix develop path:$(pwd) -c bash -c 'cd scripts && bash src/main.sh check'

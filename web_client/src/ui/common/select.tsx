@@ -1,8 +1,8 @@
 import { Select as AntdSelect } from "antd";
 
 export type SelectOption = {
-  value: string;
   label: string;
+  value: string;
 };
 
 type Props = {

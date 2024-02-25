@@ -5,19 +5,23 @@ use crate::{
         DieselAuthInfo, DieselAuthInfoEmail, DieselAuthInfoGithub, DieselGame, DieselGamePlayer,
         DieselGameScore, DieselPlayer,
     },
-    env::ENV_PG_URL,
+    env::{ENV_PG_URL, ENV_REDIS_URL},
 };
 use async_trait::async_trait;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use mahjong_core::{Game, GameId, PlayerId};
+use redis::Commands;
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 use service_contracts::{ServiceGame, ServicePlayer, ServicePlayerGame};
 use tracing::debug;
 
 use self::{
-    models::{DieselGameBoard, DieselGameDrawWall, DieselGameHand, DieselGameSettings},
+    models::{
+        DieselAuthInfoAnonymous, DieselGameBoard, DieselGameDrawWall, DieselGameHand,
+        DieselGameSettings,
+    },
     models_translation::DieselGameExtra,
 };
 
@@ -27,6 +31,7 @@ mod schema;
 
 pub struct DBStorage {
     db_path: String,
+    redis_path: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -41,19 +46,20 @@ impl Storage for DBStorage {
     async fn get_auth_info(&self, get_auth_info: GetAuthInfo) -> Result<Option<AuthInfo>, String> {
         let mut connection = PgConnection::establish(&self.db_path).unwrap();
 
-        if let GetAuthInfo::EmailUsername(username) = get_auth_info.to_owned() {
-            return DieselAuthInfoEmail::get_info_by_username(&mut connection, &username);
+        match get_auth_info {
+            GetAuthInfo::EmailUsername(username) => {
+                DieselAuthInfoEmail::get_info_by_username(&mut connection, &username)
+            }
+            GetAuthInfo::GithubUsername(username) => {
+                DieselAuthInfoGithub::get_info_by_username(&mut connection, &username)
+            }
+            GetAuthInfo::PlayerId(player_id) => {
+                DieselAuthInfo::get_info_by_id(&mut connection, &player_id)
+            }
+            GetAuthInfo::AnonymousToken(id_token) => {
+                DieselAuthInfoAnonymous::get_info_by_hashed_token(&mut connection, &id_token)
+            }
         }
-
-        if let GetAuthInfo::GithubUsername(username) = get_auth_info.to_owned() {
-            return DieselAuthInfoGithub::get_info_by_username(&mut connection, &username);
-        }
-
-        if let GetAuthInfo::PlayerId(player_id) = get_auth_info.to_owned() {
-            return DieselAuthInfo::get_info_by_id(&mut connection, &player_id);
-        }
-
-        Err("Not implemented".to_owned())
     }
 
     async fn get_player_total_score(&self, player_id: &PlayerId) -> Result<i32, String> {
@@ -66,6 +72,7 @@ impl Storage for DBStorage {
 
     async fn save_auth_info(&self, auth_info: &AuthInfo) -> Result<(), String> {
         use schema::auth_info::table;
+        use schema::auth_info_anonymous::table as anonymous_table;
         use schema::auth_info_email::table as email_table;
         use schema::auth_info_github::table as github_table;
 
@@ -94,6 +101,14 @@ impl Storage for DBStorage {
                     .execute(&mut connection)
                     .unwrap();
             }
+            AuthInfoData::Anonymous(ref anonymous) => {
+                let diesel_auth_info_anonymous = DieselAuthInfoAnonymous::from_raw(anonymous);
+
+                diesel::insert_into(anonymous_table)
+                    .values(&diesel_auth_info_anonymous)
+                    .execute(&mut connection)
+                    .unwrap();
+            }
         }
 
         Ok(())
@@ -101,6 +116,14 @@ impl Storage for DBStorage {
 
     async fn save_game(&self, service_game: &ServiceGame) -> Result<(), String> {
         let mut connection = PgConnection::establish(&self.db_path).unwrap();
+        let redis_client = redis::Client::open(self.redis_path.clone()).unwrap();
+        let mut redis_connection = redis_client.get_connection().unwrap();
+
+        let game_str = serde_json::to_string(&service_game).unwrap();
+        let redis_key = format!("game:{}", service_game.game.id);
+
+        let _: () = redis_connection.set(redis_key.clone(), game_str).unwrap();
+        let _: () = redis_connection.expire(redis_key, 60 * 60).unwrap();
 
         DieselPlayer::update_from_game(&mut connection, service_game);
 
@@ -127,7 +150,24 @@ impl Storage for DBStorage {
         Ok(())
     }
 
-    async fn get_game(&self, id: &GameId) -> Result<Option<ServiceGame>, String> {
+    async fn get_game(&self, id: &GameId, use_cache: bool) -> Result<Option<ServiceGame>, String> {
+        let redis_client = redis::Client::open(self.redis_path.clone()).unwrap();
+        let mut redis_connection = redis_client.get_connection().unwrap();
+
+        let redis_key = format!("game:{}", id);
+
+        if use_cache {
+            let game_str: Option<String> = redis_connection.get(redis_key).unwrap();
+
+            if game_str.is_some() {
+                let game: ServiceGame = serde_json::from_str(&game_str.unwrap()).unwrap();
+
+                return Ok(Some(game));
+            }
+        } else {
+            redis_connection.del::<String, bool>(redis_key).unwrap();
+        }
+
         let mut connection = PgConnection::establish(&self.db_path).unwrap();
 
         let result = DieselGame::read_from_id(&mut connection, id);
@@ -222,10 +262,14 @@ impl DBStorage {
     pub fn new_dyn() -> Box<dyn Storage> {
         let db_path = std::env::var(ENV_PG_URL)
             .unwrap_or("postgres://postgres:postgres@localhost/mahjong".to_string());
+        let redis_path = std::env::var(ENV_REDIS_URL).unwrap();
 
-        debug!("DBStorage: {}", db_path);
+        debug!("DBStorage: {} {}", db_path, redis_path);
 
-        let file_storage = Self { db_path };
+        let file_storage = Self {
+            db_path,
+            redis_path,
+        };
 
         Box::new(file_storage)
     }

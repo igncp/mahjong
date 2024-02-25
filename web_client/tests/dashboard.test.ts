@@ -11,7 +11,7 @@ test("Page title", async ({ page }) => {
   expect(await page.title()).toEqual(DashboardPage.expectedTitle);
 });
 
-test("When creating a game, it is listed", async ({ page, baseURL }) => {
+test("When creating a game, it is listed", async ({ baseURL, page }) => {
   const dashboardPage = new DashboardPage({ baseURL, page });
 
   expect(await dashboardPage.getGamesCount()).toEqual(0);
@@ -22,7 +22,7 @@ test("When creating a game, it is listed", async ({ page, baseURL }) => {
   expect(await dashboardPage.getGamesCount()).toEqual(1);
 });
 
-test("Can change the display name", async ({ page, baseURL }) => {
+test("Can change the display name", async ({ baseURL, page }) => {
   const dashboardPage = new DashboardPage({ baseURL, page });
   const newName = await dashboardPage.getNewDisplayName();
 

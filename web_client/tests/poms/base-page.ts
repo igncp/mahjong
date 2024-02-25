@@ -1,19 +1,23 @@
 import { Page } from "@playwright/test";
 
 export type CommonPageOptions = {
-  page: Page;
   baseURL: string | undefined;
+  page: Page;
 };
 
 export const defaultBaseURL = "https://mahjong-rust.com";
 
 export class BasePage {
-  page: CommonPageOptions["page"];
   baseURL: NonNullable<CommonPageOptions["baseURL"]>;
+  page: CommonPageOptions["page"];
 
   constructor(options: CommonPageOptions) {
     this.page = options.page;
     this.baseURL = options.baseURL || defaultBaseURL;
+  }
+
+  getRelativePath() {
+    return this.page.url().replace(this.baseURL, "");
   }
 
   logConsole() {
@@ -22,10 +26,6 @@ export class BasePage {
 
   navigate(path: string) {
     return this.page.goto(`${this.baseURL}${path}`);
-  }
-
-  getRelativePath() {
-    return this.page.url().replace(this.baseURL, "");
   }
 
   takeScreenshot(name: string) {

@@ -1,6 +1,6 @@
-import { getTile } from "mahjong_sdk/dist/service-game-summary";
 import { usePreview } from "react-dnd-preview";
 
+import { getTile } from "src/sdk/service-game-summary";
 import TileImg from "src/ui/tile-img";
 
 export const DnDPreview = () => {

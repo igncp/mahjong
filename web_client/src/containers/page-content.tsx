@@ -9,8 +9,8 @@ import styles from "./page-content.module.scss";
 
 type Props = {
   children: React.ReactNode;
-  style?: React.CSSProperties;
   contentStyle?: React.CSSProperties;
+  style?: React.CSSProperties;
 };
 
 const PageContent = ({ children, contentStyle, ...props }: Props) => {

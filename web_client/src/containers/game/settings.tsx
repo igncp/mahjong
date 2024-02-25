@@ -1,8 +1,8 @@
-import { GameSettings, ServiceGameSummary } from "mahjong_sdk/dist/core";
-import { ModelServiceGameSummary } from "mahjong_sdk/dist/service-game-summary";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import { GameSettings, ServiceGameSummary } from "src/sdk/core";
+import { ModelServiceGameSummary } from "src/sdk/service-game-summary";
 import Select, { SelectOption } from "src/ui/common/select";
 import Text from "src/ui/common/text";
 
@@ -23,7 +23,7 @@ type IProps = {
 };
 
 const Settings = ({ serviceGameM, serviceGameSummary }: IProps) => {
-  const { t, i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onAIEnabledChanged = (event: any) => {

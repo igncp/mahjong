@@ -76,8 +76,8 @@ impl GameSummary {
                             other_hand
                                 .0
                                 .iter()
-                                .cloned()
                                 .filter(|t| !t.concealed)
+                                .cloned()
                                 .collect(),
                         ),
                     },

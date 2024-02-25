@@ -1,8 +1,9 @@
-import { tokenObserver } from "mahjong_sdk/dist/auth";
-import { UserRole } from "mahjong_sdk/dist/core";
-import { useUserTokenClaims } from "mahjong_sdk/dist/hooks";
 import dynamic from "next/dynamic";
 import { FC, useEffect, useState } from "react";
+
+import { tokenObserver } from "src/sdk/auth";
+import { UserRole } from "src/sdk/core";
+import { useUserTokenClaims } from "src/sdk/hooks";
 
 import type { TProps as TDashboardPlayerProps } from "./dashboard-player";
 

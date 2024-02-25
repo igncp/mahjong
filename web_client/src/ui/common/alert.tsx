@@ -3,7 +3,7 @@ import { Alert as AntdAlert } from "antd";
 type Props = {
   message: React.ReactNode;
   style?: React.CSSProperties;
-  type?: "success" | "info" | "warning" | "error";
+  type?: "error" | "info" | "success" | "warning";
 };
 
 const Alert = (props: Props) => <AntdAlert {...props} />;

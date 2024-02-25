@@ -6,7 +6,7 @@ use service_contracts::{ServiceGame, ServicePlayer, ServicePlayerGame};
 #[async_trait]
 pub trait Storage: Send + Sync {
     async fn get_auth_info(&self, get_auth_info: GetAuthInfo) -> Result<Option<AuthInfo>, String>;
-    async fn get_game(&self, id: &GameId) -> Result<Option<ServiceGame>, String>;
+    async fn get_game(&self, id: &GameId, use_cache: bool) -> Result<Option<ServiceGame>, String>;
     async fn get_player_games(
         &self,
         player_id: &Option<PlayerId>,

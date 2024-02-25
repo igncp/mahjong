@@ -1,12 +1,7 @@
-import {
-  PlayerId,
-  PossibleMeld,
-  ServiceGame,
-  TileId,
-} from "mahjong_sdk/dist/core";
-import { getDeck } from "mahjong_sdk/dist/service-game-summary";
-
 import { format_tile, get_possible_melds } from "pkg";
+
+import { PlayerId, PossibleMeld, ServiceGame, TileId } from "src/sdk/core";
+import { getDeck } from "src/sdk/service-game-summary";
 
 export class ModelServiceGame {
   constructor(public data: ServiceGame) {}
@@ -17,13 +12,6 @@ export class ModelServiceGame {
     return this.data.players[playerId];
   }
 
-  getTileString(tileId: TileId) {
-    const tile = getDeck().get(tileId);
-    const tileString = format_tile(tile);
-
-    return `[${tileString}]`;
-  }
-
   getPlayerScore(playerId: PlayerId) {
     return this.data.game.score[playerId];
   }
@@ -32,5 +20,12 @@ export class ModelServiceGame {
     const possibleMelds = get_possible_melds(JSON.stringify(this.data));
 
     return possibleMelds;
+  }
+
+  getTileString(tileId: TileId) {
+    const tile = getDeck().get(tileId);
+    const tileString = format_tile(tile);
+
+    return `[${tileString}]`;
   }
 }

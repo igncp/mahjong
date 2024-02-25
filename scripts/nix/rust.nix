@@ -1,46 +1,39 @@
 {
   pkgs,
   system,
+  is-checks-ci,
   is-docker-ci,
-}: let
-  service_manifest = (pkgs.lib.importTOML ../../service/Cargo.toml).package;
-in {
+}: {
+  dev-hook = ''
+    PATH="$HOME/.rustup/bin:$PATH"
+
+    if [ -z "$(rustup component list | grep analy | grep install || true)" ]; then
+      rustup component add rust-analyzer
+    fi
+  '';
   extra-shell-packages = with pkgs;
     [
       openssl
       pkg-config
       wasm-pack
       rustup
+      wasm-bindgen-cli
     ]
     ++ (
-      if is-docker-ci
+      if ((is-docker-ci == true) || (is-checks-ci == true))
       then []
-      else
-        with pkgs; [
-          curl
-          cargo-flamegraph
-          diesel-cli
-        ]
+      else [
+        curl
+        cargo-flamegraph
+        diesel-cli
+      ]
     )
     ++ (
       if system == "aarch64-darwin"
       then [
-        pkgs.libiconv
-        pkgs.darwin.apple_sdk.frameworks.Security
-        wasm-bindgen-cli
+        libiconv
+        darwin.apple_sdk.frameworks.Security
       ]
       else []
     );
-  mahjong_service = pkgs.rustPlatform.buildRustPackage {
-    pname = service_manifest.name;
-    version = service_manifest.version;
-
-    src = ./../..;
-    cargoLock = {lockFile = ../../Cargo.lock;};
-
-    buildInputs = with pkgs; [
-      openssl
-    ];
-    nativeBuildInputs = [pkgs.pkgconfig];
-  };
 }

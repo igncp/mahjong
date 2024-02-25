@@ -1,4 +1,5 @@
 use super::schema::auth_info;
+use super::schema::auth_info_anonymous;
 use super::schema::auth_info_email;
 use super::schema::auth_info_github;
 use super::schema::game;
@@ -28,6 +29,13 @@ pub struct DieselAuthInfoEmail {
     pub hashed_pass: String,
     pub user_id: PlayerId,
     pub username: String,
+}
+
+#[derive(Insertable, Queryable, Clone)]
+#[diesel(table_name = auth_info_anonymous)]
+pub struct DieselAuthInfoAnonymous {
+    pub hashed_token: String,
+    pub user_id: PlayerId,
 }
 
 #[derive(Insertable, Queryable, Clone)]

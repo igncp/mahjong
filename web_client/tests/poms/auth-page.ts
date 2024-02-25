@@ -12,16 +12,12 @@ const defaultAccount = {
 };
 
 export class AuthPage {
-  static expectedTitle = "Mahjong Web Client";
-
   basePage: BasePage;
+
+  static expectedTitle = "Mahjong Web Client";
 
   constructor(options: CommonPageOptions) {
     this.basePage = new BasePage(options);
-  }
-
-  navigate() {
-    return this.basePage.navigate("/");
   }
 
   async fillDefault() {
@@ -40,5 +36,9 @@ export class AuthPage {
       (expectedTitle) => window.document?.title !== expectedTitle,
       AuthPage.expectedTitle
     );
+  }
+
+  navigate() {
+    return this.basePage.navigate("/");
   }
 }

@@ -8,6 +8,14 @@ on:
       - "main"
   workflow_dispatch:
     inputs:
+      deploySkip:
+        required: false
+        description: "Skip (web|service|front)"
+        default: ""
+      deployOnly:
+        required: false
+        description: "Only (web|service|front)"
+        default: ""
 
 jobs:
   build:
@@ -34,6 +42,8 @@ jobs:
           nix develop path:$(pwd) -c rustup install stable
       - name: Build docker image
         env:
+          DEPLOY_ONLY: ${{ github.event.inputs.deployOnly }}
+          DEPLOY_SKIP: ${{ github.event.inputs.deploySkip }}
           NEXT_PUBLIC_GITHUB_CLIENT_ID: 5b79179dd44f90e1a63a
           NEXT_PUBLIC_SERVICE_URL: https://mahjong-rust.com/api
         run: |

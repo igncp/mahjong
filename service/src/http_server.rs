@@ -1,9 +1,10 @@
-use crate::auth::{AuthHandler, GithubAuth, GithubCallbackQuery, UserRole};
+use crate::auth::{
+    AuthHandler, AuthInfoData, GetAuthInfo, GithubAuth, GithubCallbackQuery, UserRole,
+};
 use crate::common::Storage;
-use crate::env::{ENV_FRONTEND_URL, ENV_GRAPHQL_SOURCE};
+use crate::env::ENV_FRONTEND_URL;
 use crate::game_wrapper::GameWrapper;
 use crate::games_loop::GamesLoop;
-use crate::graphql::{create_schema, GraphQLContext};
 use crate::socket::MahjongWebsocketServer;
 use crate::socket::MahjongWebsocketSession;
 use crate::user_wrapper::UserWrapper;
@@ -13,11 +14,10 @@ use actix_web::{
     get, patch, post, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
 };
 use actix_web_actors::ws;
-use juniper::http::playground::playground_source;
-use juniper::http::GraphQLRequest;
 use mahjong_core::deck::DEFAULT_DECK;
 use mahjong_core::GameId;
 use rustc_hash::FxHashMap;
+use serde::{Deserialize, Serialize};
 use service_contracts::{
     AdminGetGamesResponse, AdminPostAIContinueRequest, AdminPostBreakMeldRequest,
     AdminPostClaimTileRequest, AdminPostCreateMeldRequest, AdminPostDiscardTileRequest,
@@ -26,8 +26,8 @@ use service_contracts::{
     UserPostBreakMeldRequest, UserPostClaimTileRequest, UserPostCreateGameRequest,
     UserPostCreateMeldRequest, UserPostDiscardTileRequest, UserPostDrawTileRequest,
     UserPostMovePlayerRequest, UserPostPassRoundRequest, UserPostSayMahjongRequest,
-    UserPostSetAuthRequest, UserPostSetGameSettingsRequest, UserPostSortHandRequest,
-    WebSocketQuery,
+    UserPostSetAuthAnonRequest, UserPostSetAuthRequest, UserPostSetGameSettingsRequest,
+    UserPostSortHandRequest, WebSocketQuery,
 };
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -118,6 +118,33 @@ async fn user_get_games(storage: DataStorage, req: HttpRequest) -> impl Responde
     }
 }
 
+#[get("/v1/user/dashboard")]
+async fn user_get_dashboard(storage: DataStorage, req: HttpRequest) -> impl Responder {
+    let auth_handler = AuthHandler::new(&storage, &req);
+
+    let user_id = auth_handler.get_user_from_token();
+
+    if user_id.is_none() {
+        return AuthHandler::get_unauthorized();
+    }
+
+    let user_id = user_id.unwrap();
+
+    let user_wrapper = UserWrapper::from_storage(&storage, &user_id).await;
+    let auth_info_summary = auth_handler.get_auth_info_summary().await;
+
+    if auth_info_summary.is_none() {
+        return HttpResponse::InternalServerError().body("Error loading user");
+    }
+
+    let auth_info_summary = auth_info_summary.unwrap();
+
+    user_wrapper
+        .unwrap()
+        .get_dashboard(&auth_info_summary)
+        .await
+}
+
 #[post("/v1/admin/game")]
 async fn admin_post_game(
     storage: DataStorage,
@@ -157,7 +184,7 @@ async fn admin_get_game_by_id(
     let game_lock = { manager.lock().unwrap().get_game_mutex(&game_id) };
     let _game_lock = game_lock.lock().unwrap();
 
-    let game = storage.get_game(&game_id.to_string()).await;
+    let game = storage.get_game(&game_id.to_string(), true).await;
 
     match game {
         Ok(game) => HttpResponse::Ok().json(game),
@@ -185,7 +212,8 @@ async fn user_get_game_load(
         return AuthHandler::get_unauthorized();
     }
 
-    let game_wrapper = GameWrapper::from_storage(&storage, &game_id, srv, None).await;
+    // Here it can't use cache because the names might have changed
+    let game_wrapper = GameWrapper::from_storage_no_cache(&storage, &game_id, srv, None).await;
     match game_wrapper {
         Ok(game_wrapper) => game_wrapper.user_load_game(&player_id),
         Err(err) => err,
@@ -826,9 +854,9 @@ async fn user_post_auth(
         }
 
         return HttpResponse::Ok().json(data.unwrap());
-    } else {
-        debug!("Handling existing user: {username}");
     }
+
+    debug!("Handling existing user: {username}");
 
     let is_valid = user.unwrap();
 
@@ -844,6 +872,63 @@ async fn user_post_auth(
         HttpResponse::Ok().json(data.unwrap())
     } else {
         debug!("Invalid password for username: {username}");
+        HttpResponse::Unauthorized().json("E_INVALID_USER_PASS")
+    }
+}
+
+#[post("/v1/user-anonymous")]
+async fn user_post_auth_anonymous(
+    storage: DataStorage,
+    body: web::Json<UserPostSetAuthAnonRequest>,
+    req: HttpRequest,
+) -> impl Responder {
+    let id_token = body.id_token.clone();
+    let mut auth_handler = AuthHandler::new(&storage, &req);
+
+    let user = auth_handler.validate_anon_user(&id_token).await;
+
+    if user.is_err() {
+        return HttpResponse::Unauthorized().finish();
+    }
+
+    let user = user.unwrap();
+
+    if user.is_none() {
+        debug!("Creating new anonymous user");
+
+        let result = auth_handler
+            .create_anonymous_user(&id_token, UserRole::Player)
+            .await;
+
+        if result.is_err() {
+            return HttpResponse::InternalServerError().json("Error creating user");
+        }
+
+        let data = auth_handler.generate_token();
+
+        if data.is_err() {
+            return HttpResponse::InternalServerError().json("Error generating json");
+        }
+
+        return HttpResponse::Ok().json(data.unwrap());
+    }
+
+    debug!("Handling existing anonymous user: {id_token}");
+
+    let is_valid = user.unwrap();
+
+    if is_valid {
+        let data = auth_handler.generate_token();
+
+        if data.is_err() {
+            let err = data.err().unwrap();
+            debug!("Error generating token: {err}");
+            return HttpResponse::InternalServerError().json("Error generating json");
+        }
+
+        HttpResponse::Ok().json(data.unwrap())
+    } else {
+        debug!("Invalid anonymous token");
         HttpResponse::Unauthorized().json("E_INVALID_USER_PASS")
     }
 }
@@ -967,41 +1052,71 @@ async fn get_ws(
     )
 }
 
-#[get("/v1/graphql")]
-async fn graphql_playground() -> HttpResponse {
-    let graphql_source = std::env::var(ENV_GRAPHQL_SOURCE).unwrap_or("/api/v1/graphql".to_string());
-
-    HttpResponse::Ok()
-        .content_type("text/html; charset=utf-8")
-        .body(playground_source(&graphql_source, None))
-}
-
-#[post("/v1/graphql")]
-async fn graphql(
-    data: web::Json<GraphQLRequest>,
+#[post("/v1/test/delete-games")]
+async fn test_post_delete_games(
     req: HttpRequest,
     storage: DataStorage,
-) -> Result<HttpResponse, Error> {
+) -> Result<impl Responder, Error> {
     let auth_handler = AuthHandler::new(&storage, &req);
 
     let user_id = auth_handler.get_user_from_token();
 
     if user_id.is_none() {
-        return Ok(AuthHandler::get_unauthorized());
+        return Ok(HttpResponse::Unauthorized().finish());
     }
 
-    let ctx = GraphQLContext {
-        user_id: user_id.unwrap(),
-        storage,
-    };
+    let user_id = user_id.unwrap();
 
-    let schema = create_schema();
-    let res = data.execute(&schema, &ctx).await;
-    let res_str = serde_json::to_string(&res).unwrap();
+    // If deleting for normal users, should check if any active running at the moment by using
+    // the web socket
 
-    Ok(HttpResponse::Ok()
-        .content_type("application/json")
-        .body(res_str))
+    let auth_info = storage
+        .get_auth_info(GetAuthInfo::PlayerId(user_id.clone()))
+        .await;
+
+    if auth_info.is_err() {
+        return Ok(HttpResponse::Unauthorized().finish());
+    }
+
+    let auth_info = auth_info.unwrap();
+
+    if auth_info.is_none() {
+        return Ok(HttpResponse::Unauthorized().finish());
+    }
+
+    let auth_info = auth_info.unwrap();
+
+    if let AuthInfoData::Email(auth_info_email) = auth_info.data {
+        if auth_info_email.username != "test" {
+            return Ok(HttpResponse::Unauthorized().finish());
+        }
+    } else {
+        return Ok(HttpResponse::Unauthorized().finish());
+    }
+
+    let games = storage.get_player_games(&Some(user_id.clone())).await;
+    if games.is_err() {
+        return Ok(HttpResponse::InternalServerError().finish());
+    }
+    let games = games.unwrap();
+    let games_ids: Vec<_> = games.iter().map(|g| g.id.clone()).collect();
+
+    let result = storage.delete_games(&games_ids).await;
+
+    if result.is_err() {
+        return Ok(HttpResponse::InternalServerError().finish());
+    }
+
+    #[derive(Deserialize, Serialize)]
+    struct DeleteGames {
+        test_delete_games: bool,
+    }
+
+    Ok(HttpResponse::Ok().json({
+        DeleteGames {
+            test_delete_games: true,
+        }
+    }))
 }
 
 pub struct MahjongServer;
@@ -1050,13 +1165,13 @@ impl MahjongServer {
                 .service(get_health)
                 .service(get_ws)
                 .service(github_callback)
-                .service(graphql)
-                .service(graphql_playground)
                 .service(user_get_game_load)
                 .service(user_get_games)
                 .service(user_get_info)
+                .service(user_get_dashboard)
                 .service(user_patch_info)
                 .service(user_post_auth)
+                .service(user_post_auth_anonymous)
                 .service(user_post_game_ai_continue)
                 .service(user_post_game_break_meld)
                 .service(user_post_game_claim_tile)
@@ -1069,6 +1184,7 @@ impl MahjongServer {
                 .service(user_post_game_say_mahjong)
                 .service(user_post_game_settings)
                 .service(user_post_game_sort_hand)
+                .service(test_post_delete_games)
                 .wrap(cors)
         })
         .bind((address, port))?
