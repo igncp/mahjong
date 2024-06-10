@@ -11,10 +11,10 @@ pub async fn run_simulation() {
     let mut stats = Stats::new();
 
     loop {
-        let mut game = Game::default();
-        game.start_game();
+        let mut game = Game::new(None);
+        game.start();
 
-        let ai_players = FxHashSet::from_iter(game.players.clone());
+        let ai_players = FxHashSet::from_iter(game.players.0.clone());
         let auto_stop_claim_meld = FxHashSet::default();
         let mut game_ai = StandardAI::new(&mut game, ai_players, auto_stop_claim_meld);
 

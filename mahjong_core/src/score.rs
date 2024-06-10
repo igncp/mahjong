@@ -1,8 +1,34 @@
 // http://mahjongtime.com/hong-kong-mahjong-scoring.html
 
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
+use serde::{Deserialize, Serialize};
 
 use crate::{deck::DEFAULT_DECK, Flower, Game, PlayerId, Season, Tile};
+
+pub type ScoreItem = u32;
+pub type ScoreMap = FxHashMap<PlayerId, ScoreItem>;
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct Score(pub ScoreMap);
+
+// Proxied
+impl Score {
+    pub fn get(&self, player_id: &PlayerId) -> Option<&ScoreItem> {
+        self.0.get(player_id)
+    }
+
+    pub fn insert(&mut self, player_id: impl AsRef<str>, score: ScoreItem) {
+        self.0.insert(player_id.as_ref().to_string(), score);
+    }
+
+    pub fn remove(&mut self, player_id: &PlayerId) -> ScoreItem {
+        self.0.remove(player_id).unwrap()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&PlayerId, &ScoreItem)> {
+        self.0.iter()
+    }
+}
 
 enum ScoringRule {
     AllFlowers,
@@ -29,7 +55,7 @@ impl Game {
         let current_player_score = self.score.get(winner_player).unwrap();
 
         self.score
-            .insert(winner_player.clone(), current_player_score + round_points);
+            .insert(winner_player, current_player_score + round_points);
     }
 
     fn get_scoring_rules_points(scoring_rules: &Vec<ScoringRule>) -> u32 {
@@ -52,9 +78,9 @@ impl Game {
     fn get_scoring_rules(&self, winner_player: &PlayerId) -> Vec<ScoringRule> {
         let mut rules = Vec::new();
         rules.push(ScoringRule::BasePoint);
-        let winner_hand = self.table.hands.get(winner_player).unwrap().clone();
+        let winner_hand = self.table.hands.get(winner_player).clone();
 
-        if self.table.draw_wall.is_empty() {
+        if self.table.draw_wall.0.is_empty() {
             rules.push(ScoringRule::LastWallTile);
         }
 

@@ -125,7 +125,7 @@ pub fn draw_user_view<B: Backend>(f: &mut Frame<B>, app: &App, ui_state: &mut UI
 
                 for player in game.game_summary.players.iter() {
                     if *player != game.game_summary.player_id {
-                        let player_hand = game.game_summary.other_hands.get(player).unwrap();
+                        let player_hand = game.game_summary.other_hands.0.get(player).unwrap();
                         secondary_strs.push(format!(
                             "-   {}",
                             format_player(

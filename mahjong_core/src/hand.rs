@@ -1,7 +1,7 @@
 use crate::{
     deck::DEFAULT_DECK,
     meld::{get_is_chow, get_is_kong, get_is_pair, get_is_pung, PlayerDiff, SetCheckOpts},
-    Tile, TileId,
+    PlayerId, Tile, TileId,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::{Deserialize, Serialize};
@@ -30,9 +30,16 @@ impl HandTile {
             concealed: true,
         }
     }
+    pub fn from_tile(tile: &Tile) -> Self {
+        Self {
+            id: tile.get_id(),
+            set_id: None,
+            concealed: true,
+        }
+    }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
 pub struct Hand(pub Vec<HandTile>);
 
 type MeldsCollection<'a> = FxHashMap<String, Vec<&'a HandTile>>;
@@ -42,7 +49,30 @@ pub struct GetHandMeldsReturn<'a> {
     pub tiles_without_meld: usize,
 }
 
+// Proxied
 impl Hand {
+    pub fn get(&self, index: usize) -> &HandTile {
+        self.0.get(index).unwrap()
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+impl Hand {
+    pub fn from_ref_vec(tiles: &[&HandTile]) -> Self {
+        Self(tiles.iter().cloned().cloned().collect())
+    }
+
+    pub fn from_ids(tiles: &[TileId]) -> Self {
+        Self(tiles.iter().cloned().map(HandTile::from_id).collect())
+    }
+
     pub fn sort_default(&mut self) {
         self.0.sort_by(|a, b| {
             let tile_a = DEFAULT_DECK.0.get(&a.id);
@@ -241,5 +271,55 @@ impl Hand {
 
     pub fn get_has_tile(&self, tile_id: &TileId) -> bool {
         self.0.iter().any(|t| t.id == *tile_id)
+    }
+
+    pub fn get_sets_groups(&self) -> FxHashMap<SetId, Vec<&HandTile>> {
+        let mut sets: FxHashMap<SetId, Vec<&HandTile>> = FxHashMap::default();
+
+        for tile in &self.0 {
+            let set_id = tile.set_id.clone();
+            let list = sets.get(&set_id);
+
+            let mut list = match list {
+                Some(list) => list.clone(),
+                None => vec![],
+            };
+
+            list.push(tile);
+
+            sets.insert(set_id, list);
+        }
+
+        sets
+    }
+}
+
+pub type HandsMap = FxHashMap<PlayerId, Hand>;
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+pub struct Hands(pub HandsMap);
+
+// Proxied
+impl Hands {
+    pub fn get(&self, player: &PlayerId) -> &Hand {
+        self.0.get(player).unwrap()
+    }
+
+    pub fn remove(&mut self, player: &PlayerId) -> Hand {
+        self.0.remove(player).unwrap()
+    }
+
+    pub fn insert(&mut self, player: impl AsRef<str>, hand: Hand) -> Option<Hand> {
+        self.0.insert(player.as_ref().to_string(), hand)
+    }
+}
+
+impl Hands {
+    pub fn get_player_hand_len(&self, player: &str) -> usize {
+        self.0.get(player).unwrap().len()
+    }
+
+    pub fn insert_ids(&mut self, player: &str, tiles: &[TileId]) -> &mut Self {
+        self.0.insert(player.to_string(), Hand::from_ids(tiles));
+        self
     }
 }

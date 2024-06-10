@@ -2,11 +2,13 @@ on:
   push:
     branches:
       - "main"
+  workflow_dispatch:
 
 name: Checks
 
 jobs:
   check:
+    if: github.repository == 'igncp/mahjong' || github.event_name == 'workflow_dispatch'
     name: Check
     runs-on: ubuntu-latest
     steps:

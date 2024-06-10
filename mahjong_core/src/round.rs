@@ -1,4 +1,7 @@
-use crate::{GamePhase, Hands, PlayerId, TileId, Wind, WINDS_ROUND_ORDER};
+use crate::{
+    game::GameStyle, macros::derive_game_common, Game, GamePhase, Hands, PlayerId, TileId, Wind,
+    WINDS_ROUND_ORDER,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -10,7 +13,7 @@ pub struct RoundTileClaimed {
 
 pub type TileClaimed = Option<RoundTileClaimed>;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+derive_game_common! {
 pub struct Round {
     pub dealer_player_index: usize,
     pub player_index: usize,
@@ -18,13 +21,16 @@ pub struct Round {
     pub tile_claimed: TileClaimed,
     pub wall_tile_drawn: Option<TileId>,
     pub wind: Wind,
-}
+    #[serde(skip_serializing)]
+    pub style: GameStyle,
+}}
 
-impl Default for Round {
-    fn default() -> Self {
+impl Round {
+    pub fn new(game_style: &GameStyle) -> Self {
         // This assumes that the players array is sorted
         Self {
             dealer_player_index: 0,
+            style: game_style.clone(),
             player_index: 0,
             round_index: 0,
             tile_claimed: None,
@@ -32,15 +38,12 @@ impl Default for Round {
             wind: Wind::East,
         }
     }
-}
-
-impl Round {
     pub fn next(&mut self, hands: &Hands) -> bool {
         if self.wall_tile_drawn.is_none() {
             return false;
         }
 
-        for hand in hands.values() {
+        for hand in hands.0.values() {
             if hand.0.len() != 13 {
                 return false;
             }
@@ -50,7 +53,7 @@ impl Round {
         self.tile_claimed = None;
 
         self.player_index += 1;
-        if self.player_index == 4 {
+        if self.player_index == Game::get_players_num(&self.style) {
             self.player_index = 0;
         }
 
@@ -63,7 +66,7 @@ impl Round {
 
         self.round_index += 1;
         self.dealer_player_index += 1;
-        if self.dealer_player_index == 4 {
+        if self.dealer_player_index == Game::get_players_num(&self.style) {
             self.dealer_player_index = 0;
         }
 

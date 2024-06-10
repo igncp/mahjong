@@ -3,7 +3,7 @@
 set -e
 
 run_clippy() {
-  cargo clippy --release --all-features -- -D warnings
+  cargo clippy --release --all-features --all-targets -- -D warnings
 }
 
 run_fix() {
@@ -12,8 +12,8 @@ run_fix() {
 }
 
 run_check() {
+  cargo check --workspace --release --all-targets
   cargo build --release
-  cargo check --workspace --release
   cargo test --release
 
   run_clippy

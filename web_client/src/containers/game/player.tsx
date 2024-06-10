@@ -207,28 +207,16 @@ const Game = ({ gameId, userId }: IProps) => {
         {t("game.currentDealer")} <b>{dealerPlayer.name}</b>
       </Text>
       <span ref={boardDropRef}>
-        <Card
-          bodyStyle={{ padding: 0 }}
-          title={`${t("game.board")} (${
-            serviceGameSummary.game_summary.board.length
-          } / 92)`}
-        >
-          <GameBoard
-            activePlayer={turnPlayer.id}
-            canDropInBoard={canDropInBoard}
-            dealerPlayer={dealerPlayer.id}
-            players={
-              boardPlayers as [
-                BoardPlayer,
-                BoardPlayer,
-                BoardPlayer,
-                BoardPlayer
-              ]
-            }
-            serviceGameM={serviceGameM}
-            serviceGameSummary={serviceGameSummary}
-          />
-        </Card>
+        <GameBoard
+          activePlayer={turnPlayer.id}
+          canDropInBoard={canDropInBoard}
+          dealerPlayer={dealerPlayer.id}
+          players={
+            boardPlayers as [BoardPlayer, BoardPlayer, BoardPlayer, BoardPlayer]
+          }
+          serviceGameM={serviceGameM}
+          serviceGameSummary={serviceGameSummary}
+        />
       </span>
       <div>
         <Card

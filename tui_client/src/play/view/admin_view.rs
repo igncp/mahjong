@@ -103,10 +103,13 @@ pub fn draw_admin_view<B: Backend>(f: &mut Frame<B>, app: &App, ui_state: &mut U
                 let mut secondary_strs = vec![
                     format!("- Dealer: {}", dealer.unwrap()),
                     format!("- Round wind: {:?}", service_game.game.round.wind),
-                    format!("- Draw wall ({}):", service_game.game.table.draw_wall.len(),),
+                    format!(
+                        "- Draw wall ({}):",
+                        service_game.game.table.draw_wall.0.len(),
+                    ),
                     draw_wall_str,
                     "".to_string(),
-                    format!("- Board ({}):", service_game.game.table.board.len(),),
+                    format!("- Board ({}):", service_game.game.table.board.0.len(),),
                     board_str,
                 ];
 

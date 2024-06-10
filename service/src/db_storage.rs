@@ -10,12 +10,15 @@ use crate::{
 use async_trait::async_trait;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use mahjong_core::{Game, GameId, PlayerId};
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use mahjong_core::{Game, GameId, PlayerId, Players};
 use redis::Commands;
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 use service_contracts::{ServiceGame, ServicePlayer, ServicePlayerGame};
 use tracing::debug;
+
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
 use self::{
     models::{
@@ -191,7 +194,7 @@ impl Storage for DBStorage {
 
         let game_extra = result.unwrap();
         let mut game = game_extra.game;
-        game.set_players(&game_players);
+        game.set_players(&Players(game_players));
         game.score = score;
         game.table.hands = hands;
         game.table.board = board;
@@ -267,9 +270,13 @@ impl DBStorage {
         debug!("DBStorage: {} {}", db_path, redis_path);
 
         let file_storage = Self {
-            db_path,
+            db_path: db_path.clone(),
             redis_path,
         };
+
+        let mut connection = PgConnection::establish(&db_path).unwrap();
+
+        connection.run_pending_migrations(MIGRATIONS).unwrap();
 
         Box::new(file_storage)
     }

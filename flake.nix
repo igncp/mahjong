@@ -28,7 +28,7 @@
             else rust.dev-hook
           );
         packages = with pkgs;
-          [bun patchelf postgresql nodejs_20] # without nodejs_20 prettier throws an error
+          [bun patchelf postgresql nodejs_22] # without nodejs_22 prettier throws an error
           ++ (
             if is-docker-ci
             then []

@@ -25,7 +25,7 @@ pub enum UIScreen {
 
 enum UIEvent {
     Input(KeyEvent),
-    Message(PlayEvent),
+    Message,
 }
 
 pub struct UIState {
@@ -140,7 +140,7 @@ impl PlayUI {
             message = self.wait_for_message_event(app) => {
                 message.clone()?;
 
-                Some(UIEvent::Message(message.unwrap()))
+                Some(UIEvent::Message)
             }
         }
     }
@@ -155,8 +155,8 @@ impl PlayUI {
             return None;
         }
         let game = &app.play.service_game.clone().unwrap().game;
-        let player_id = game.players.clone()[player_index.unwrap()].clone();
-        let player_hand = &game.table.hands[&player_id];
+        let player_id = game.players.0.clone()[player_index.unwrap()].clone();
+        let player_hand = &game.table.hands.0[&player_id];
         let tiles = args[2..]
             .iter()
             .filter_map(|tile| {
@@ -211,7 +211,7 @@ impl PlayUI {
             return None;
         }
         let game = &app.play.service_game.clone().unwrap().game;
-        let player_id = game.players.clone()[player_index.unwrap()].clone();
+        let player_id = game.players.0.clone()[player_index.unwrap()].clone();
         Some(player_id)
     }
 
@@ -225,8 +225,8 @@ impl PlayUI {
             return None;
         }
         let tile_index = tile_index.unwrap();
-        for player in &app.play.service_game.as_ref().unwrap().game.players {
-            let player_hand = &app.play.service_game.as_ref().unwrap().game.table.hands[player];
+        for player in &app.play.service_game.as_ref().unwrap().game.players.0 {
+            let player_hand = &app.play.service_game.as_ref().unwrap().game.table.hands.0[player];
             if player_hand.0.iter().len() == 14 {
                 let filtered_hand = player_hand
                     .0
@@ -262,6 +262,7 @@ impl PlayUI {
             .game
             .table
             .draw_wall
+            .0
             .len();
         let tile_index_a = tile_index_a.unwrap();
         let tile_index_b = tile_index_b.unwrap_or(draw_wall_len - 1);
@@ -274,6 +275,7 @@ impl PlayUI {
             .game
             .table
             .draw_wall
+            .0
             .get(tile_index_a);
         let tile_id_b = app
             .play
@@ -283,6 +285,7 @@ impl PlayUI {
             .game
             .table
             .draw_wall
+            .0
             .get(tile_index_b);
 
         if tile_id_a.is_none() || tile_id_b.is_none() {
@@ -411,6 +414,7 @@ impl PlayUI {
                                                     .game
                                                     .table
                                                     .hands
+                                                    .0
                                                     .insert(player_id, new_hand);
                                                 self.state.display_hand = true;
                                             }
@@ -483,7 +487,7 @@ impl PlayUI {
                         _ => {}
                     };
                 }
-                UIEvent::Message(_) => {}
+                UIEvent::Message => {}
             };
         }
 

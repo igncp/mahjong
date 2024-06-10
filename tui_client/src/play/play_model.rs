@@ -49,7 +49,7 @@ impl Play {
         let game_summary = self.service_game_summary.as_ref().unwrap();
         let player_id = game_summary.game_summary.player_id.clone();
         let current_player =
-            &game_summary.game_summary.players[game_summary.game_summary.round.player_index];
+            &game_summary.game_summary.players.0[game_summary.game_summary.round.player_index];
 
         player_id == *current_player
     }
@@ -219,7 +219,7 @@ impl Play {
         let hand: AdminPostDrawTileResponse = result.unwrap();
         let current_player = game.game.get_current_player();
 
-        game.game.table.hands.insert(current_player, hand);
+        game.game.table.hands.0.insert(current_player, hand);
 
         true
     }

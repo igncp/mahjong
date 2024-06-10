@@ -1,8 +1,9 @@
 ## Features to add
 
 - More complex and complete game mechanics
+- System for testing games
 - More user features, robust implementations (modules)
-- Better UI (using canvas, no antd), interactive options
+- Better UI (using canvas, no antd), interactive options, animations
 
 ## Later Improvements
 

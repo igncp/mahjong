@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod test {
+    use crate::{game::GameStyle, round::Round, GamePhase, Hand, HandTile, Hands, Wind};
+    use pretty_assertions::assert_eq;
     use rustc_hash::FxHashMap;
-
-    use crate::{round::Round, GamePhase, Hand, HandTile, Hands, Wind};
 
     fn compare_rounds(round: &Round, expected_round: &Round, test_index: usize) {
         assert_eq!(
@@ -33,14 +33,14 @@ mod test {
                     player_index: 2,
                     wind: Wind::West,
                     wall_tile_drawn: Some(3),
-                    ..Round::default()
+                    ..Round::new(&GameStyle::HongKong)
                 },
                 Round {
                     dealer_player_index: 2,
                     player_index: 3,
                     wind: Wind::West,
                     wall_tile_drawn: None,
-                    ..Round::default()
+                    ..Round::new(&GameStyle::HongKong)
                 },
             ),
             (
@@ -49,14 +49,14 @@ mod test {
                     player_index: 3,
                     wind: Wind::West,
                     wall_tile_drawn: Some(3),
-                    ..Round::default()
+                    ..Round::new(&GameStyle::HongKong)
                 },
                 Round {
                     dealer_player_index: 3,
                     player_index: 0,
                     wind: Wind::West,
                     wall_tile_drawn: None,
-                    ..Round::default()
+                    ..Round::new(&GameStyle::HongKong)
                 },
             ),
         ];
@@ -70,12 +70,12 @@ mod test {
             get_continue_round_fixtures().iter().enumerate()
         {
             let mut round = round.clone();
-            let mut hands: Hands = FxHashMap::default();
+            let mut hands = Hands(FxHashMap::default());
 
-            hands.insert("0".to_string(), Hand(vec![]));
+            hands.0.insert("0".to_string(), Hand::default());
 
             for _ in 0..13 {
-                hands.get_mut("0").unwrap().0.push(HandTile {
+                hands.0.get_mut("0").unwrap().0.push(HandTile {
                     concealed: false,
                     id: 0,
                     set_id: None,
@@ -97,13 +97,13 @@ mod test {
                     player_index: 2,
                     wind: Wind::West,
                     wall_tile_drawn: Some(2),
-                    ..Round::default()
+                    ..Round::new(&GameStyle::HongKong)
                 },
                 Round {
                     dealer_player_index: 3,
                     player_index: 3,
                     wind: Wind::West,
-                    ..Round::default()
+                    ..Round::new(&GameStyle::HongKong)
                 },
                 GamePhase::Playing,
             ),
@@ -113,13 +113,13 @@ mod test {
                     player_index: 3,
                     wind: Wind::South,
                     wall_tile_drawn: Some(2),
-                    ..Round::default()
+                    ..Round::new(&GameStyle::HongKong)
                 },
                 Round {
                     dealer_player_index: 2,
                     player_index: 2,
                     wind: Wind::West,
-                    ..Round::default()
+                    ..Round::new(&GameStyle::HongKong)
                 },
                 GamePhase::Playing,
             ),
@@ -129,13 +129,13 @@ mod test {
                     player_index: 1,
                     wind: Wind::North,
                     wall_tile_drawn: Some(1),
-                    ..Round::default()
+                    ..Round::new(&GameStyle::HongKong)
                 },
                 Round {
                     dealer_player_index: 3,
                     player_index: 3,
                     wind: Wind::North,
-                    ..Round::default()
+                    ..Round::new(&GameStyle::HongKong)
                 },
                 GamePhase::End,
             ),

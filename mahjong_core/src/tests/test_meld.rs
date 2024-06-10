@@ -4,6 +4,7 @@ mod test {
     use crate::meld::{get_is_chow, get_is_kong, get_is_pung, PlayerDiff, SetCheckOpts};
     use crate::tile::TileId;
     use crate::{Deck, Flower, FlowerTile, Hand, HandTile, Suit, SuitTile, Tile, Wind, WindTile};
+    use pretty_assertions::assert_eq;
 
     type GetIsPungFixture = (Vec<Tile>, bool);
     fn get_is_pung_fixtures() -> Vec<GetIsPungFixture> {

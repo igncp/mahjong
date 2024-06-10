@@ -40,7 +40,6 @@ EOF
   scp /tmp/mahjong_prod.sql mahjong-rust.com:data/mahjong_prod.sql
   rm -rf /tmp/mahjong_prod.sql
 
-  (cd scripts && scp docker-compose.yml mahjong-rust.com:)
   (cd scripts && scp -r sql-queries mahjong-rust.com:)
 
   # If not running in a file and passing it as a here document, the script will

@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod test {
     use crate::{ai::sort_by_is_mahjong, meld::PossibleMeld};
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn it_puts_melds_with_mahjong_at_the_beginning() {
@@ -10,7 +11,7 @@ mod test {
             tiles: vec![],
             discard_tile: None,
         };
-        let mut melds = vec![
+        let mut melds = [
             PossibleMeld {
                 player_id: "1".to_string(),
                 ..default_meld.clone()

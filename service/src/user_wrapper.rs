@@ -93,7 +93,7 @@ impl<'a> UserWrapper<'a> {
     }
 
     pub async fn update_info(&mut self, new_data: &UserPatchInfoRequest) -> HttpResponse {
-        self.player.name = new_data.name.clone();
+        self.player.name.clone_from(&new_data.name);
 
         let save_result = self.storage.save_player(&self.player).await;
         let info = self.get_info_data().await;

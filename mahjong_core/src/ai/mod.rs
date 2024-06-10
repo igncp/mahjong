@@ -79,7 +79,7 @@ impl<'a> StandardAI<'a> {
                     }
                 }
 
-                let player_hand = self.game.table.hands.get(&meld.player_id).unwrap();
+                let player_hand = self.game.table.hands.0.get(&meld.player_id).unwrap();
                 let missing_tile = meld
                     .tiles
                     .iter()
@@ -127,9 +127,16 @@ impl<'a> StandardAI<'a> {
 
                 if tile_drawn.is_some() {
                     if self.sort_on_draw {
-                        let mut hand = self.game.table.hands.get(&current_player).unwrap().clone();
+                        let mut hand = self
+                            .game
+                            .table
+                            .hands
+                            .0
+                            .get(&current_player)
+                            .unwrap()
+                            .clone();
                         hand.sort_default();
-                        self.game.table.hands.insert(current_player, hand);
+                        self.game.table.hands.0.insert(current_player, hand);
                     }
 
                     return PlayActionResult {
@@ -139,9 +146,9 @@ impl<'a> StandardAI<'a> {
                 }
             }
 
-            let player_tiles = self.game.table.hands.get(&current_player).unwrap();
-            if player_tiles.0.len() == 14 {
-                let mut tiles_without_meld = player_tiles
+            let player_hand = self.game.table.hands.0.get(&current_player).unwrap();
+            if player_hand.len() == self.game.style.tiles_after_claim() {
+                let mut tiles_without_meld = player_hand
                     .0
                     .iter()
                     .filter(|tile| tile.set_id.is_none())
@@ -228,9 +235,16 @@ impl<'a> StandardAI<'a> {
 
                 if tile_drawn.is_some() {
                     if self.sort_on_draw {
-                        let mut hand = self.game.table.hands.get(&current_player).unwrap().clone();
+                        let mut hand = self
+                            .game
+                            .table
+                            .hands
+                            .0
+                            .get(&current_player)
+                            .unwrap()
+                            .clone();
                         hand.sort_default();
-                        self.game.table.hands.insert(current_player, hand);
+                        self.game.table.hands.0.insert(current_player, hand);
                     }
 
                     return PlayActionResult {
@@ -239,8 +253,8 @@ impl<'a> StandardAI<'a> {
                     };
                 }
             } else if self.can_pass_turn {
-                let player_tiles = self.game.table.hands.get(&current_player).unwrap();
-                if player_tiles.0.len() == 13 {
+                let player_hand = self.game.table.hands.0.get(&current_player).unwrap();
+                if player_hand.len() < self.game.style.tiles_after_claim() {
                     let success = self.game.round.next(&self.game.table.hands);
 
                     if success {
@@ -253,7 +267,7 @@ impl<'a> StandardAI<'a> {
             }
         }
 
-        if self.game.table.draw_wall.is_empty() && self.can_draw_round {
+        if self.game.table.draw_wall.0.is_empty() && self.can_draw_round {
             let round_passed = self.game.pass_null_round();
 
             if round_passed {
@@ -272,8 +286,9 @@ impl<'a> StandardAI<'a> {
 
     pub fn get_is_after_discard(&self) -> bool {
         let current_player = self.game.get_current_player();
-        let current_hand = self.game.table.hands.get(&current_player).unwrap();
+        let current_hand = self.game.table.hands.get(&current_player);
 
-        current_hand.0.len() == 13 && self.game.round.tile_claimed.is_some()
+        current_hand.len() < self.game.style.tiles_after_claim()
+            && self.game.round.tile_claimed.is_some()
     }
 }

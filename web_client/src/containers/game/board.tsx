@@ -53,8 +53,15 @@ const GameBoard = ({
   const [displaySettingsModal, setDisplaySettingsModal] = useState(false);
   const { t } = useTranslation();
 
+  const bannerDisplay = `${t("game.board")} (${
+    serviceGameSummary.game_summary.board.length
+  } / 92)`;
+
   return (
-    <Text className={styles.wrapper}>
+    <div className={styles.wrapper}>
+      <div className={styles.banner}>
+        <Text>{bannerDisplay}</Text>
+      </div>
       <span className={styles.content}>
         {serviceGameSummary.game_summary.board.map(
           (tileId, tileIndex, tiles) => {
@@ -210,7 +217,7 @@ const GameBoard = ({
           />
         </Modal>
       </span>
-    </Text>
+    </div>
   );
 };
 

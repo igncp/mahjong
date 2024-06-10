@@ -74,6 +74,7 @@ pub struct DieselGame {
     pub round_wind: String,
     pub updated_at: chrono::NaiveDateTime,
     pub version: GameVersion,
+    pub style: String,
 }
 
 #[derive(Identifiable, Insertable, Selectable, Queryable, Associations, Debug)]

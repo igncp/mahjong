@@ -5,8 +5,8 @@ use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Dragon, DragonTile, Flower, FlowerTile, Hand, HandTile, Hands, PlayerId, Season, SeasonTile,
-    Suit, SuitTile, Table, Tile, TileId, Wind, WindTile,
+    game::Players, Board, Dragon, DragonTile, DrawWall, Flower, FlowerTile, Hand, HandTile, Hands,
+    HandsMap, Season, SeasonTile, Suit, SuitTile, Table, Tile, TileId, Wind, WindTile,
 };
 
 pub type DeckContent = FxHashMap<TileId, Tile>;
@@ -103,18 +103,18 @@ impl Deck {
             .clone()
     }
 
-    pub fn create_table(&self, players: &[PlayerId]) -> Table {
+    pub fn create_table(&self, players: &Players) -> Table {
         let Self(deck_content) = self;
-        let mut draw_wall = deck_content.keys().cloned().collect::<Vec<TileId>>();
+        let mut draw_wall = DrawWall(deck_content.keys().cloned().collect::<Vec<TileId>>());
 
-        draw_wall.shuffle(&mut thread_rng());
+        draw_wall.0.shuffle(&mut thread_rng());
 
-        let hands = players
+        let hands_map = players
             .iter()
             .map(|player| {
                 let mut hand = Hand(vec![]);
                 for _ in 0..13 {
-                    let tile_id = draw_wall.pop().unwrap();
+                    let tile_id = draw_wall.0.pop().unwrap();
                     let tile = HandTile {
                         id: tile_id,
                         concealed: true,
@@ -125,12 +125,16 @@ impl Deck {
                 }
                 (player.clone(), hand)
             })
-            .collect::<Hands>();
+            .collect::<HandsMap>();
 
         Table {
-            board: vec![],
+            board: Board::default(),
             draw_wall,
-            hands,
+            hands: Hands(hands_map),
         }
+    }
+
+    pub fn get_sure(&self, id: TileId) -> &Tile {
+        self.0.get(&id).unwrap()
     }
 }

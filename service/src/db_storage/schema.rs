@@ -53,6 +53,8 @@ diesel::table! {
         round_wind -> Text,
         updated_at -> Timestamp,
         version -> Text,
+        #[max_length = 255]
+        style -> Varchar,
     }
 }
 

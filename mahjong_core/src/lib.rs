@@ -1,9 +1,11 @@
 #![deny(clippy::use_self, clippy::shadow_unrelated)]
 pub use deck::Deck;
-pub use game::{Game, GameId, GamePhase};
+pub use game::{Game, GameId, GamePhase, PlayerId, Players};
 pub use hand::{Hand, HandTile, SetId};
-use rustc_hash::FxHashMap;
+pub use hand::{Hands, HandsMap};
+pub use score::{Score, ScoreItem, ScoreMap};
 use serde::{Deserialize, Serialize};
+pub use table::{Board, DrawWall, Table};
 pub use tile::{Tile, TileId};
 
 pub mod ai;
@@ -12,19 +14,15 @@ pub mod game;
 pub mod game_summary;
 pub mod hand;
 mod log;
+mod macros;
 pub mod meld;
 pub mod round;
 pub mod score;
-mod test_deck;
-mod test_game;
-mod test_game_summary;
-mod test_hand;
-mod test_meld;
-mod test_round;
+mod table;
+#[cfg(test)]
+mod tests;
 pub mod tile;
 pub mod ui;
-
-pub type PlayerId = String;
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Suit {
@@ -97,17 +95,3 @@ pub struct SeasonTile {
     pub id: TileId,
     pub value: Season,
 }
-
-pub type Board = Vec<TileId>;
-pub type Hands = FxHashMap<PlayerId, Hand>;
-pub type DrawWall = Vec<TileId>;
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Table {
-    pub board: Board,
-    pub draw_wall: DrawWall,
-    pub hands: Hands,
-}
-
-pub type ScoreItem = u32;
-pub type Score = FxHashMap<PlayerId, ScoreItem>;

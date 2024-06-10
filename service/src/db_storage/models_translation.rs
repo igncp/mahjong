@@ -7,11 +7,17 @@ use super::schema;
 use crate::auth::{AuthInfo, AuthInfoAnonymous, AuthInfoData, AuthInfoEmail, AuthInfoGithub};
 use diesel::prelude::*;
 use diesel::PgConnection;
-use mahjong_core::round::{Round, RoundTileClaimed};
-use mahjong_core::{Board, DrawWall, Game, GameId, Hand, HandTile, Hands, PlayerId, Score, TileId};
+use mahjong_core::{
+    game::GameStyle,
+    round::{Round, RoundTileClaimed},
+};
+use mahjong_core::{
+    Board, DrawWall, Game, GameId, Hand, HandTile, Hands, PlayerId, Score, ScoreMap, TileId,
+};
 use rustc_hash::FxHashMap;
 use schema::player::dsl as player_dsl;
 use service_contracts::{GameSettings, Provider, ServiceGame, ServicePlayer, ServicePlayerGame};
+use std::str::FromStr;
 use tracing::debug;
 
 pub fn wait_common() {
@@ -29,9 +35,8 @@ where
 
         if result.is_ok() {
             break;
-        } else {
-            debug!("DB request failed: {:?}", result);
         }
+        debug!("DB request failed: {:?}", result);
         wait_common();
     }
 }
@@ -58,6 +63,12 @@ impl DieselAuthInfo {
                     .expect("Github not found");
 
                 AuthInfoData::Github(data.into_raw())
+            }
+            val if val == Provider::Anonymous.to_string() => {
+                let data = DieselAuthInfoAnonymous::get_by_id(connection, &self.user_id)
+                    .expect("Anonymous not found");
+
+                AuthInfoData::Anonymous(data.into_raw())
             }
             _ => panic!("Unknown provider"),
         };
@@ -372,9 +383,8 @@ impl DieselPlayer {
 
                 if result.is_ok() {
                     break;
-                } else {
-                    debug!("Error saving player: {:?}", result.err());
                 }
+                debug!("Error saving player: {:?}", result.err());
                 wait_common();
             }
         }
@@ -442,6 +452,9 @@ pub struct DieselGameExtra {
 
 impl DieselGame {
     pub fn into_raw(self) -> DieselGameExtra {
+        let default_game = Game::new(None);
+        let game_style = GameStyle::from_str(&self.style);
+
         let round = Round {
             dealer_player_index: self.round_dealer_index as usize,
             player_index: self.round_player_index as usize,
@@ -453,6 +466,7 @@ impl DieselGame {
             }),
             wall_tile_drawn: self.round_wall_tile_drawn.map(|tile_id| tile_id as TileId),
             wind: serde_json::from_str(&self.round_wind).unwrap(),
+            style: game_style.clone().unwrap(),
         };
         let game = Game {
             name: self.name,
@@ -460,8 +474,9 @@ impl DieselGame {
             id: self.id,
             phase: serde_json::from_str(&self.phase).unwrap(),
             round,
+            style: game_style.unwrap(),
             // For now the deck is not persisted
-            ..Game::default()
+            ..default_game
         };
 
         DieselGameExtra {
@@ -545,6 +560,7 @@ impl DieselGame {
             round_wind: serde_json::to_string(&raw.round.wind).unwrap(),
             updated_at: extra.updated_at,
             version: raw.version.clone(),
+            style: raw.style.to_string(),
         }
     }
 
@@ -685,7 +701,7 @@ impl DieselGameScore {
     pub fn read_from_game(connection: &mut PgConnection, game_id: &GameId) -> Score {
         use schema::game_score::dsl as game_score_dsl;
 
-        loop {
+        let score_map = loop {
             if let Ok(data) = game_score_dsl::game_score
                 .filter(game_score_dsl::game_id.eq(game_id))
                 .load::<Self>(connection)
@@ -700,7 +716,9 @@ impl DieselGameScore {
 
             (game_score.player_id, score)
         })
-        .collect::<Score>()
+        .collect::<ScoreMap>();
+
+        Score(score_map)
     }
 
     pub fn read_total_from_player(connection: &mut PgConnection, player_id: &PlayerId) -> i32 {
@@ -748,6 +766,7 @@ impl DieselGameBoard {
             .game
             .table
             .board
+            .0
             .iter()
             .enumerate()
             .map(|(tile_index, tile_id)| Self {
@@ -772,7 +791,7 @@ impl DieselGameBoard {
     pub fn read_from_game(connection: &mut PgConnection, game_id: &GameId) -> Board {
         use schema::game_board::dsl as game_board_dsl;
 
-        loop {
+        let board_content = loop {
             if let Ok(data) = game_board_dsl::game_board
                 .filter(game_board_dsl::game_id.eq(game_id))
                 .order(game_board_dsl::tile_index.asc())
@@ -784,7 +803,9 @@ impl DieselGameBoard {
         }
         .into_iter()
         .map(|game_board| game_board.tile_id as TileId)
-        .collect::<Board>()
+        .collect::<Vec<TileId>>();
+
+        Board(board_content)
     }
 
     pub fn delete_games(connection: &mut PgConnection, game_ids: &[GameId]) {
@@ -815,6 +836,7 @@ impl DieselGameDrawWall {
             .game
             .table
             .draw_wall
+            .0
             .iter()
             .enumerate()
             .map(|(tile_index, tile_id)| Self {
@@ -839,7 +861,7 @@ impl DieselGameDrawWall {
     pub fn read_from_game(connection: &mut PgConnection, game_id: &GameId) -> DrawWall {
         use schema::game_draw_wall::dsl as game_draw_wall_dsl;
 
-        loop {
+        let draw_wall_content = loop {
             if let Ok(data) = game_draw_wall_dsl::game_draw_wall
                 .filter(game_draw_wall_dsl::game_id.eq(game_id))
                 .order(game_draw_wall_dsl::tile_index.asc())
@@ -851,7 +873,9 @@ impl DieselGameDrawWall {
         }
         .into_iter()
         .map(|game_draw_wall| game_draw_wall.tile_id as TileId)
-        .collect::<DrawWall>()
+        .collect::<Vec<TileId>>();
+
+        DrawWall(draw_wall_content)
     }
 
     pub fn delete_games(connection: &mut PgConnection, game_ids: &[GameId]) {
@@ -884,6 +908,7 @@ impl DieselGameHand {
             .game
             .table
             .hands
+            .0
             .iter()
             .for_each(|(player_id, hand)| {
                 hand.0.iter().enumerate().for_each(|(tile_index, tile)| {
@@ -936,14 +961,14 @@ impl DieselGameHand {
             let player_id = game_hand.player_id;
             let concealed = game_hand.concealed == 1;
             let set_id = game_hand.set_id;
-            let mut current_hand = hands.get(&player_id).unwrap_or(&Hand(Vec::new())).clone();
+            let mut current_hand = hands.0.get(&player_id).unwrap_or(&Hand(Vec::new())).clone();
             current_hand.0.push(HandTile {
                 id: tile_id,
                 concealed,
                 set_id,
             });
 
-            hands.insert(player_id, current_hand);
+            hands.0.insert(player_id, current_hand);
         });
 
         hands

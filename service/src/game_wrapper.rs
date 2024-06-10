@@ -5,7 +5,7 @@ use crate::{
     time::get_timestamp,
 };
 use actix_web::{web, HttpResponse};
-use mahjong_core::{game::GameVersion, Game, PlayerId, TileId};
+use mahjong_core::{game::GameVersion, Game, PlayerId, Players, TileId};
 use rustc_hash::{FxHashMap, FxHashSet};
 use service_contracts::{
     AdminPostAIContinueRequest, AdminPostAIContinueResponse, AdminPostBreakMeldRequest,
@@ -211,7 +211,14 @@ impl<'a> GameWrapper<'a> {
 
     pub async fn handle_sort_hands(&mut self) -> HttpResponse {
         for player in self.service_game.game.players.iter() {
-            let hand = self.service_game.game.table.hands.get_mut(player).unwrap();
+            let hand = self
+                .service_game
+                .game
+                .table
+                .hands
+                .0
+                .get_mut(player)
+                .unwrap();
             hand.sort_default();
         }
 
@@ -253,6 +260,7 @@ impl<'a> GameWrapper<'a> {
             .game
             .table
             .hands
+            .0
             .get(&current_player_id)
             .unwrap();
 
@@ -487,6 +495,7 @@ impl<'a> GameWrapper<'a> {
             .game
             .table
             .hands
+            .0
             .get(&body.player_id)
             .unwrap();
 
@@ -538,6 +547,7 @@ impl<'a> GameWrapper<'a> {
             .game
             .table
             .hands
+            .0
             .get(&body.player_id)
             .unwrap();
         let response: AdminPostCreateMeldResponse = hand.clone();
@@ -596,6 +606,7 @@ impl<'a> GameWrapper<'a> {
             .game
             .table
             .hands
+            .0
             .get_mut(player_id)
             .unwrap();
 
@@ -661,11 +672,17 @@ fn create_game(
     player: &Option<ServicePlayer>,
     ai_player_names: &Option<Vec<String>>,
 ) -> ServiceGame {
-    let mut players: Vec<PlayerId> = vec![];
+    let mut players = Players::default();
 
-    debug!("Going to create players");
+    debug!("Going to create new game players");
 
-    for player_index in 0..4 {
+    let mut game = Game {
+        id: Uuid::new_v4().to_string(),
+        name: "Custom Game".to_string(),
+        ..Game::new(None)
+    };
+
+    for player_index in 0..Game::get_players_num(&game.style) {
         if player_index == 0 && player.is_some() {
             players.push(player.as_ref().unwrap().id.clone());
         } else {
@@ -674,12 +691,6 @@ fn create_game(
             players.push(id);
         }
     }
-
-    let mut game = Game {
-        id: Uuid::new_v4().to_string(),
-        name: "Custom Game".to_string(),
-        ..Default::default()
-    };
 
     game.set_players(&players);
     let mut players_set = FxHashMap::<String, ServicePlayer>::default();

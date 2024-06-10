@@ -1,7 +1,7 @@
 use crate::{
-    game::GameVersion,
+    game::{GameStyle, GameVersion, Players},
     meld::{PlayerDiff, PossibleMeld},
-    Game, GameId, GamePhase, Hand, HandTile, PlayerId, Score, TileId, Wind,
+    Board, Game, GameId, GamePhase, Hand, HandTile, Hands, PlayerId, Score, TileId, Wind,
 };
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
@@ -21,27 +21,47 @@ pub struct OtherPlayerHand {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OtherPlayerHands(pub FxHashMap<PlayerId, OtherPlayerHand>);
+
+impl OtherPlayerHands {
+    pub fn from_hands(hands: &Hands, player_id: &PlayerId) -> Self {
+        let mut other_hands = FxHashMap::default();
+
+        for (id, hand) in hands.0.iter() {
+            if id != player_id {
+                let visible_tiles = hand.0.iter().filter(|t| !t.concealed).cloned().collect();
+                other_hands.insert(
+                    id.clone(),
+                    OtherPlayerHand {
+                        tiles: hand.len(),
+                        visible: Hand(visible_tiles),
+                    },
+                );
+            }
+        }
+
+        Self(other_hands)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameSummary {
-    pub board: Vec<TileId>,
+    pub board: Board,
     pub draw_wall_count: usize,
     pub hand: Hand,
     pub id: GameId,
-    pub other_hands: FxHashMap<PlayerId, OtherPlayerHand>,
+    pub other_hands: OtherPlayerHands,
     pub phase: GamePhase,
     pub player_id: PlayerId,
-    pub players: Vec<PlayerId>,
+    pub players: Players,
     pub round: RoundSummary,
     pub score: Score,
     pub version: GameVersion,
+    pub style: GameStyle,
 }
 
 impl GameSummary {
     pub fn from_game(game: &Game, player_id: &PlayerId) -> Option<Self> {
-        let players = game.players.clone();
-        let hand = game.table.hands.get(player_id).unwrap().clone();
-        let phase = game.phase.clone();
-        let score = game.score.clone();
-
         let discarded_tile = if game.round.tile_claimed.is_some() {
             let tile_claimed = game.round.tile_claimed.as_ref().unwrap();
             if tile_claimed.by.is_none() {
@@ -61,52 +81,35 @@ impl GameSummary {
         };
 
         let draw_wall_count = game.table.draw_wall.len();
-        let board = game.table.board.clone();
-        let other_hands = game
-            .table
-            .hands
-            .iter()
-            .filter(|(id, _)| id != &player_id)
-            .map(|(id, other_hand)| {
-                (
-                    id.clone(),
-                    OtherPlayerHand {
-                        tiles: other_hand.0.len(),
-                        visible: Hand(
-                            other_hand
-                                .0
-                                .iter()
-                                .filter(|t| !t.concealed)
-                                .cloned()
-                                .collect(),
-                        ),
-                    },
-                )
-            })
-            .collect();
+        let other_hands = OtherPlayerHands::from_hands(&game.table.hands, player_id);
 
         Some(Self {
-            board,
+            board: game.table.board.clone(),
             draw_wall_count,
-            hand,
+            hand: game.table.hands.get(player_id).clone(),
             id: game.id.clone(),
             other_hands,
-            phase,
+            phase: game.phase.clone(),
             player_id: player_id.clone(),
-            players,
+            players: game.players.clone(),
             round,
-            score,
+            score: game.score.clone(),
             version: game.version.clone(),
+            style: game.style.clone(),
         })
     }
 
     pub fn get_current_player(&self) -> &PlayerId {
-        &self.players[self.round.player_index]
+        &self.players.0[self.round.player_index]
+    }
+
+    fn get_can_claim_tile(&self) -> bool {
+        self.hand.len() < self.style.tiles_after_claim() && self.round.discarded_tile.is_some()
     }
 
     pub fn get_possible_melds(&self) -> Vec<PossibleMeld> {
         let mut possible_melds: Vec<PossibleMeld> = vec![];
-        let can_claim_tile = self.hand.0.len() == 13 && self.round.discarded_tile.is_some();
+        let can_claim_tile = self.get_can_claim_tile();
 
         let mut claimed_tile: Option<TileId> = None;
         let mut tested_hand = self.hand.clone();

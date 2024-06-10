@@ -1,7 +1,5 @@
 use chrono::Utc;
 use mahjong_core::{Game, PlayerId};
-use rand::seq::SliceRandom;
-use rand::thread_rng;
 use rustc_hash::FxHashMap;
 use std::ops::{Add, Div};
 
@@ -38,10 +36,9 @@ impl Stats {
         // `max_by_key` favors the last value so need to randomize the keys
         let mut players = game.players.clone();
 
-        let mut rng = thread_rng();
-        players.shuffle(&mut rng);
+        players.shuffle();
 
-        let winner = players.iter().max_by_key(|k| game.score.get(*k).unwrap());
+        let winner = players.iter().max_by_key(|k| game.score.get(k).unwrap());
 
         if let Some(winner) = winner {
             *self.winners.entry(winner.clone()).or_insert(0) += 1;

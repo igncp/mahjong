@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod test {
     use crate::{Hand, HandTile};
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_sort_by_tiles() {

@@ -7,6 +7,7 @@ pub fn write(content: String) {
     let mut file = OpenOptions::new()
         .write(true)
         .create(true)
+        .truncate(true)
         .open("/tmp/mahjong_log.txt")
         .unwrap();
 

@@ -7,6 +7,7 @@ use service_contracts::ServiceGame;
 pub fn get_draw_wall(game: &Game, show_index: bool) -> String {
     game.table
         .draw_wall
+        .0
         .iter()
         .enumerate()
         .map(|(index, tile_id)| {
@@ -25,6 +26,7 @@ pub fn get_draw_wall(game: &Game, show_index: bool) -> String {
 
 pub fn get_board(board: &Board) -> String {
     board
+        .0
         .iter()
         .map(|tile_id| {
             let tile = DEFAULT_DECK.0.get(tile_id).unwrap();
@@ -136,7 +138,7 @@ pub fn get_admin_hands_str(game: &ServiceGame) -> Vec<String> {
     let mut possible_melds = game.game.get_possible_melds_by_discard();
 
     for player in game.game.players.iter() {
-        let hand = game.game.table.hands.get(player).unwrap();
+        let hand = game.game.table.hands.get(player);
 
         lines.push("".to_string());
         let player_line =
@@ -184,8 +186,7 @@ pub fn get_admin_hands_str(game: &ServiceGame) -> Vec<String> {
                     if meld.discard_tile.is_some() {
                         let tile = DEFAULT_DECK.0.get(&meld.discard_tile.unwrap()).unwrap();
                         let emoji = format_to_emoji(tile);
-                        let current_player_hand =
-                            game.game.table.hands.get(&current_player).unwrap();
+                        let current_player_hand = game.game.table.hands.get(&current_player);
                         let index = current_player_hand
                             .0
                             .iter()
