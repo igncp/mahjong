@@ -1,4 +1,4 @@
-use crate::{macros::derive_game_common, round::Round, Score, Table};
+use crate::{macros::derive_game_common, round::Round, Score, Table, TileId};
 use std::{
     fmt::{Display, Formatter},
     str::FromStr,
@@ -10,7 +10,9 @@ derive_game_common! {
 #[derive(PartialEq)]
 pub enum GamePhase {
     Beginning,
+    DecidingDealer,
     End,
+    InitialDraw,
     Playing,
 }}
 
@@ -36,6 +38,15 @@ pub struct Game {
     pub style: GameStyle,
 }}
 
+derive_game_common! {
+#[derive(PartialEq, Eq)]
+pub enum DrawTileResult {
+    AlreadyDrawn,
+    Bonus(TileId),
+    Normal(TileId),
+    WallExhausted,
+}}
+
 impl Game {
     pub fn get_players_num(style: &GameStyle) -> usize {
         match style {
@@ -48,7 +59,9 @@ impl Display for GamePhase {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Beginning => write!(f, "Beginning"),
+            Self::DecidingDealer => write!(f, "Deciding Dealer"),
             Self::End => write!(f, "End"),
+            Self::InitialDraw => write!(f, "Initial Draw"),
             Self::Playing => write!(f, "Playing"),
         }
     }
@@ -75,10 +88,21 @@ impl FromStr for GameStyle {
     }
 }
 
+impl Default for GameStyle {
+    fn default() -> Self {
+        Self::HongKong
+    }
+}
+
 impl GameStyle {
     pub fn tiles_after_claim(&self) -> usize {
         match self {
             Self::HongKong => 14,
+        }
+    }
+    pub fn max_consecutive_same_seats(&self) -> usize {
+        match self {
+            Self::HongKong => 3,
         }
     }
 }

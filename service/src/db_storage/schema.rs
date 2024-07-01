@@ -55,6 +55,8 @@ diesel::table! {
         version -> Text,
         #[max_length = 255]
         style -> Varchar,
+        round_consecutive_same_seats -> Int4,
+        round_east_player_index -> Int4,
     }
 }
 

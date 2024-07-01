@@ -1,13 +1,13 @@
 use mahjong_core::{ai::StandardAI, Game, GamePhase};
 use rustc_hash::FxHashSet;
 
-pub use self::simulate_cli::get_simulate_command;
+pub use self::simulate_cli::{get_simulate_command, get_simulate_opts, SimulateOpts};
 use self::stats::Stats;
 
 mod simulate_cli;
 mod stats;
 
-pub async fn run_simulation() {
+pub async fn run_simulation(opts: SimulateOpts) {
     let mut stats = Stats::new();
 
     loop {
@@ -30,6 +30,10 @@ pub async fn run_simulation() {
             }
         }
 
-        stats.print_if_interval(10);
+        let passed_interval = stats.print_if_interval(10);
+
+        if passed_interval && opts.once {
+            break;
+        }
     }
 }

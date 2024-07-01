@@ -111,6 +111,14 @@ $top-offset: 60px;
 
   background: $color-lightgreen;
   border-radius: 12px;
+
+  &.mobile {
+    box-sizing: border-box;
+    height: 100vh;
+    // stylelint-disable-next-line
+    margin: 0 -$common-gap;
+    border-radius: 0;
+  }
 }
 
 .helpModalTrigger,

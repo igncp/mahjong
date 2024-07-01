@@ -5,7 +5,10 @@ use crate::{
     time::get_timestamp,
 };
 use actix_web::{web, HttpResponse};
-use mahjong_core::{game::GameVersion, Game, PlayerId, Players, TileId};
+use mahjong_core::{
+    game::{DrawTileResult, GameVersion},
+    Game, PlayerId, Players, TileId,
+};
 use rustc_hash::{FxHashMap, FxHashSet};
 use service_contracts::{
     AdminPostAIContinueRequest, AdminPostAIContinueResponse, AdminPostBreakMeldRequest,
@@ -117,7 +120,7 @@ impl<'a> GameWrapper<'a> {
     pub async fn handle_admin_say_mahjong(&mut self, player_id: &PlayerId) -> HttpResponse {
         let success = self.service_game.game.say_mahjong(player_id);
 
-        if !success {
+        if success.is_err() {
             return HttpResponse::BadRequest().body("Error saying mahjong");
         }
 
@@ -131,7 +134,7 @@ impl<'a> GameWrapper<'a> {
     pub async fn handle_user_say_mahjong(&mut self, player_id: &PlayerId) -> HttpResponse {
         let success = self.service_game.game.say_mahjong(player_id);
 
-        if !success {
+        if success.is_err() {
             return HttpResponse::BadRequest().body("Error saying mahjong");
         }
 
@@ -278,8 +281,11 @@ impl<'a> GameWrapper<'a> {
 
         let tile_drawn = self.service_game.game.draw_tile_from_wall();
 
-        if tile_drawn.is_none() {
-            return HttpResponse::BadRequest().body("Error when drawing tile");
+        match tile_drawn {
+            DrawTileResult::WallExhausted | DrawTileResult::AlreadyDrawn => {
+                return HttpResponse::BadRequest().body("Error when drawing tile");
+            }
+            DrawTileResult::Normal(_) | DrawTileResult::Bonus(_) => {}
         }
 
         self.sync_game_updated();
@@ -292,11 +298,6 @@ impl<'a> GameWrapper<'a> {
     }
 
     pub async fn handle_user_pass_round(&mut self, player_id: &PlayerId) -> HttpResponse {
-        let current_player = self.service_game.game.get_current_player();
-        if &current_player != player_id {
-            return HttpResponse::BadRequest().body("Not your turn");
-        }
-
         let success = self.service_game.game.pass_null_round();
 
         if !success {
@@ -434,17 +435,18 @@ impl<'a> GameWrapper<'a> {
             .service_game
             .game
             .round
-            .next(&self.service_game.game.table.hands);
+            .next_turn(&self.service_game.game.table.hands);
 
-        if success {
-            self.sync_game_updated();
+        match success {
+            Ok(()) => {
+                self.sync_game_updated();
 
-            let response: UserPostMovePlayerResponse =
-                ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
+                let response: UserPostMovePlayerResponse =
+                    ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
 
-            self.save_and_return(response, "Error moving player").await
-        } else {
-            HttpResponse::BadRequest().body("Error when moving player")
+                self.save_and_return(response, "Error moving player").await
+            }
+            Err(_) => HttpResponse::BadRequest().body("Error when moving player"),
         }
     }
 
@@ -454,7 +456,11 @@ impl<'a> GameWrapper<'a> {
             .unwrap()
             .as_millis();
 
-        self.service_game.game.discard_tile_to_board(tile_id);
+        self.service_game
+            .game
+            .discard_tile_to_board(tile_id)
+            .unwrap_or_default();
+
         let mut game = self.service_game.clone();
 
         game.settings.last_discard_time = now_time as i128;
@@ -583,16 +589,17 @@ impl<'a> GameWrapper<'a> {
             .service_game
             .game
             .round
-            .next(&self.service_game.game.table.hands);
+            .next_turn(&self.service_game.game.table.hands);
 
-        if success {
-            self.sync_game_updated();
+        match success {
+            Ok(_) => {
+                self.sync_game_updated();
 
-            let response: &AdminPostMovePlayerResponse = &self.service_game;
+                let response: &AdminPostMovePlayerResponse = &self.service_game;
 
-            self.save_and_return(response, "Error moving player").await
-        } else {
-            HttpResponse::BadRequest().body("Error when moving player")
+                self.save_and_return(response, "Error moving player").await
+            }
+            Err(_) => HttpResponse::BadRequest().body("Error when moving player"),
         }
     }
 
@@ -613,10 +620,13 @@ impl<'a> GameWrapper<'a> {
         if tiles.is_none() {
             hand.sort_default();
         } else {
-            let did_try_to_sort = hand.sort_by_tiles(tiles.as_ref().unwrap());
+            let sorting_result = hand.sort_by_tiles(tiles.as_ref().unwrap());
 
-            if !did_try_to_sort {
-                debug!("Failed to sort hand");
+            match sorting_result {
+                Ok(_) => {}
+                Err(_) => {
+                    debug!("Failed to sort hand");
+                }
             }
         }
 

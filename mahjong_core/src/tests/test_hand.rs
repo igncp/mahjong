@@ -1,85 +1,59 @@
 #[cfg(test)]
 mod test {
-    use crate::{Hand, HandTile};
+    use crate::{
+        hand::{CanSayMahjongError, SortHandError},
+        Hand, Tile,
+    };
     use pretty_assertions::assert_eq;
+    use strum::IntoEnumIterator;
 
     #[test]
     fn test_sort_by_tiles() {
-        let mut hand = Hand(vec![
-            HandTile {
-                concealed: true,
-                id: 114,
-                set_id: None,
-            },
-            HandTile {
-                concealed: true,
-                id: 15,
-                set_id: None,
-            },
-            HandTile {
-                concealed: true,
-                id: 68,
-                set_id: None,
-            },
-            HandTile {
-                concealed: true,
-                id: 16,
-                set_id: None,
-            },
-            HandTile {
-                concealed: true,
-                id: 27,
-                set_id: None,
-            },
-            HandTile {
-                concealed: true,
-                id: 121,
-                set_id: Some("17808af0-bac7-4b03-946a-2b50f0ffa02b".to_string()),
-            },
-            HandTile {
-                concealed: true,
-                id: 122,
-                set_id: Some("17808af0-bac7-4b03-946a-2b50f0ffa02b".to_string()),
-            },
-            HandTile {
-                concealed: true,
-                id: 55,
-                set_id: Some("17808af0-bac7-4b03-946a-2b50f0ffa02b".to_string()),
-            },
-            HandTile {
-                concealed: true,
-                id: 74,
-                set_id: None,
-            },
-            HandTile {
-                concealed: true,
-                id: 1,
-                set_id: None,
-            },
-            HandTile {
-                concealed: true,
-                id: 23,
-                set_id: None,
-            },
-            HandTile {
-                concealed: true,
-                id: 73,
-                set_id: None,
-            },
-            HandTile {
-                concealed: true,
-                id: 6,
-                set_id: None,
-            },
-        ]);
+        for error in SortHandError::iter() {
+            let (summary, tiles) = match error {
+                SortHandError::NotSortedMissingTile => ("一萬,二萬,三萬", "一筒,二筒"),
+            };
 
-        hand.sort_by_tiles(&[74, 114, 15, 68, 16, 27, 1, 23, 73, 6]);
+            let result = Hand::from_summary(summary).sort_by_tiles(&Tile::ids_from_summary(tiles));
 
-        let result_ids = hand.0.iter().map(|t| t.id).collect::<Vec<_>>();
+            assert_eq!(error, result.unwrap_err());
+        }
+
+        let mut hand = Hand::from_summary("二萬,四萬,三萬 一筒,三筒,二筒");
+
+        // It sorts with the new order
+        hand.sort_by_tiles(&Tile::ids_from_summary("四萬,三萬,二萬"))
+            .unwrap();
+
+        let result_ids = hand.list.iter().map(|t| t.id).collect::<Vec<_>>();
 
         assert_eq!(
             result_ids,
-            vec![74, 114, 15, 68, 16, 27, 1, 23, 73, 6, 121, 122, 55]
+            Tile::ids_from_summary("四萬,三萬,二萬,一筒,三筒,二筒"),
         );
+    }
+
+    #[test]
+    fn test_can_say_mahjong() {
+        for error in CanSayMahjongError::iter() {
+            let summary = match error {
+                CanSayMahjongError::CantDrop => "".to_string(),
+                CanSayMahjongError::NotPair => {
+                    "一萬,二萬 一筒,一筒,一筒 二筒,二筒,二筒 三筒,三筒,三筒 四筒,四筒,四筒"
+                        .to_string()
+                }
+            };
+
+            let result = Hand::from_summary(&summary).can_say_mahjong();
+
+            assert_eq!(error, result.unwrap_err());
+        }
+
+        let correct_result = Hand::from_summary(
+            "一萬,一萬 一筒,一筒,一筒 二筒,二筒,二筒 三筒,三筒,三筒 四筒,四筒,四筒",
+        )
+        .can_say_mahjong();
+
+        assert_eq!(correct_result, Ok(()));
     }
 }

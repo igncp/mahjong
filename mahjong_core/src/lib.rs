@@ -48,6 +48,18 @@ pub enum Wind {
 
 // Note that this order is reversed to the compass directions, since it is counter-clockwise
 pub const WINDS_ROUND_ORDER: &[Wind] = &[Wind::East, Wind::South, Wind::West, Wind::North];
+pub const FLOWERS_ORDER: &[Flower] = &[
+    Flower::Plum,
+    Flower::Orchid,
+    Flower::Chrysanthemum,
+    Flower::Bamboo,
+];
+pub const SEASONS_ORDER: &[Season] = &[
+    Season::Spring,
+    Season::Summer,
+    Season::Autumn,
+    Season::Winter,
+];
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WindTile {

@@ -75,6 +75,8 @@ pub struct DieselGame {
     pub updated_at: chrono::NaiveDateTime,
     pub version: GameVersion,
     pub style: String,
+    pub round_consecutive_same_seats: i32,
+    pub round_east_player_index: i32,
 }
 
 #[derive(Identifiable, Insertable, Selectable, Queryable, Associations, Debug)]

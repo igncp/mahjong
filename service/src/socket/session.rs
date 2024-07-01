@@ -17,7 +17,6 @@ pub struct MahjongWebsocketSession {
     pub addr: Addr<MahjongWebsocketServer>,
     pub hb: Instant,
     pub id: usize,
-    pub name: Option<String>,
     pub room: String,
 }
 

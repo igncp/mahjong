@@ -14,13 +14,17 @@ run_fix() {
 run_check() {
   cargo check --workspace --release --all-targets
   cargo build --release
-  cargo test --release
+
+  # In case there are some flaky tests, run them multiple times
+  for i in $(seq 1 50); do cargo test --release; done
 
   run_clippy
 
   (cd service && sqlfluff lint --dialect postgres migrations/**/*.sql)
 
   run_pack_wasm
+
+  cargo run --release --bin mahjong_cli -- simulate -o
 
   (cd web_client &&
     bun install &&

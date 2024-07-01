@@ -7,6 +7,7 @@ set -e
 . ./src/install.sh
 . ./src/sync_prod.sh
 . ./src/wasm.sh
+. ./src/tests_summaries_fix.sh
 
 SCRIPTPATH="$(
   cd -- "$(dirname "$0")" >/dev/null 2>&1
@@ -24,7 +25,8 @@ Run various scripts for the Mahjong project
   - fix: Run linters in fix mode
   - list: List root files to be used in a pipe
   - pack_wasm: Pack the wasm files
-  - sync_prod: Deploy a clean production DB"
+  - sync_prod: Deploy a clean production DB
+  - tests_summaries_fix: Convert the tests summaries to chinese chars"
 
 # This is specially convenient for maintaining the clippy rules, which need to
 # be in each crate
@@ -66,6 +68,9 @@ main() {
     ;;
   sync_prod)
     run_sync_prod
+    ;;
+  tests_summaries_fix)
+    tests_summaries_fix
     ;;
   *)
     echo "$USAGE"

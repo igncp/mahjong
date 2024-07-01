@@ -98,4 +98,8 @@ impl Tile {
             },
         }
     }
+
+    pub fn is_bonus(&self) -> bool {
+        matches!(self, Self::Flower(_) | Self::Season(_))
+    }
 }

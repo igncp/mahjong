@@ -1,5 +1,5 @@
 [package]
-name = "mahjong_tui"
+name = "mahjong_cli"
 version = "0.1.0"
 edition = "2021"
 

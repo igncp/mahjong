@@ -2,348 +2,99 @@
 mod test {
     use crate::hand::HandPossibleMeld;
     use crate::meld::{get_is_chow, get_is_kong, get_is_pung, PlayerDiff, SetCheckOpts};
-    use crate::tile::TileId;
-    use crate::{Deck, Flower, FlowerTile, Hand, HandTile, Suit, SuitTile, Tile, Wind, WindTile};
+    use crate::{Hand, Tile};
     use pretty_assertions::assert_eq;
 
-    type GetIsPungFixture = (Vec<Tile>, bool);
-    fn get_is_pung_fixtures() -> Vec<GetIsPungFixture> {
-        vec![
-            (
-                vec![
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        id: 0,
-                        value: 1,
-                        suit: Suit::Dots,
-                    })),
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        id: 0,
-                        value: 1,
-                        suit: Suit::Dots,
-                    })),
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        id: 0,
-                        value: 1,
-                        suit: Suit::Dots,
-                    })),
-                ],
-                true,
-            ),
-            (
-                vec![
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        id: 0,
-                        value: 1,
-                        suit: Suit::Dots,
-                    })),
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        id: 1,
-                        value: 2,
-                        suit: Suit::Dots,
-                    })),
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        id: 2,
-                        value: 1,
-                        suit: Suit::Dots,
-                    })),
-                ],
-                // Not all the same value
-                false,
-            ),
-            (
-                vec![
-                    Deck::find_tile_without_id(Tile::Wind(WindTile {
-                        id: 0,
-                        value: Wind::North,
-                    })),
-                    Deck::find_tile_without_id(Tile::Wind(WindTile {
-                        id: 1,
-                        value: Wind::North,
-                    })),
-                    Deck::find_tile_without_id(Tile::Wind(WindTile {
-                        id: 2,
-                        value: Wind::North,
-                    })),
-                ],
-                true,
-            ),
-            // Bonus are never valid pungs
-            (
-                vec![
-                    Deck::find_tile_without_id(Tile::Flower(FlowerTile {
-                        id: 0,
-                        value: Flower::Bamboo,
-                    })),
-                    Deck::find_tile_without_id(Tile::Flower(FlowerTile {
-                        id: 1,
-                        value: Flower::Bamboo,
-                    })),
-                    Deck::find_tile_without_id(Tile::Flower(FlowerTile {
-                        id: 2,
-                        value: Flower::Bamboo,
-                    })),
-                ],
-                // Not all the same value
-                false,
-            ),
-            (
-                vec![
-                    Deck::find_tile_without_id(Tile::Wind(WindTile {
-                        id: 0,
-                        value: Wind::West,
-                    })),
-                    Deck::find_tile_without_id(Tile::Wind(WindTile {
-                        id: 0,
-                        value: Wind::West,
-                    })),
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        id: 0,
-                        value: 7,
-                        suit: Suit::Dots,
-                    })),
-                ],
-                false,
-            ),
-        ]
+    const PUNG_FIXTURES: &[(&str, bool)] = &[
+        ("一筒,一筒,一筒", true),
+        ("一筒,二筒,一筒", false),
+        ("北,北,北", true),
+        ("竹,竹,竹", false),
+        ("北,北,七筒", false),
+    ];
+
+    const CHOW_FIXTURES: &[(&str, bool, Option<&'static str>, PlayerDiff)] = &[
+        ("一筒,三筒,二筒", true, None, None),
+        ("一筒,三筒,二筒", true, Some("三筒"), Some(1)),
+        ("一筒,三筒,二筒", false, Some("三筒"), Some(-1)),
+        ("一筒,一筒,一筒", false, Some("三筒"), None),
+    ];
+
+    const KONG_FIXTURES: &[(&str, bool)] = &[
+        ("西,西,七筒,七筒", false),
+        ("西,西,西,西", true),
+        ("一筒,二筒,三筒,四筒", false),
+    ];
+
+    const POSSIBLE_MELDS_FIXTURES: &[(&str, PlayerDiff, &[&str])] = &[
+        ("二筒,一筒,三筒", Some(0), &["一筒,三筒,二筒 NO"]),
+        ("一筒,二筒,四筒", None, &[]),
+        (
+            "三筒,一筒,二筒,五筒,五筒,五筒",
+            None,
+            &["一筒,三筒,二筒 NO", "五筒,五筒,五筒 NO"],
+        ),
+    ];
+
+    enum MeldFixtureArray {
+        Small(&'static [(&'static str, bool)]),
+        Full(&'static [(&'static str, bool, Option<&'static str>, PlayerDiff)]),
+    }
+
+    fn test_meld(arr: MeldFixtureArray, func: impl Fn(&SetCheckOpts) -> bool) {
+        let parsed_arr = match arr {
+            MeldFixtureArray::Small(arr) => &arr
+                .iter()
+                .map(|(a, b)| (*a, *b, None, None))
+                .collect::<Vec<_>>(),
+            MeldFixtureArray::Full(arr) => &arr.to_vec(),
+        };
+
+        for (index, (tiles, expected_result, claimed_tile, board_tile_player_diff)) in
+            parsed_arr.iter().enumerate()
+        {
+            let sub_hand = Hand::from_summary(tiles);
+            let opts = SetCheckOpts {
+                board_tile_player_diff: *board_tile_player_diff,
+                claimed_tile: claimed_tile.map(Tile::id_from_summary),
+                sub_hand: &sub_hand.into(),
+            };
+
+            assert_eq!(func(&opts), *expected_result, "index: {index}");
+        }
     }
 
     #[test]
     fn test_is_pung() {
-        for (index, (tiles, expected_is_pung)) in get_is_pung_fixtures().iter().enumerate() {
-            let sub_hand = tiles.iter().map(|tile| tile.get_id()).collect();
-            let opts = SetCheckOpts {
-                board_tile_player_diff: None,
-                claimed_tile: None,
-                sub_hand: &sub_hand,
-            };
-            let is_pung = get_is_pung(&opts);
-            assert_eq!(is_pung, *expected_is_pung, "index: {index}");
-        }
-    }
-
-    type GetIsChowFixture = (Vec<Tile>, bool, Option<TileId>, PlayerDiff);
-    fn get_is_chow_fixtures() -> Vec<GetIsChowFixture> {
-        vec![
-            (
-                vec![
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        value: 1,
-                        suit: Suit::Dots,
-                        id: 0,
-                    })),
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        value: 3,
-                        suit: Suit::Dots,
-                        id: 1,
-                    })),
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        value: 2,
-                        suit: Suit::Dots,
-                        id: 2,
-                    })),
-                ],
-                true,
-                None,
-                None,
-            ),
-            (
-                vec![
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        value: 1,
-                        suit: Suit::Dots,
-                        id: 0,
-                    })),
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        value: 3,
-                        suit: Suit::Dots,
-                        id: 1,
-                    })),
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        value: 2,
-                        suit: Suit::Dots,
-                        id: 2,
-                    })),
-                ],
-                true,
-                Some(
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        value: 3,
-                        suit: Suit::Dots,
-                        id: 1,
-                    }))
-                    .get_id(),
-                ),
-                Some(1),
-            ),
-            (
-                vec![
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        value: 1,
-                        suit: Suit::Dots,
-                        id: 0,
-                    })),
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        value: 3,
-                        suit: Suit::Dots,
-                        id: 1,
-                    })),
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        value: 2,
-                        suit: Suit::Dots,
-                        id: 2,
-                    })),
-                ],
-                false,
-                Some(
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        value: 3,
-                        suit: Suit::Dots,
-                        id: 1,
-                    }))
-                    .get_id(),
-                ),
-                Some(-1),
-            ),
-            (
-                vec![
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        value: 1,
-                        suit: Suit::Dots,
-                        id: 0,
-                    })),
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        value: 1,
-                        suit: Suit::Dots,
-                        id: 1,
-                    })),
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        value: 1,
-                        suit: Suit::Dots,
-                        id: 2,
-                    })),
-                ],
-                false,
-                Some(
-                    Deck::find_tile_without_id(Tile::Suit(SuitTile {
-                        value: 3,
-                        suit: Suit::Dots,
-                        id: 1,
-                    }))
-                    .get_id(),
-                ),
-                None,
-            ),
-        ]
+        test_meld(MeldFixtureArray::Small(PUNG_FIXTURES), get_is_pung);
     }
 
     #[test]
     fn test_is_chow() {
-        for (index, (tiles, expected_is_chow, claimed_tile, board_tile_player_diff)) in
-            get_is_chow_fixtures().iter().enumerate()
-        {
-            let sub_hand = tiles.iter().map(|tile| tile.get_id()).collect();
-            let opts = SetCheckOpts {
-                board_tile_player_diff: *board_tile_player_diff,
-                claimed_tile: *claimed_tile,
-                sub_hand: &sub_hand,
-            };
-            let is_chow = get_is_chow(&opts);
-            assert_eq!(is_chow, *expected_is_chow, "index: {index}");
-        }
-    }
-
-    type GetIsKongFixture = (Vec<Tile>, bool);
-    fn get_is_kong_fixtures() -> Vec<GetIsKongFixture> {
-        vec![(
-            vec![
-                Tile::Wind(WindTile {
-                    id: 0,
-                    value: Wind::West,
-                }),
-                Tile::Wind(WindTile {
-                    id: 1,
-                    value: Wind::West,
-                }),
-                Tile::Suit(SuitTile {
-                    id: 2,
-                    value: 7,
-                    suit: Suit::Dots,
-                }),
-                Tile::Suit(SuitTile {
-                    id: 3,
-                    value: 7,
-                    suit: Suit::Dots,
-                }),
-            ],
-            false,
-        )]
+        test_meld(MeldFixtureArray::Full(CHOW_FIXTURES), get_is_chow);
     }
 
     #[test]
     fn test_get_is_kong() {
-        for (index, (tiles, expected_is_kong)) in get_is_kong_fixtures().iter().enumerate() {
-            let sub_hand = tiles.iter().map(|tile| tile.get_id()).collect();
-            let opts = SetCheckOpts {
-                board_tile_player_diff: None,
-                claimed_tile: None,
-                sub_hand: &sub_hand,
-            };
-            let is_chow = get_is_kong(&opts);
-            assert_eq!(is_chow, *expected_is_kong, "index: {index}");
-        }
-    }
-
-    type GetPossibleMeldsFixture = (Hand, PlayerDiff, Vec<HandPossibleMeld>);
-    fn get_possible_melds_fixtures() -> Vec<GetPossibleMeldsFixture> {
-        fn get_hand_tile(tile: &Tile) -> HandTile {
-            HandTile {
-                id: tile.get_id(),
-                concealed: true,
-                set_id: None,
-            }
-        }
-
-        let first_tile = Deck::find_tile_without_id(Tile::Suit(SuitTile {
-            value: 1,
-            suit: Suit::Dots,
-            id: 0,
-        }));
-        let second_tile = Deck::find_tile_without_id(Tile::Suit(SuitTile {
-            value: 2,
-            suit: Suit::Dots,
-            id: 0,
-        }));
-        let third_tile = Deck::find_tile_without_id(Tile::Suit(SuitTile {
-            value: 3,
-            suit: Suit::Dots,
-            id: 0,
-        }));
-
-        vec![(
-            Hand(vec![
-                get_hand_tile(&first_tile),
-                get_hand_tile(&second_tile),
-                get_hand_tile(&third_tile),
-            ]),
-            Some(0),
-            vec![HandPossibleMeld {
-                is_mahjong: false,
-                tiles: vec![
-                    first_tile.get_id(),
-                    second_tile.get_id(),
-                    third_tile.get_id(),
-                ],
-            }],
-        )]
+        test_meld(MeldFixtureArray::Small(KONG_FIXTURES), get_is_kong);
     }
 
     #[test]
     fn test_get_possible_melds() {
-        for (index, (hand, player_diff, expected_meld)) in
-            get_possible_melds_fixtures().iter().enumerate()
+        for (index, (hand_summary, player_diff, expected_meld_summary)) in
+            POSSIBLE_MELDS_FIXTURES.iter().enumerate()
         {
-            let possible_melds = hand.get_possible_melds(*player_diff, None, false);
-            assert_eq!(possible_melds, *expected_meld, "index: {index}");
+            let hand = Hand::from_summary(hand_summary);
+            let possible_melds = hand
+                .get_possible_melds(*player_diff, None, false)
+                .into_iter()
+                .map(|m| {
+                    let hand_possible_meld: HandPossibleMeld = m;
+                    hand_possible_meld.to_summary()
+                })
+                .collect::<Vec<_>>();
+
+            assert_eq!(possible_melds, *expected_meld_summary, "index: {index}");
         }
     }
 }

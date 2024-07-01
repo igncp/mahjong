@@ -1,23 +1,36 @@
 ## Features to add
 
-- More complex and complete game mechanics
-- System for testing games
+- More complex and complete game mechanics based on the Wikipedia spec
 - More user features, robust implementations (modules)
-- Better UI (using canvas, no antd), interactive options, animations
+- Better UI (perspective, animations), interactive options
 
 ## Later Improvements
 
-- No TUI
-- Refactor logic to support multiple types of games
+- FE: search of a specific tile (show how many in board, how many in other melds)
+- FE: Audio effects
+- FE: Perspective of tiles
+- BE: can say mahjong tests
+- BE: leaderboard using redis
+- BE: promote anonymous account to real account
+- BE: decouple mahjong specific logic from server to a different package
+- BE: single script to setup everthing for development
+- CORE: Add fixtures to the AI tests
+- CORE: Other rules from https://en.wikipedia.org/wiki/Mahjong
+- CORE: Replace current tests naming with Chinese characters
+- CORE: Replace bool returning functions with side effects
+- CORE: Divide the draw wall in four segments + dead wall
+- CORE: minimum points win support
+- CORE: Support declaring concealed melds
+- CORE: Support charleston in the drawing phase
+- CORE: Support the deciding of the dealer with dice
+- CORE: Bonus tiles directions
+- CORE: Drawing phase
+- CORE: Support three players: high effort
+- FS: Use the deciding of dealer and drawing phases
+- FS: Refactor logic to support multiple types of games (e.g. listed in wikipedia)
     - Move most business logic to the core (rust/ts)
 - Move other projects bash scripts to the main scripts dir
 - Convert DB operations into transactions
-- Random user position (especially with other players)
-- ESLint rule noshadow
-- Move useful utils (e.g. i18n, locale) to the TS SDK
-
-## Backlog ideas
-
 - Change player names when they are AI
 - Form to create AI game vs real players game
     - Link to invite players to game (and qr code)
@@ -31,4 +44,3 @@
 - Record of games for each player
 - Ranking of players
 - Dark theme
-- Feature reduction: No wasm / no web lib

@@ -5,8 +5,9 @@ use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    game::Players, Board, Dragon, DragonTile, DrawWall, Flower, FlowerTile, Hand, HandTile, Hands,
-    HandsMap, Season, SeasonTile, Suit, SuitTile, Table, Tile, TileId, Wind, WindTile,
+    game::Players, table::BonusTiles, Board, Dragon, DragonTile, DrawWall, Flower, FlowerTile,
+    Hand, HandTile, Hands, HandsMap, Season, SeasonTile, Suit, SuitTile, Table, Tile, TileId, Wind,
+    WindTile,
 };
 
 pub type DeckContent = FxHashMap<TileId, Tile>;
@@ -112,8 +113,8 @@ impl Deck {
         let hands_map = players
             .iter()
             .map(|player| {
-                let mut hand = Hand(vec![]);
-                for _ in 0..13 {
+                let mut hand = Hand::new(vec![]);
+                for _ in 0..(hand.style.clone().unwrap_or_default().tiles_after_claim() - 1) {
                     let tile_id = draw_wall.0.pop().unwrap();
                     let tile = HandTile {
                         id: tile_id,
@@ -121,15 +122,18 @@ impl Deck {
                         set_id: None,
                     };
 
-                    hand.0.push(tile);
+                    hand.push(tile);
                 }
                 (player.clone(), hand)
             })
             .collect::<HandsMap>();
 
+        let bonus_tiles = BonusTiles::default();
+
         Table {
             board: Board::default(),
             draw_wall,
+            bonus_tiles,
             hands: Hands(hands_map),
         }
     }

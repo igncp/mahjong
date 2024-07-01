@@ -48,7 +48,7 @@ impl Stats {
         self.rounds_num.push(game.round.round_index + 1);
     }
 
-    pub fn print_if_interval(&mut self, seconds: usize) {
+    pub fn print_if_interval(&mut self, seconds: usize) -> bool {
         let end_time = Utc::now().time();
         let diff = (end_time - self.start_time).num_seconds() as usize;
 
@@ -74,5 +74,7 @@ impl Stats {
             println!("Average rounds per game: {:.2}", average_rounds_per_game);
             println!("---\n");
         }
+
+        diff > seconds
     }
 }

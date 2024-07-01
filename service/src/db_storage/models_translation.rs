@@ -467,6 +467,8 @@ impl DieselGame {
             wall_tile_drawn: self.round_wall_tile_drawn.map(|tile_id| tile_id as TileId),
             wind: serde_json::from_str(&self.round_wind).unwrap(),
             style: game_style.clone().unwrap(),
+            consecutive_same_seats: self.round_consecutive_same_seats as usize,
+            east_player_index: self.round_east_player_index as usize,
         };
         let game = Game {
             name: self.name,
@@ -561,6 +563,8 @@ impl DieselGame {
             updated_at: extra.updated_at,
             version: raw.version.clone(),
             style: raw.style.to_string(),
+            round_consecutive_same_seats: raw.round.consecutive_same_seats as i32,
+            round_east_player_index: raw.round.east_player_index as i32,
         }
     }
 
@@ -911,7 +915,7 @@ impl DieselGameHand {
             .0
             .iter()
             .for_each(|(player_id, hand)| {
-                hand.0.iter().enumerate().for_each(|(tile_index, tile)| {
+                hand.list.iter().enumerate().for_each(|(tile_index, tile)| {
                     let tile_id = tile.id;
                     let concealed = if tile.concealed { 1 } else { 0 };
                     let set_id = tile.set_id.clone();
@@ -961,8 +965,12 @@ impl DieselGameHand {
             let player_id = game_hand.player_id;
             let concealed = game_hand.concealed == 1;
             let set_id = game_hand.set_id;
-            let mut current_hand = hands.0.get(&player_id).unwrap_or(&Hand(Vec::new())).clone();
-            current_hand.0.push(HandTile {
+            let mut current_hand = hands
+                .0
+                .get(&player_id)
+                .unwrap_or(&Hand::new(Vec::new()))
+                .clone();
+            current_hand.push(HandTile {
                 id: tile_id,
                 concealed,
                 set_id,

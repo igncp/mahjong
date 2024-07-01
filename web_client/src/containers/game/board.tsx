@@ -33,6 +33,7 @@ interface IProps {
   activePlayer: BoardPlayer["id"];
   canDropInBoard: boolean;
   dealerPlayer: BoardPlayer["id"];
+  isMobile: boolean;
   players: [BoardPlayer, BoardPlayer, BoardPlayer, BoardPlayer];
   serviceGameM: ModelServiceGameSummary;
   serviceGameSummary: ServiceGameSummary;
@@ -45,6 +46,7 @@ const GameBoard = ({
   activePlayer,
   canDropInBoard,
   dealerPlayer,
+  isMobile,
   players,
   serviceGameM,
   serviceGameSummary,
@@ -58,7 +60,7 @@ const GameBoard = ({
   } / 92)`;
 
   return (
-    <div className={styles.wrapper}>
+    <div className={[styles.wrapper, isMobile ? styles.mobile : ""].join(" ")}>
       <div className={styles.banner}>
         <Text>{bannerDisplay}</Text>
       </div>

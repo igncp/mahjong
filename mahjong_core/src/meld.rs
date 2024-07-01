@@ -29,17 +29,15 @@ pub fn get_is_pung(opts: &SetCheckOpts) -> bool {
         }
 
         let tile = tile.unwrap();
+
+        if tile.is_bonus() {
+            return false;
+        }
+
         let last_tile = last_tile.unwrap();
 
-        match tile {
-            Tile::Season(_) | Tile::Flower(_) => {
-                return false;
-            }
-            other_tile => {
-                if !other_tile.is_same_content(last_tile) {
-                    return false;
-                }
-            }
+        if !tile.is_same_content(last_tile) {
+            return false;
         }
 
         last_tile_id = tile.get_id();
@@ -137,15 +135,8 @@ pub fn get_is_kong(opts: &SetCheckOpts) -> bool {
         let tile = tile.unwrap();
         let last_tile = last_tile.unwrap();
 
-        match tile {
-            Tile::Season(_) | Tile::Flower(_) => {
-                return false;
-            }
-            other_tile => {
-                if !other_tile.is_same_content(last_tile) {
-                    return false;
-                }
-            }
+        if tile.is_bonus() || !tile.is_same_content(last_tile) {
+            return false;
         }
 
         last_tile_id = tile_id;

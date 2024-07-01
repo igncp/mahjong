@@ -8,9 +8,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoundSummary {
+    consecutive_same_seats: usize,
     dealer_player_index: usize,
-    pub player_index: usize,
+    east_player_index: usize,
     pub discarded_tile: Option<TileId>,
+    pub player_index: usize,
     wind: Wind,
 }
 
@@ -29,12 +31,13 @@ impl OtherPlayerHands {
 
         for (id, hand) in hands.0.iter() {
             if id != player_id {
-                let visible_tiles = hand.0.iter().filter(|t| !t.concealed).cloned().collect();
+                let visible_tiles: Vec<HandTile> =
+                    hand.list.iter().filter(|t| !t.concealed).cloned().collect();
                 other_hands.insert(
                     id.clone(),
                     OtherPlayerHand {
                         tiles: hand.len(),
-                        visible: Hand(visible_tiles),
+                        visible: Hand::new(visible_tiles),
                     },
                 );
             }
@@ -75,7 +78,9 @@ impl GameSummary {
 
         let round = RoundSummary {
             dealer_player_index: game.round.dealer_player_index,
+            east_player_index: game.round.east_player_index,
             discarded_tile,
+            consecutive_same_seats: game.round.consecutive_same_seats,
             player_index: game.round.player_index,
             wind: game.round.wind.clone(),
         };
@@ -129,7 +134,7 @@ impl GameSummary {
                 set_id: None,
             };
 
-            tested_hand.0.push(tile);
+            tested_hand.push(tile);
             claimed_tile = Some(tile_id);
             player_diff = Some(match player_index as i32 - current_player_index as i32 {
                 -3 => 1,

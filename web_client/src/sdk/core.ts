@@ -159,8 +159,10 @@ export type GameSummary = {
   player_id: PlayerId;
   players: PlayerId[];
   round: {
+    consecutive_same_seats: number;
     dealer_player_index: number;
     discarded_tile: null | TileId;
+    east_player_index: number;
     player_index: number;
     wind: Wind;
   };

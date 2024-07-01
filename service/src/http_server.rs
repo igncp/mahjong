@@ -1044,7 +1044,6 @@ async fn get_ws(
             addr,
             hb: Instant::now(),
             id: rand::random(),
-            name: None,
             room: MahjongWebsocketSession::get_room_id(&game_id, player_id.as_ref()),
         },
         &req,

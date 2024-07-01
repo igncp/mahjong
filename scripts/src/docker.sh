@@ -19,7 +19,7 @@ run_docker() (
 
     docker build \
       -t "igncp/mahjong_service:$DOCKER_IMAGE_TAG" \
-      -f scripts/Dockerfile.service \
+      -f Dockerfile.service \
       --progress=plain \
       .
 
@@ -30,7 +30,7 @@ run_docker() (
   docker_front() {
     docker build \
       -t "igncp/mahjong_front:$DOCKER_IMAGE_TAG" \
-      -f scripts/Dockerfile.front \
+      -f Dockerfile.front \
       --progress=plain \
       .
 

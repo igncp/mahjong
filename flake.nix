@@ -21,6 +21,7 @@
         shellHook =
           ''
             export PATH=$PATH:$HOME/.cargo/bin
+            export PATH=$PATH:$PWD/cli
           ''
           + (
             if (is-docker-ci || is-checks-ci)

@@ -30,7 +30,8 @@ impl Score {
     }
 }
 
-enum ScoringRule {
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ScoringRule {
     AllFlowers,
     AllSeasons,
     BasePoint, // This is a custome rule until all other rules are implemented
@@ -40,12 +41,12 @@ enum ScoringRule {
 }
 
 impl Game {
-    pub fn calculate_hand_score(&mut self, winner_player: &PlayerId) {
+    pub fn calculate_hand_score(&mut self, winner_player: &PlayerId) -> (Vec<ScoringRule>, u32) {
         {
             let score = &mut self.score;
             let current_player_score = score.get(winner_player);
             if current_player_score.is_none() {
-                return;
+                return (vec![], 0);
             }
         }
 
@@ -56,6 +57,8 @@ impl Game {
 
         self.score
             .insert(winner_player, current_player_score + round_points);
+
+        (scoring_rules, round_points)
     }
 
     fn get_scoring_rules_points(scoring_rules: &Vec<ScoringRule>) -> u32 {
@@ -78,7 +81,13 @@ impl Game {
     fn get_scoring_rules(&self, winner_player: &PlayerId) -> Vec<ScoringRule> {
         let mut rules = Vec::new();
         rules.push(ScoringRule::BasePoint);
-        let winner_hand = self.table.hands.get(winner_player).clone();
+        let empty_bonus = vec![];
+        let winner_bonus = self
+            .table
+            .bonus_tiles
+            .0
+            .get(winner_player)
+            .unwrap_or(&empty_bonus);
 
         if self.table.draw_wall.0.is_empty() {
             rules.push(ScoringRule::LastWallTile);
@@ -91,9 +100,8 @@ impl Game {
         let mut flowers: FxHashSet<Flower> = FxHashSet::default();
         let mut seasons: FxHashSet<Season> = FxHashSet::default();
 
-        for tile in winner_hand.0 {
-            let tile = DEFAULT_DECK.0.get(&tile.id).unwrap();
-
+        for tile_id in winner_bonus {
+            let tile = DEFAULT_DECK.0.get(tile_id).unwrap();
             match tile {
                 Tile::Flower(flower) => {
                     flowers.insert(flower.value.clone());

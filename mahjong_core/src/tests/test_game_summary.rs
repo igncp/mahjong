@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod test {
-    use crate::{game_summary::GameSummary, Game, Hand, Tile};
+    use crate::{game_summary::GameSummary, hand::HandPossibleMeld, Game, Hand, Tile};
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -9,16 +9,24 @@ mod test {
         let first_player = game.players.first();
         let mut game_summary = GameSummary::from_game(&game, first_player).unwrap();
 
-        game_summary.hand = Hand::from_summary("1C,1C,1C,3B,3B");
+        game_summary.hand = Hand::from_summary("一萬,一萬,一萬,三索,三索");
 
-        let discarded_tile = Tile::id_from_summary("3B");
+        let discarded_tile = Tile::id_from_summary("三索");
         game_summary.board.0.push(discarded_tile);
         game_summary.round.discarded_tile = Some(discarded_tile);
         game_summary.round.player_index = 2;
 
-        let possible_melds = game_summary.get_possible_melds();
+        let possible_melds: Vec<String> = game_summary
+            .get_possible_melds()
+            .iter()
+            .map(|meld| {
+                let hand_possible_meld: HandPossibleMeld = meld.clone().into();
+
+                hand_possible_meld.to_summary()
+            })
+            .collect();
 
         // One is own and one claimed
-        assert_eq!(possible_melds.len(), 2);
+        assert_eq!(possible_melds, &["一萬,一萬,一萬 NO", "三索,三索,三索 NO"]);
     }
 }

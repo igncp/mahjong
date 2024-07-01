@@ -16,6 +16,7 @@ import {
   TUserLoadGameResponse,
   Wind,
 } from "src/sdk/core";
+import { useIsMobile } from "src/sdk/hooks";
 import { HttpClient } from "src/sdk/http-client";
 import {
   ModelServiceGameSummary,
@@ -45,6 +46,7 @@ const Game = ({ gameId, userId }: IProps) => {
   const gameState = useState<null | TUserLoadGameResponse>(null);
   const loadingState = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
+  const isMobile = useIsMobile();
 
   const serviceGameMRef = useRef<ModelServiceGameSummary | null>(null);
   const router = useRouter();
@@ -180,37 +182,42 @@ const Game = ({ gameId, userId }: IProps) => {
     player.id === userId && serviceGameSummary.game_summary.hand.length < 14;
 
   return (
-    <PageContent>
-      <Text style={{ marginTop: "20px" }}>
-        <b style={{ fontSize: "20px" }}>{player.name}</b> (
-        <span
-          style={{
-            fontWeight:
-              serviceGameSummary.game_summary.score[userId] > 0 ? 700 : 400,
-          }}
-        >
-          {t("game.points", "{{count}} points", {
-            count: serviceGameSummary.game_summary.score[userId],
-          })}
-        </span>
-        )
-        {process.env.NODE_ENV !== "production" && (
-          <>
-            {" "}
-            <CopyToClipboard text={userId} />
-          </>
-        )}
-      </Text>
-      <Text>
-        {t("game.currentWind")}{" "}
-        <b>{windToText[serviceGameSummary.game_summary.round.wind]}</b>,{" "}
-        {t("game.currentDealer")} <b>{dealerPlayer.name}</b>
-      </Text>
+    <PageContent headerCollapsible={isMobile}>
+      {!isMobile && (
+        <>
+          <Text style={{ marginTop: "20px" }}>
+            <b style={{ fontSize: "20px" }}>{player.name}</b> (
+            <span
+              style={{
+                fontWeight:
+                  serviceGameSummary.game_summary.score[userId] > 0 ? 700 : 400,
+              }}
+            >
+              {t("game.points", "{{count}} points", {
+                count: serviceGameSummary.game_summary.score[userId],
+              })}
+            </span>
+            )
+            {process.env.NODE_ENV !== "production" && (
+              <>
+                {" "}
+                <CopyToClipboard text={userId} />
+              </>
+            )}
+          </Text>
+          <Text>
+            {t("game.currentWind")}{" "}
+            <b>{windToText[serviceGameSummary.game_summary.round.wind]}</b>,{" "}
+            {t("game.currentDealer")} <b>{dealerPlayer.name}</b>
+          </Text>
+        </>
+      )}{" "}
       <span ref={boardDropRef}>
         <GameBoard
           activePlayer={turnPlayer.id}
           canDropInBoard={canDropInBoard}
           dealerPlayer={dealerPlayer.id}
+          isMobile={isMobile}
           players={
             boardPlayers as [BoardPlayer, BoardPlayer, BoardPlayer, BoardPlayer]
           }
