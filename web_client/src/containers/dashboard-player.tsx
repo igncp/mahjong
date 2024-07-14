@@ -1,4 +1,5 @@
 import { EditOutlined, PlusCircleOutlined } from "@ant-design/icons";
+import type { UserGetDashboardResponse } from "bindings/UserGetDashboardResponse";
 import dayjs from "dayjs";
 import Head from "next/head";
 import Link from "next/link";
@@ -9,7 +10,6 @@ import { first } from "rxjs";
 import { string } from "zod";
 
 import { tokenObserver } from "src/sdk/auth";
-import type { TUserDashboardResponse } from "src/sdk/core";
 import { HttpClient } from "src/sdk/http-client";
 import Button from "src/ui/common/button";
 import Card from "src/ui/common/card";
@@ -39,8 +39,10 @@ const simpleFormatDate = (timestamp: string): string => {
 
 const DashboardUser = ({ userId }: TProps) => {
   const { t } = useTranslation();
+
   const [dashboardQueryResponse, setDashboardQueryResponse] =
-    useState<null | TUserDashboardResponse>(null);
+    useState<null | UserGetDashboardResponse>(null);
+
   const [editName, setEditName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -77,6 +79,7 @@ const DashboardUser = ({ userId }: TProps) => {
 
   const onSaveNameSubmit = () => {
     if (isSaveNameDisabled) return;
+
     setIsLoading(true);
 
     HttpClient.userPatchInfo(userId, {
@@ -97,6 +100,7 @@ const DashboardUser = ({ userId }: TProps) => {
               name: newUser.name,
             },
           });
+
           setEditName(false);
         },
       });
@@ -200,6 +204,7 @@ const DashboardUser = ({ userId }: TProps) => {
                       isEmail ? `mailto:${username}` : null,
                     ];
                   }
+
                   case "Github":
                     return [
                       `${username}@github`,

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { MouseEventHandler, useEffect, useState } from "react";
+import type { MouseEventHandler } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { TAdminGetGamesResponse } from "src/sdk/core";
+import type { TAdminGetGamesResponse } from "src/sdk/core";
 import { HttpClient } from "src/sdk/http-client";
 import List, { ListItem } from "src/ui/common/list";
 

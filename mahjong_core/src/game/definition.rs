@@ -3,21 +3,23 @@ use std::{
     fmt::{Display, Formatter},
     str::FromStr,
 };
+use ts_rs::TS;
 
 use super::Players;
 
 derive_game_common! {
-#[derive(PartialEq)]
+#[derive(PartialEq, TS)]
 pub enum GamePhase {
     Beginning,
     DecidingDealer,
     End,
+    InitialShuffle,
     InitialDraw,
     Playing,
 }}
 
 derive_game_common! {
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, TS)]
 pub enum GameStyle {
     HongKong,
 }}
@@ -63,6 +65,7 @@ impl Display for GamePhase {
             Self::End => write!(f, "End"),
             Self::InitialDraw => write!(f, "Initial Draw"),
             Self::Playing => write!(f, "Playing"),
+            Self::InitialShuffle => write!(f, "Initial Shuffle"),
         }
     }
 }

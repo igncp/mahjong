@@ -8,10 +8,12 @@ import {
 
 export const setupServiceGameSummary = () => {
   setFormatTile(format_tile);
+
   setGetPossibleMeldsSummary((game) =>
     get_possible_melds_summary(JSON.stringify(game))
   );
 
   const deck = get_deck();
+
   setDeck(deck);
 };

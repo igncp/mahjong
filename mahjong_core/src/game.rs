@@ -1,3 +1,9 @@
+pub use self::creation::GameNewOpts;
+pub use self::definition::{DrawTileResult, Game, GameId, GamePhase, GameStyle, GameVersion};
+pub use self::errors::{
+    BreakMeldError, CreateMeldError, DiscardTileError, InitialDrawError, PassNullRoundError,
+};
+pub use self::players::{PlayerId, Players, PlayersVec};
 use crate::{
     deck::DEFAULT_DECK,
     hand::CanSayMahjongError,
@@ -8,26 +14,15 @@ use crate::{
     round::{Round, RoundTileClaimed},
     Hand, HandTile, TileId,
 };
+use rand::seq::SliceRandom;
+use rand::thread_rng;
 use rustc_hash::FxHashSet;
-use strum_macros::EnumIter;
 use uuid::Uuid;
-
-pub use self::creation::GameNewOpts;
-pub use self::definition::{DrawTileResult, Game, GameId, GamePhase, GameStyle, GameVersion};
-pub use self::players::{PlayerId, Players, PlayersVec};
 
 mod creation;
 mod definition;
+mod errors;
 mod players;
-
-#[derive(Debug, PartialEq, Eq, Clone, EnumIter)]
-pub enum DiscardTileError {
-    ClaimedAnotherTile,
-    NoPlayerCanDiscard,
-    PlayerHasNoTile,
-    TileIsExposed,
-    TileIsPartOfMeld,
-}
 
 impl Game {
     pub fn set_players(&mut self, players: &Players) {
@@ -58,29 +53,78 @@ impl Game {
         let player_index = self.players.iter().position(|p| p == player_id).unwrap();
 
         self.round.move_after_win(&mut self.phase, player_index);
-        self.table = DEFAULT_DECK.create_table(&self.players);
+
+        if self.phase != GamePhase::End {
+            self.phase = GamePhase::InitialShuffle;
+        }
 
         Ok(())
     }
 
-    pub fn pass_null_round(&mut self) -> bool {
+    pub fn pass_null_round(&mut self) -> Result<(), PassNullRoundError> {
         if !self.table.draw_wall.0.is_empty() || self.round.tile_claimed.is_some() {
             for hand in self.table.hands.0.values() {
-                if hand.can_drop_tile() || hand.can_say_mahjong().is_ok() {
-                    return false;
+                if hand.can_drop_tile() {
+                    return Err(PassNullRoundError::HandCanDropTile);
+                }
+
+                if hand.can_say_mahjong().is_ok() {
+                    return Err(PassNullRoundError::HandCanSayMahjong);
                 }
             }
         }
 
         self.round.move_after_draw(&mut self.phase);
 
-        self.table = DEFAULT_DECK.create_table(&self.players);
+        if self.phase != GamePhase::End {
+            self.phase = GamePhase::InitialShuffle;
+        }
 
-        true
+        Ok(())
     }
 
     pub fn start(&mut self) {
+        self.phase = GamePhase::DecidingDealer;
+    }
+
+    pub fn decide_dealer(&mut self) {
+        self.round.dealer_player_index = 0;
+        self.round.east_player_index = 0;
+        self.round.player_index = 0;
+
+        self.phase = GamePhase::InitialShuffle;
+    }
+
+    pub fn prepare_table(&mut self) {
+        self.table = DEFAULT_DECK.create_table(&self.players);
+        self.table.draw_wall.0.shuffle(&mut thread_rng());
+        self.phase = GamePhase::InitialDraw;
+    }
+
+    pub fn initial_draw(&mut self) -> Result<(), InitialDrawError> {
+        let tiles_after_claim = self.style.tiles_after_claim();
+
+        for hand in self.table.hands.0.values_mut() {
+            for _ in 0..(tiles_after_claim - 1) {
+                let tile_id = self.table.draw_wall.0.pop();
+
+                if tile_id.is_none() {
+                    return Err(InitialDrawError::NotEnoughTiles);
+                }
+
+                let tile = HandTile {
+                    id: tile_id.unwrap(),
+                    concealed: true,
+                    set_id: None,
+                };
+
+                hand.push(tile);
+            }
+        }
+
         self.phase = GamePhase::Playing;
+
+        Ok(())
     }
 
     // If `check_for_mahjong` is true, then it will only check for mahjong, if is false, then it
@@ -330,12 +374,17 @@ impl Game {
         Ok(())
     }
 
-    pub fn create_meld(&mut self, player_id: &PlayerId, tiles: &FxHashSet<TileId>) -> bool {
+    pub fn create_meld(
+        &mut self,
+        player_id: &PlayerId,
+        tiles: &[TileId],
+    ) -> Result<(), CreateMeldError> {
+        let tiles_set = tiles.iter().cloned().collect::<FxHashSet<TileId>>();
         let hand = self.table.hands.get(player_id);
         let sub_hand_tiles = hand
             .list
             .iter()
-            .filter(|t| tiles.contains(&t.id))
+            .filter(|t| tiles_set.contains(&t.id))
             .cloned()
             .collect::<Vec<HandTile>>();
 
@@ -343,7 +392,7 @@ impl Game {
             .iter()
             .any(|t| t.set_id.is_some() || !t.concealed)
         {
-            return false;
+            return Err(CreateMeldError::TileIsPartOfMeld);
         }
 
         let sub_hand = Hand::new(sub_hand_tiles);
@@ -351,14 +400,12 @@ impl Game {
         let board_tile_player_diff =
             self.get_board_tile_player_diff(None, Some(&sub_hand), player_id);
 
-        let tiles_ids = tiles.iter().cloned().collect::<Vec<TileId>>();
-
         let opts_claimed_tile = get_tile_claimed_id_for_user(player_id, &self.round.tile_claimed);
 
         let opts = SetCheckOpts {
             board_tile_player_diff,
             claimed_tile: opts_claimed_tile,
-            sub_hand: &tiles_ids,
+            sub_hand: &tiles.to_vec(),
         };
 
         if get_is_pung(&opts) || get_is_chow(&opts) || get_is_kong(&opts) {
@@ -375,17 +422,21 @@ impl Game {
                     tile.set_id = Some(set_id.clone());
                 });
 
-            return true;
+            return Ok(());
         }
 
-        false
+        Err(CreateMeldError::NotMeld)
     }
 
-    pub fn break_meld(&mut self, player_id: &PlayerId, set_id: &String) -> bool {
+    pub fn break_meld(
+        &mut self,
+        player_id: &PlayerId,
+        set_id: &String,
+    ) -> Result<(), BreakMeldError> {
         let hand = self.table.hands.0.get(player_id);
 
         if hand.is_none() {
-            return false;
+            return Err(BreakMeldError::MissingHand);
         }
 
         let mut hand = hand.unwrap().clone();
@@ -393,7 +444,7 @@ impl Game {
         for hand_tile in hand.list.iter_mut() {
             if hand_tile.set_id.is_some() && hand_tile.set_id.clone().unwrap() == *set_id {
                 if !hand_tile.concealed {
-                    return false;
+                    return Err(BreakMeldError::TileIsExposed);
                 }
 
                 hand_tile.set_id = None;
@@ -402,7 +453,7 @@ impl Game {
 
         self.table.hands.0.insert(player_id.clone(), hand);
 
-        true
+        Ok(())
     }
 
     pub fn get_board_tile_player_diff(

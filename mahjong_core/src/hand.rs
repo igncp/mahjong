@@ -9,6 +9,7 @@ use crate::{
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::{Deserialize, Deserializer, Serialize};
 use strum_macros::EnumIter;
+use ts_rs::TS;
 
 pub type SetIdContent = String;
 pub type SetId = Option<SetIdContent>;
@@ -28,7 +29,7 @@ impl From<PossibleMeld> for HandPossibleMeld {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, TS)]
 pub struct HandTile {
     pub concealed: bool,
     pub id: TileId,
@@ -52,7 +53,7 @@ impl HandTile {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq, Default, TS)]
 pub struct Hand {
     pub list: Vec<HandTile>,
     pub style: Option<GameStyle>,

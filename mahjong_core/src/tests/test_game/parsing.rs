@@ -215,7 +215,7 @@ mod test {
 - P4: 五筒,四筒
 Wall: 五筒,四筒,三筒...
 Board: 四筒,六筒
-Turn: P1, Dealer: P1, Round: 1, Wind: East, Phase: Playing
+Turn: P1, Dealer: P1, Round: 1, Wind: East, Phase: DecidingDealer
 Consecutive: 2, Discarded: 七筒(P1), Drawn: 一索
 "#
             .trim()

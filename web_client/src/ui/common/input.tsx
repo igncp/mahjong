@@ -1,5 +1,6 @@
 import { Input as AntdInput } from "antd";
-import React, { ChangeEvent } from "react";
+import type { ChangeEvent } from "react";
+import React from "react";
 
 type TProps = {
   disabled?: boolean;

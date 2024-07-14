@@ -7,6 +7,7 @@ pub use score::{Score, ScoreItem, ScoreMap};
 use serde::{Deserialize, Serialize};
 pub use table::{Board, DrawWall, Table};
 pub use tile::{Tile, TileId};
+use ts_rs::TS;
 
 pub mod ai;
 pub mod deck;
@@ -24,21 +25,24 @@ mod tests;
 pub mod tile;
 pub mod ui;
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, TS)]
+#[ts(export)]
 pub enum Suit {
     Bamboo,
     Characters,
     Dots,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct SuitTile {
     pub id: TileId,
     pub value: u32,
     pub suit: Suit,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, TS)]
+#[ts(export)]
 pub enum Wind {
     East,
     North,
@@ -61,26 +65,30 @@ pub const SEASONS_ORDER: &[Season] = &[
     Season::Winter,
 ];
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct WindTile {
     pub id: TileId,
     pub value: Wind,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, TS)]
+#[ts(export)]
 pub enum Dragon {
     Green,
     Red,
     White,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct DragonTile {
     pub id: TileId,
     pub value: Dragon,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, TS)]
+#[ts(export)]
 pub enum Flower {
     Bamboo,
     Chrysanthemum,
@@ -88,13 +96,15 @@ pub enum Flower {
     Plum,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct FlowerTile {
     pub id: TileId,
     pub value: Flower,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, TS)]
+#[ts(export)]
 pub enum Season {
     Autumn,
     Spring,
@@ -102,7 +112,8 @@ pub enum Season {
     Winter,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct SeasonTile {
     pub id: TileId,
     pub value: Season,

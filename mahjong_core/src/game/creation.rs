@@ -25,7 +25,7 @@ impl Game {
         }
 
         let table = DEFAULT_DECK.create_table(&players);
-        let mut score = Score::default();
+        let mut score = Score::new(&players.0);
 
         for player_id in &players.0 {
             score.insert(player_id, 0);

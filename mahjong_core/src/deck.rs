@@ -1,13 +1,10 @@
 use lazy_static::lazy_static;
-use rand::seq::SliceRandom;
-use rand::thread_rng;
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     game::Players, table::BonusTiles, Board, Dragon, DragonTile, DrawWall, Flower, FlowerTile,
-    Hand, HandTile, Hands, HandsMap, Season, SeasonTile, Suit, SuitTile, Table, Tile, TileId, Wind,
-    WindTile,
+    Hand, Hands, HandsMap, Season, SeasonTile, Suit, SuitTile, Table, Tile, TileId, Wind, WindTile,
 };
 
 pub type DeckContent = FxHashMap<TileId, Tile>;
@@ -106,24 +103,12 @@ impl Deck {
 
     pub fn create_table(&self, players: &Players) -> Table {
         let Self(deck_content) = self;
-        let mut draw_wall = DrawWall(deck_content.keys().cloned().collect::<Vec<TileId>>());
-
-        draw_wall.0.shuffle(&mut thread_rng());
+        let draw_wall = DrawWall(deck_content.keys().cloned().collect::<Vec<TileId>>());
 
         let hands_map = players
             .iter()
             .map(|player| {
-                let mut hand = Hand::new(vec![]);
-                for _ in 0..(hand.style.clone().unwrap_or_default().tiles_after_claim() - 1) {
-                    let tile_id = draw_wall.0.pop().unwrap();
-                    let tile = HandTile {
-                        id: tile_id,
-                        concealed: true,
-                        set_id: None,
-                    };
-
-                    hand.push(tile);
-                }
+                let hand = Hand::default();
                 (player.clone(), hand)
             })
             .collect::<HandsMap>();

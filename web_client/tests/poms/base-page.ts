@@ -1,4 +1,4 @@
-import { Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 export type CommonPageOptions = {
   baseURL: string | undefined;
@@ -21,6 +21,7 @@ export class BasePage {
   }
 
   logConsole() {
+    // eslint-disable-next-line no-console
     this.page.on("console", (msg) => console.log(msg.text()));
   }
 

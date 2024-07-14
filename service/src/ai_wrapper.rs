@@ -1,6 +1,6 @@
 use std::time::SystemTime;
 
-use mahjong_core::ai::{PlayActionResult, StandardAI};
+use mahjong_core::ai::{PlayActionResult, PlayExitLocation, StandardAI};
 use service_contracts::{GameSettings, ServiceGame};
 
 pub struct AIWrapper<'a> {
@@ -51,7 +51,7 @@ impl<'a> AIWrapper<'a> {
 
         let result = self.standard_ai.play_action();
 
-        if result.changed && result.tile_discarded.unwrap_or(false) {
+        if result.changed && result.exit_location == PlayExitLocation::TileDiscarded {
             self.game_settings.last_discard_time = now_time;
         }
 

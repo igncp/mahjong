@@ -1,18 +1,12 @@
-import {
-  DependencyList,
-  EffectCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import type { DependencyList, EffectCallback } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { parseJwt } from "./auth";
 
 export const useUserTokenClaims = (
   token: null | string,
   atob: (s: string) => string
-) => useMemo(() => parseJwt(token as string, atob), [token]);
+) => useMemo(() => parseJwt(token as string, atob), [token, atob]);
 
 export const useEffectExceptOnMount = (
   effect: EffectCallback,
@@ -26,6 +20,7 @@ export const useEffectExceptOnMount = (
     } else {
       mounted.current = true;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, dependencies);
 };
 

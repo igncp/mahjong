@@ -1,5 +1,6 @@
 import { AuthPage } from "./auth-page";
-import { BasePage, CommonPageOptions } from "./base-page";
+import type { CommonPageOptions } from "./base-page";
+import { BasePage } from "./base-page";
 
 const selectors = {
   createGameButton: '[data-name="create-game-button"]',
@@ -32,6 +33,7 @@ export class DashboardPage {
     const displayName = this.basePage.page.locator(
       selectors.displayNameTrigger
     );
+
     await displayName.click();
 
     await this.basePage.page.locator(selectors.displayNameInput).fill(newName);
@@ -85,8 +87,8 @@ export class DashboardPage {
 
   private async waitForTitle(isEqual = true) {
     await this.basePage.page.waitForFunction(
-      ([expectedTitle, isEqual]) =>
-        (document.title === expectedTitle) === isEqual,
+      ([expectedTitle, isEqualVal]) =>
+        (document.title === expectedTitle) === isEqualVal,
       [DashboardPage.expectedTitle, isEqual]
     );
   }

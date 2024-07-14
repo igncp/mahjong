@@ -85,6 +85,7 @@ impl FromStr for GamePhase {
             "End" => Ok(Self::End),
             "Initial Draw" => Ok(Self::InitialDraw),
             "Playing" => Ok(Self::Playing),
+            "Initial Shuffle" => Ok(Self::InitialShuffle),
             _ => Err(()),
         }
     }
@@ -278,6 +279,22 @@ impl Game {
         });
 
         game
+    }
+
+    pub fn get_meld_id_from_summary(&self, player_id: &str, summary: &str) -> String {
+        let tile_id = Tile::from_summary(summary).get_id();
+        self.table
+            .hands
+            .0
+            .get(player_id)
+            .unwrap()
+            .list
+            .iter()
+            .find(|hand_tile| hand_tile.id == tile_id)
+            .unwrap()
+            .set_id
+            .clone()
+            .unwrap()
     }
 }
 

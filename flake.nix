@@ -18,6 +18,7 @@
       rust = import ./scripts/nix/rust.nix {inherit pkgs system is-docker-ci is-checks-ci;};
     in {
       devShell = pkgs.mkShell {
+        TS_RS_EXPORT_DIR = "../web_client/bindings";
         shellHook =
           ''
             export PATH=$PATH:$HOME/.cargo/bin

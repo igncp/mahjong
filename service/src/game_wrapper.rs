@@ -298,9 +298,9 @@ impl<'a> GameWrapper<'a> {
     }
 
     pub async fn handle_user_pass_round(&mut self, player_id: &PlayerId) -> HttpResponse {
-        let success = self.service_game.game.pass_null_round();
+        let result = self.service_game.game.pass_null_round();
 
-        if !success {
+        if result.is_err() {
             return HttpResponse::BadRequest().body("Error when passing round");
         }
 
@@ -490,7 +490,7 @@ impl<'a> GameWrapper<'a> {
             .game
             .break_meld(&body.player_id, &body.set_id);
 
-        if !result {
+        if result.is_err() {
             return HttpResponse::BadRequest().body("Error when breaking meld");
         }
 
@@ -520,7 +520,7 @@ impl<'a> GameWrapper<'a> {
             .game
             .break_meld(&body.player_id, &body.set_id);
 
-        if !result {
+        if result.is_err() {
             return HttpResponse::BadRequest().body("Error when breaking meld");
         }
 
@@ -537,12 +537,12 @@ impl<'a> GameWrapper<'a> {
         &mut self,
         body: &AdminPostCreateMeldRequest,
     ) -> HttpResponse {
-        let result = self
-            .service_game
-            .game
-            .create_meld(&body.player_id, &body.tiles);
+        let result = self.service_game.game.create_meld(
+            &body.player_id,
+            &body.tiles.clone().into_iter().collect::<Vec<TileId>>(),
+        );
 
-        if !result {
+        if result.is_err() {
             return HttpResponse::BadRequest().body("Error when creating meld");
         }
 
@@ -566,12 +566,12 @@ impl<'a> GameWrapper<'a> {
         &mut self,
         body: &UserPostCreateMeldRequest,
     ) -> HttpResponse {
-        let result = self
-            .service_game
-            .game
-            .create_meld(&body.player_id, &body.tiles);
+        let result = self.service_game.game.create_meld(
+            &body.player_id,
+            &body.tiles.clone().into_iter().collect::<Vec<TileId>>(),
+        );
 
-        if !result {
+        if result.is_err() {
             return HttpResponse::BadRequest().body("Error when creating meld");
         }
 

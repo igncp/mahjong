@@ -4,6 +4,7 @@ import { DashboardPage } from "./poms/dashboard-page";
 
 test.beforeEach(async ({ baseURL, page }) => {
   const dashboardPage = new DashboardPage({ baseURL, page });
+
   await dashboardPage.navigate();
 });
 

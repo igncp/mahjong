@@ -1,19 +1,26 @@
+import type { GameSettings } from "bindings/GameSettings";
+import type { ServiceGameSummary } from "bindings/ServiceGameSummary";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { GameSettings, ServiceGameSummary } from "src/sdk/core";
-import { ModelServiceGameSummary } from "src/sdk/service-game-summary";
-import Select, { SelectOption } from "src/ui/common/select";
+import type { ModelServiceGameSummary } from "src/sdk/service-game-summary";
+import type { SelectOption } from "src/ui/common/select";
+import Select from "src/ui/common/select";
 import Text from "src/ui/common/text";
 
 import styles from "./settings.module.scss";
 
 const convertDiscardWaitMsValue = (value: GameSettings["discard_wait_ms"]) => {
   if (value === null) return "none";
+
   if (value === 1000) return "1s";
+
   if (value === 10000) return "10s";
+
   if (value === 60000) return "1m";
+
   if (value === -1) return "block";
+
   return "none";
 };
 
@@ -144,7 +151,7 @@ const Settings = ({ serviceGameM, serviceGameSummary }: IProps) => {
                 name="ai_enabled"
                 onChange={onAIEnabledChanged}
                 type="radio"
-                value={"enabled"}
+                value="enabled"
               />
             </label>
             <label>
@@ -154,7 +161,7 @@ const Settings = ({ serviceGameM, serviceGameSummary }: IProps) => {
                 name="ai_enabled"
                 onChange={onAIEnabledChanged}
                 type="radio"
-                value={"disabled"}
+                value="disabled"
               />
             </label>
           </Text>

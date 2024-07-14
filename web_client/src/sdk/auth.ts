@@ -1,6 +1,6 @@
 import { BehaviorSubject } from "rxjs";
 
-import { TokenClaims } from "./core";
+import type { TokenClaims } from "./core";
 
 export const tokenObserver = new BehaviorSubject<null | string>("");
 

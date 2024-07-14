@@ -1,13 +1,14 @@
 import dynamic from "next/dynamic";
-import { FC } from "react";
+import type { FC } from "react";
 
 import type { IProps as IGameAdminProps } from "src/containers/game/admin";
 import type { IProps as IGamePlayerProps } from "src/containers/game/player";
-import { GameId, PlayerId } from "src/sdk/core";
+import type { GameId, PlayerId } from "src/sdk/core";
 
 const GameAdmin = dynamic(() => import("src/containers/game/admin"), {
   ssr: false,
 }) as FC<IGameAdminProps>;
+
 const GamePlayer = dynamic(() => import("src/containers/game/player"), {
   ssr: false,
 }) as FC<IGamePlayerProps>;

@@ -1,4 +1,4 @@
-import { PlaywrightTestConfig } from "@playwright/test";
+import type { PlaywrightTestConfig } from "@playwright/test";
 import dotenv from "dotenv";
 import { authFile } from "tests/utils";
 

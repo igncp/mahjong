@@ -3,7 +3,7 @@ import { Fragment, useEffect, useState } from "react";
 
 import { ModelServiceGame } from "src/lib/models/service-game";
 import { SiteUrls } from "src/lib/site/urls";
-import { SetId, TAdminGetGameResponse } from "src/sdk/core";
+import type { SetId, TAdminGetGameResponse } from "src/sdk/core";
 import { HttpClient } from "src/sdk/http-client";
 import Button from "src/ui/common/button";
 import CopyToClipboard from "src/ui/common/copy-to-clipboard";
@@ -16,6 +16,7 @@ export interface IProps {
 
 const Game = ({ gameId }: IProps) => {
   const router = useRouter();
+
   const [serviceGame, setServiceGame] = useState<null | TAdminGetGameResponse>(
     null
   );
@@ -33,6 +34,7 @@ const Game = ({ gameId }: IProps) => {
     HttpClient.adminGetGame(gameId).subscribe({
       error: () => {
         router.push(SiteUrls.index);
+
         return [];
       },
       next: (game) => {
@@ -43,7 +45,7 @@ const Game = ({ gameId }: IProps) => {
     return () => {
       socket$.value.close();
     };
-  }, [gameId]);
+  }, [gameId, router]);
 
   if (!serviceGame) return null;
 
@@ -116,17 +118,21 @@ const Game = ({ gameId }: IProps) => {
       {serviceGame.game.players.map((playerId) => {
         const player = serviceGame.players[playerId];
         const hand = serviceGame.game.table.hands[playerId];
+
         const canDiscardTile =
-          player.id === currentPlayer.id && hand.length === 14;
-        const handWithoutMelds = hand.filter((tile) => !tile.set_id);
+          player.id === currentPlayer.id && hand.list.length === 14;
+
+        const handWithoutMelds = hand.list.filter((tile) => !tile.set_id);
+
         const playerPossibleMelds = possibleMelds.filter(
           (p) => p.player_id === player.id
         );
 
-        const setsIds = hand.reduce((acc, tile) => {
+        const setsIds = hand.list.reduce((acc, tile) => {
           if (tile.set_id) {
             acc.add(tile.set_id);
           }
+
           return acc;
         }, new Set<SetId>());
 
@@ -134,7 +140,8 @@ const Game = ({ gameId }: IProps) => {
           <Fragment key={playerId}>
             <p>
               {player.name} {player.id === currentPlayer.id ? "*" : ""} (
-              {hand.length}) [Score: {serviceGameM.getPlayerScore(player.id)}] (
+              {hand.list.length}) [Score:{" "}
+              {serviceGameM.getPlayerScore(player.id)}] (
               <CopyToClipboard text={player.id} />)
             </p>
             <ul>
@@ -162,7 +169,10 @@ const Game = ({ gameId }: IProps) => {
                 ))}
               </li>
               {Array.from(setsIds).map((setId) => {
-                const setTiles = hand.filter((tile) => tile.set_id === setId);
+                const setTiles = hand.list.filter(
+                  (tile) => tile.set_id === setId
+                );
+
                 const isConcealed = setTiles.every((tile) => tile.concealed);
 
                 return (
@@ -204,12 +214,15 @@ const Game = ({ gameId }: IProps) => {
                   ))}
                   <Button
                     onClick={async () => {
-                      const hand = await HttpClient.adminCreateMeld(gameId, {
-                        player_id: player.id,
-                        tiles: playerPossibleMeld.tiles,
-                      });
+                      const handResponse = await HttpClient.adminCreateMeld(
+                        gameId,
+                        {
+                          player_id: player.id,
+                          tiles: playerPossibleMeld.tiles,
+                        }
+                      );
 
-                      serviceGame.game.table.hands[player.id] = hand;
+                      serviceGame.game.table.hands[player.id] = handResponse;
                       setServiceGame({ ...serviceGame });
                     }}
                   >
@@ -227,6 +240,7 @@ const Game = ({ gameId }: IProps) => {
           <Button
             onClick={async () => {
               const newHand = await HttpClient.adminDrawCard(gameId);
+
               serviceGame.game.table.hands[currentPlayer.id] = newHand;
               setServiceGame({ ...serviceGame });
             }}
@@ -238,6 +252,7 @@ const Game = ({ gameId }: IProps) => {
           <Button
             onClick={async () => {
               const newGame = await HttpClient.adminMovePlayer(gameId);
+
               setServiceGame(newGame);
             }}
           >
@@ -248,6 +263,7 @@ const Game = ({ gameId }: IProps) => {
           <Button
             onClick={async () => {
               const hands = await HttpClient.adminSortHands(gameId);
+
               serviceGame.game.table.hands = hands;
               setServiceGame({ ...serviceGame });
             }}

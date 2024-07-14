@@ -1,14 +1,10 @@
+import type { GameSettingsSummary } from "bindings/GameSettingsSummary";
+import type { Hand } from "bindings/Hand";
+import type { ServiceGameSummary } from "bindings/ServiceGameSummary";
+import type { Tile } from "bindings/Tile";
 import { Subject } from "rxjs";
 
-import {
-  Deck,
-  GameSettingsSummary,
-  Hand,
-  PossibleMeld,
-  ServiceGameSummary,
-  Tile,
-  TileId,
-} from "./core";
+import type { Deck, PossibleMeld, TileId } from "./core";
 import { HttpClient } from "./http-client";
 
 export type ModelState<A> = [A, (v: A) => void];
@@ -20,6 +16,7 @@ let get_possible_melds_summary: (game: ServiceGameSummary) => PossibleMeld[];
 export const setDeck = (newDeck: Deck) => {
   deck = newDeck;
 };
+
 export const getDeck = () => deck;
 
 export const setFormatTile = (newFormatTile: typeof format_tile) => {
@@ -139,7 +136,7 @@ export class ModelServiceGameSummary {
   getPlayerHandWithoutMelds(): Hand {
     const { hand } = this.gameState[0].game_summary;
 
-    return hand.filter((tile) => !tile.set_id);
+    return { ...hand, list: hand.list.filter((tile) => !tile.set_id) };
   }
 
   getPlayingPlayer() {
@@ -158,7 +155,7 @@ export class ModelServiceGameSummary {
 
       return possibleMelds;
     } catch (error) {
-      console.log("debug: service-game-summary.ts: error", error);
+      console.error("debug: service-game-summary.ts: error", error);
     }
 
     return [];
@@ -175,8 +172,9 @@ export class ModelServiceGameSummary {
 
       return `[${tileString}]`;
     } catch (err) {
-      console.log("debug: service-game-summary.ts: err", err);
+      console.error("debug: service-game-summary.ts: err", err);
     }
+
     return "";
   }
 
@@ -214,7 +212,7 @@ export class ModelServiceGameSummary {
       player_id: this.gameState[0].game_summary.player_id,
     }).subscribe({
       error: (error) => {
-        console.log("debug: service-game-summary.ts: error", error);
+        console.error("debug: service-game-summary.ts: error", error);
         this.handleError(ModelServiceGameSummaryError.INVALID_SAY_MAHJONG);
       },
       next: (newGame) => {
@@ -256,7 +254,7 @@ export class ModelServiceGameSummary {
     HttpClient.userSortHand(this.gameState[0].game_summary.id, {
       game_version: this.gameState[0].game_summary.version,
       player_id: this.gameState[0].game_summary.player_id,
-      tiles,
+      tiles: tiles || null,
     }).subscribe({
       error: () => {
         this.handleError();
@@ -269,22 +267,23 @@ export class ModelServiceGameSummary {
 
     if (tiles) {
       const tileIdToIndex = new Map<TileId, number>();
+
       tiles?.forEach((tileId, index) => {
         tileIdToIndex.set(tileId, index);
       });
 
-      const newHand = this.gameState[0].game_summary.hand
-        .slice()
-        .sort((a, b) => {
-          const aIndex = tileIdToIndex.get(a.id);
-          const bIndex = tileIdToIndex.get(b.id);
+      const newHand = { ...this.gameState[0].game_summary.hand };
 
-          if (aIndex === undefined || bIndex === undefined) {
-            return 0;
-          }
+      newHand.list = newHand.list.slice().sort((a, b) => {
+        const aIndex = tileIdToIndex.get(a.id);
+        const bIndex = tileIdToIndex.get(b.id);
 
-          return aIndex - bIndex;
-        });
+        if (aIndex === undefined || bIndex === undefined) {
+          return 0;
+        }
+
+        return aIndex - bIndex;
+      });
 
       this.gameState[1]({
         ...this.gameState[0],

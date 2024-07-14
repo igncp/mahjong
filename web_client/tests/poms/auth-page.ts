@@ -1,4 +1,5 @@
-import { BasePage, CommonPageOptions } from "./base-page";
+import type { CommonPageOptions } from "./base-page";
+import { BasePage } from "./base-page";
 
 const selectors = {
   password: '[data-name="password"]',
@@ -26,6 +27,7 @@ export class AuthPage {
     await this.basePage.page
       .locator(selectors.username)
       .fill(defaultAccount.name);
+
     await this.basePage.page
       .locator(selectors.password)
       .fill(defaultAccount.password);

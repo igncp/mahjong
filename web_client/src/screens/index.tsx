@@ -16,7 +16,7 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  return <>{isLoggedIn ? <Dashboard /> : <AuthForm />}</>;
+  return isLoggedIn ? <Dashboard /> : <AuthForm />;
 };
 
 export default Index;

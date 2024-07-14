@@ -1,5 +1,5 @@
 import dynamic from "next/dynamic";
-import { FC } from "react";
+import type { FC } from "react";
 
 import type { IProps as IGameProps } from "./game";
 

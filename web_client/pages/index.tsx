@@ -12,6 +12,7 @@ const Home = () => {
 
   // This hook has issues in the page level
   const { t } =
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     typeof window === "undefined" ? { t: () => null } : useTranslation();
 
   return (

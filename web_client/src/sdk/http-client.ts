@@ -1,8 +1,20 @@
+import type { UserGetDashboardResponse } from "bindings/UserGetDashboardResponse";
+import type { UserGetGamesQuery } from "bindings/UserGetGamesQuery";
+import type { UserGetInfoResponse } from "bindings/UserGetInfoResponse";
+import type { UserPatchInfoRequest } from "bindings/UserPatchInfoRequest";
+import type { UserPostBreakMeldRequest } from "bindings/UserPostBreakMeldRequest";
+import type { UserPostCreateMeldRequest } from "bindings/UserPostCreateMeldRequest";
+import type { UserPostMovePlayerRequest } from "bindings/UserPostMovePlayerRequest";
+import type { UserPostPassRoundRequest } from "bindings/UserPostPassRoundRequest";
+import type { UserPostSetAuthResponse } from "bindings/UserPostSetAuthResponse";
+import type { UserPostSetGameSettingsRequest } from "bindings/UserPostSetGameSettingsRequest";
+import type { UserPostSortHandRequest } from "bindings/UserPostSortHandRequest";
+import type { WebSocketQuery } from "bindings/WebSocketQuery";
 import qs from "qs";
 import { BehaviorSubject, from } from "rxjs";
 
 import { getAuthTokenHeader, tokenObserver } from "./auth";
-import {
+import type {
   GameId,
   PlayerId,
   TAdminGetGameResponse,
@@ -26,18 +38,12 @@ import {
   TGetDeckResponse,
   TSocketMessageFromClient,
   TSocketMessageFromServer,
-  TSocketQuery,
   TSocketWrapper,
   TTestDeleteGamesResponse,
-  TUserDashboardResponse,
-  TUserGetGamesQuery,
   TUserGetGamesResponse,
-  TUserGetInfoResponse,
   TUserLoadGameQuery,
   TUserLoadGameResponse,
-  TUserPatchInfoRequest,
   TUserPatchInfoResponse,
-  TUserPostBreakMeldRequest,
   TUserPostBreakMeldResponse,
   TUserPostClaimTileRequest,
   TUserPostClaimTileResponse,
@@ -45,25 +51,19 @@ import {
   TUserPostContinueAIResponse,
   TUserPostCreateGameRequest,
   TUserPostCreateGameResponse,
-  TUserPostCreateMeldRequest,
   TUserPostCreateMeldResponse,
   TUserPostDiscardTileRequest,
   TUserPostDiscardTileResponse,
   TUserPostDrawTileRequest,
   TUserPostDrawTileResponse,
-  TUserPostMovePlayerRequest,
   TUserPostMovePlayerResponse,
-  TUserPostPassRoundRequest,
   TUserPostPassRoundResponse,
   TUserPostSayMahjongRequest,
   TUserPostSayMahjongResponse,
   TUserPostSetAnonAuthRequest,
   TUserPostSetAnonAuthResponse,
   TUserPostSetAuthRequest,
-  TUserPostSetAuthResponse,
-  TUserPostSetGameSettingsRequest,
   TUserPostSetGameSettingsResponse,
-  TUserPostSortHandRequest,
   TUserPostSortHandResponse,
 } from "./core";
 
@@ -187,11 +187,13 @@ export const HttpClient = {
     playerId?: PlayerId;
   }) {
     const { gameId, onMessage, playerId } = opts;
+
     let isIntentional = false;
-    const query: TSocketQuery = {
+
+    const query: WebSocketQuery = {
       game_id: gameId,
+      player_id: playerId || null,
       token: tokenObserver.getValue() as string,
-      ...(playerId && { player_id: playerId }),
     };
 
     const sockerUrl = baseUrl.replace("https", "wss").replace("http", "ws");
@@ -199,11 +201,12 @@ export const HttpClient = {
 
     socket.onmessage = (event) => {
       const data: TSocketMessageFromServer = JSON.parse(event.data);
+
       onMessage(data);
     };
 
     socket.onerror = (error) => {
-      console.log("Socket onerrror", error);
+      console.error("Socket onerrror", error);
     };
 
     let retryUnsubscribe = () => {};
@@ -224,12 +227,15 @@ export const HttpClient = {
     socket.onclose = () => {
       if (!isIntentional) {
         setTimeout(() => {
+          // eslint-disable-next-line no-console
           console.log("Trying to reconnect onclose");
+
           const subscription = HttpClient.connectToSocket(opts).subscribe({
             next: (newSocketWrapper) => {
               socketProvider.next(newSocketWrapper);
             },
           });
+
           retryUnsubscribe = () => subscription.unsubscribe();
         }, 10_000);
       }
@@ -247,7 +253,7 @@ export const HttpClient = {
 
   getUserDashboard() {
     return from(
-      fetchJson<TUserDashboardResponse>(`/v1/user/dashboard`, {
+      fetchJson<UserGetDashboardResponse>(`/v1/user/dashboard`, {
         method: "GET",
       })
     );
@@ -255,7 +261,7 @@ export const HttpClient = {
 
   setAuth(body: TUserPostSetAuthRequest) {
     return from(
-      fetchJson<TUserPostSetAuthResponse>("/v1/user", {
+      fetchJson<UserPostSetAuthResponse>("/v1/user", {
         body: JSON.stringify(body),
         method: "POST",
       })
@@ -279,7 +285,7 @@ export const HttpClient = {
     );
   },
 
-  userBreakMeld(gameId: GameId, body: TUserPostBreakMeldRequest) {
+  userBreakMeld(gameId: GameId, body: UserPostBreakMeldRequest) {
     return from(
       fetchJson<TUserPostBreakMeldResponse>(
         `/v1/user/game/${gameId}/break-meld`,
@@ -324,7 +330,7 @@ export const HttpClient = {
     );
   },
 
-  userCreateMeld(gameId: GameId, body: TUserPostCreateMeldRequest) {
+  userCreateMeld(gameId: GameId, body: UserPostCreateMeldRequest) {
     return from(
       fetchJson<TUserPostCreateMeldResponse>(
         `/v1/user/game/${gameId}/create-meld`,
@@ -360,14 +366,14 @@ export const HttpClient = {
     );
   },
 
-  userGetGames(query: TUserGetGamesQuery) {
+  userGetGames(query: UserGetGamesQuery) {
     return from(
       fetchJson<TUserGetGamesResponse>(`/v1/user/game?${qs.stringify(query)}`)
     );
   },
 
   userGetInfo(userId: PlayerId) {
-    return from(fetchJson<TUserGetInfoResponse>(`/v1/user/info/${userId}`));
+    return from(fetchJson<UserGetInfoResponse>(`/v1/user/info/${userId}`));
   },
 
   userLoadGame(gameId: GameId, query: TUserLoadGameQuery) {
@@ -378,7 +384,7 @@ export const HttpClient = {
     );
   },
 
-  userMovePlayer(gameId: GameId, body: TUserPostMovePlayerRequest) {
+  userMovePlayer(gameId: GameId, body: UserPostMovePlayerRequest) {
     return from(
       fetchJson<TUserPostMovePlayerResponse>(
         `/v1/user/game/${gameId}/move-player`,
@@ -390,7 +396,7 @@ export const HttpClient = {
     );
   },
 
-  userPassRound(gameId: GameId, body: TUserPostPassRoundRequest) {
+  userPassRound(gameId: GameId, body: UserPostPassRoundRequest) {
     return from(
       fetchJson<TUserPostPassRoundResponse>(
         `/v1/user/game/${gameId}/pass-round`,
@@ -402,7 +408,7 @@ export const HttpClient = {
     );
   },
 
-  userPatchInfo(userId: PlayerId, body: TUserPatchInfoRequest) {
+  userPatchInfo(userId: PlayerId, body: UserPatchInfoRequest) {
     return from(
       fetchJson<TUserPatchInfoResponse>(`/v1/user/info/${userId}`, {
         body: JSON.stringify(body),
@@ -423,7 +429,7 @@ export const HttpClient = {
     );
   },
 
-  userSetGameSettings(gameId: GameId, body: TUserPostSetGameSettingsRequest) {
+  userSetGameSettings(gameId: GameId, body: UserPostSetGameSettingsRequest) {
     return from(
       fetchJson<TUserPostSetGameSettingsResponse>(
         `/v1/user/game/${gameId}/settings`,
@@ -435,7 +441,7 @@ export const HttpClient = {
     );
   },
 
-  userSortHand(gameId: GameId, body: TUserPostSortHandRequest) {
+  userSortHand(gameId: GameId, body: UserPostSortHandRequest) {
     return from(
       fetchJson<TUserPostSortHandResponse>(
         `/v1/user/game/${gameId}/sort-hand`,

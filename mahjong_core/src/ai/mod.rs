@@ -1,9 +1,10 @@
-use crate::game::DrawTileResult;
+use crate::game::{DrawTileResult, InitialDrawError};
 use crate::meld::PossibleMeld;
-use crate::{Game, PlayerId, TileId};
+use crate::{Game, GamePhase, PlayerId, TileId};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use rustc_hash::FxHashSet;
+use strum_macros::EnumIter;
 
 mod best_drops;
 
@@ -18,19 +19,25 @@ pub struct StandardAI<'a> {
     pub sort_on_draw: bool,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, EnumIter, Clone)]
 pub enum PlayExitLocation {
     AIPlayerTileDrawn,
     AIPlayerTurnPassed,
+    AlreadyEnd,
     AutoStoppedDrawMahjong,
     AutoStoppedDrawNormal,
     ClaimedTile,
     CouldNotClaimTile,
+    DecidedDealer,
+    InitialDraw,
+    InitialDrawError(InitialDrawError),
+    InitialShuffle,
     MeldCreated,
     NoAIPlayers,
     NoAction,
     NoAutoDrawTile,
     RoundPassed,
+    StartGame,
     SuccessMahjong,
     TileDiscarded,
     TileDrawn,
@@ -41,7 +48,6 @@ pub enum PlayExitLocation {
 pub struct PlayActionResult {
     pub changed: bool,
     pub exit_location: PlayExitLocation,
-    pub tile_discarded: Option<bool>,
 }
 
 pub fn sort_by_is_mahjong(a: &PossibleMeld, b: &PossibleMeld) -> std::cmp::Ordering {
@@ -76,8 +82,56 @@ impl<'a> StandardAI<'a> {
             return PlayActionResult {
                 changed: false,
                 exit_location: PlayExitLocation::NoAIPlayers,
-                tile_discarded: None,
             };
+        }
+
+        match self.game.phase {
+            GamePhase::InitialShuffle => {
+                self.game.prepare_table();
+
+                return PlayActionResult {
+                    changed: true,
+                    exit_location: PlayExitLocation::InitialShuffle,
+                };
+            }
+            GamePhase::DecidingDealer => {
+                self.game.decide_dealer();
+                return PlayActionResult {
+                    changed: true,
+                    exit_location: PlayExitLocation::DecidedDealer,
+                };
+            }
+            GamePhase::Beginning => {
+                self.can_draw_round = true;
+
+                self.game.start();
+
+                return PlayActionResult {
+                    changed: true,
+                    exit_location: PlayExitLocation::StartGame,
+                };
+            }
+            GamePhase::InitialDraw => match self.game.initial_draw() {
+                Ok(_) => {
+                    return PlayActionResult {
+                        changed: true,
+                        exit_location: PlayExitLocation::InitialDraw,
+                    };
+                }
+                Err(e) => {
+                    return PlayActionResult {
+                        changed: false,
+                        exit_location: PlayExitLocation::InitialDrawError(e),
+                    };
+                }
+            },
+            GamePhase::End => {
+                return PlayActionResult {
+                    changed: false,
+                    exit_location: PlayExitLocation::AlreadyEnd,
+                };
+            }
+            GamePhase::Playing => {}
         }
 
         // Check if any meld can be created with existing cards
@@ -97,7 +151,6 @@ impl<'a> StandardAI<'a> {
                         return PlayActionResult {
                             changed: true,
                             exit_location: PlayExitLocation::SuccessMahjong,
-                            tile_discarded: None,
                         };
                     }
                 }
@@ -119,14 +172,12 @@ impl<'a> StandardAI<'a> {
                                 return PlayActionResult {
                                     changed: true,
                                     exit_location: PlayExitLocation::ClaimedTile,
-                                    tile_discarded: None,
                                 };
                             } else {
                                 // Unexpected state
                                 return PlayActionResult {
                                     changed: false,
                                     exit_location: PlayExitLocation::CouldNotClaimTile,
-                                    tile_discarded: None,
                                 };
                             }
                         }
@@ -137,14 +188,12 @@ impl<'a> StandardAI<'a> {
                     continue;
                 }
 
-                let tiles = meld.tiles.iter().cloned().collect::<FxHashSet<TileId>>();
-                let meld_created = self.game.create_meld(&meld.player_id, &tiles);
+                let meld_created = self.game.create_meld(&meld.player_id, &meld.tiles);
 
-                if meld_created {
+                if meld_created.is_ok() {
                     return PlayActionResult {
                         changed: true,
                         exit_location: PlayExitLocation::MeldCreated,
-                        tile_discarded: Some(false),
                     };
                 }
             }
@@ -169,7 +218,6 @@ impl<'a> StandardAI<'a> {
                         return PlayActionResult {
                             changed: true,
                             exit_location: PlayExitLocation::AIPlayerTileDrawn,
-                            tile_discarded: Some(false),
                         };
                     }
                     DrawTileResult::AlreadyDrawn | DrawTileResult::WallExhausted => {}
@@ -195,7 +243,6 @@ impl<'a> StandardAI<'a> {
                         return PlayActionResult {
                             changed: true,
                             exit_location: PlayExitLocation::TileDiscarded,
-                            tile_discarded: Some(true),
                         };
                     }
                 }
@@ -225,7 +272,6 @@ impl<'a> StandardAI<'a> {
                             return PlayActionResult {
                                 changed: false,
                                 exit_location: PlayExitLocation::AutoStoppedDrawMahjong,
-                                tile_discarded: None,
                             };
                         }
 
@@ -239,7 +285,6 @@ impl<'a> StandardAI<'a> {
                             return PlayActionResult {
                                 changed: false,
                                 exit_location: PlayExitLocation::AutoStoppedDrawNormal,
-                                tile_discarded: None,
                             };
                         }
                     }
@@ -250,7 +295,6 @@ impl<'a> StandardAI<'a> {
                     return PlayActionResult {
                         changed: true,
                         exit_location: PlayExitLocation::AIPlayerTurnPassed,
-                        tile_discarded: Some(false),
                     };
                 }
             };
@@ -262,7 +306,6 @@ impl<'a> StandardAI<'a> {
                     return PlayActionResult {
                         changed: false,
                         exit_location: PlayExitLocation::NoAutoDrawTile,
-                        tile_discarded: None,
                     };
                 }
 
@@ -279,7 +322,6 @@ impl<'a> StandardAI<'a> {
                         return PlayActionResult {
                             changed: true,
                             exit_location: PlayExitLocation::TileDrawn,
-                            tile_discarded: Some(false),
                         };
                     }
                     DrawTileResult::AlreadyDrawn | DrawTileResult::WallExhausted => {}
@@ -293,7 +335,6 @@ impl<'a> StandardAI<'a> {
                         return PlayActionResult {
                             changed: true,
                             exit_location: PlayExitLocation::TurnPassed,
-                            tile_discarded: Some(false),
                         };
                     }
                 }
@@ -303,11 +344,10 @@ impl<'a> StandardAI<'a> {
         if self.game.table.draw_wall.0.is_empty() && self.can_draw_round {
             let round_passed = self.game.pass_null_round();
 
-            if round_passed {
+            if round_passed.is_ok() {
                 return PlayActionResult {
                     changed: true,
                     exit_location: PlayExitLocation::RoundPassed,
-                    tile_discarded: None,
                 };
             }
         }
@@ -315,7 +355,6 @@ impl<'a> StandardAI<'a> {
         PlayActionResult {
             changed: false,
             exit_location: PlayExitLocation::NoAction,
-            tile_discarded: None,
         }
     }
 

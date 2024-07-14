@@ -1,14 +1,5 @@
-import { getI18n } from "react-i18next";
-
-import {
-  Dragon,
-  Flower,
-  FlowerTile,
-  Season,
-  Suit,
-  Tile,
-  Wind,
-} from "src/sdk/core";
+import type { Tile } from "bindings/Tile";
+import type { getI18n } from "react-i18next";
 
 const prefix = "https://upload.wikimedia.org/wikipedia/commons/";
 
@@ -17,59 +8,67 @@ export const getTileInfo = (
   tile: Tile,
   i18n: ReturnType<typeof getI18n>
 ): [string, string] | null => {
-  if ((tile as FlowerTile).Flower) {
-    switch ((tile as FlowerTile).Flower.value) {
-      case Flower.Plum:
+  if ("Flower" in tile) {
+    switch (tile.Flower.value) {
+      case "Plum":
         return [`${prefix}8/8b/MJh5-.svg`, i18n.t("tile.plum")];
-      case Flower.Orchid:
+      case "Orchid":
         return [`${prefix}b/b3/MJh6-.svg`, i18n.t("tile.orchid")];
-      case Flower.Chrysanthemum:
+      case "Chrysanthemum":
         return [`${prefix}b/b6/MJh7-.svg`, i18n.t("tile.chrys")];
-      case Flower.Bamboo:
+      case "Bamboo":
         return [`${prefix}9/9c/MJh8-.svg`, i18n.t("tile.bamboo")];
+      default:
+        tile.Flower.value satisfies never;
     }
   }
 
   if ("Wind" in tile) {
     switch (tile.Wind.value) {
-      case Wind.East:
+      case "East":
         return [`${prefix}9/90/MJf1-.svg`, i18n.t("tile.east")];
-      case Wind.South:
+      case "South":
         return [`${prefix}b/bb/MJf2-.svg`, i18n.t("tile.south")];
-      case Wind.West:
+      case "West":
         return [`${prefix}5/54/MJf3-.svg`, i18n.t("tile.west")];
-      case Wind.North:
+      case "North":
         return [`${prefix}d/df/MJf4-.svg`, i18n.t("tile.north")];
+      default:
+        tile.Wind.value satisfies never;
     }
   }
 
   if ("Dragon" in tile) {
     switch (tile.Dragon.value) {
-      case Dragon.Red:
+      case "Red":
         return [`${prefix}2/20/MJd1-.svg`, i18n.t("tile.red")];
-      case Dragon.Green:
+      case "Green":
         return [`${prefix}8/8c/MJd2-.svg`, i18n.t("tile.green")];
-      case Dragon.White:
+      case "White":
         return [`${prefix}5/52/MJd3-.svg`, i18n.t("tile.white")];
+      default:
+        tile.Dragon.value satisfies never;
     }
   }
 
   if ("Season" in tile) {
     switch (tile.Season.value) {
-      case Season.Spring:
+      case "Spring":
         return [`${prefix}1/14/MJh1-.svg`, i18n.t("tile.spring")];
-      case Season.Summer:
+      case "Summer":
         return [`${prefix}e/e0/MJh2-.svg`, i18n.t("tile.summer")];
-      case Season.Autumn:
+      case "Autumn":
         return [`${prefix}2/25/MJh3-.svg`, i18n.t("tile.autumn")];
-      case Season.Winter:
+      case "Winter":
         return [`${prefix}b/b7/MJh4-.svg`, i18n.t("tile.winter")];
+      default:
+        tile.Season.value satisfies never;
     }
   }
 
   if ("Suit" in tile) {
     switch (tile.Suit.suit) {
-      case Suit.Dots: {
+      case "Dots": {
         switch (tile.Suit.value) {
           case 1:
             return [`${prefix}b/b3/MJt1-.svg`, i18n.t("tile.dots1")];
@@ -92,9 +91,11 @@ export const getTileInfo = (
           default:
             break;
         }
+
         break;
       }
-      case Suit.Bamboo: {
+
+      case "Bamboo": {
         switch (tile.Suit.value) {
           case 1:
             return [`${prefix}e/e8/MJs1-.svg`, i18n.t("tile.bamboo1")];
@@ -115,9 +116,11 @@ export const getTileInfo = (
           case 9:
             return [`${prefix}f/f3/MJs9-.svg`, i18n.t("tile.bamboo9")];
         }
+
         break;
       }
-      case Suit.Characters: {
+
+      case "Characters": {
         switch (tile.Suit.value) {
           case 1:
             return [`${prefix}3/32/MJw1-.svg`, i18n.t("tile.chars1")];
@@ -138,8 +141,12 @@ export const getTileInfo = (
           case 9:
             return [`${prefix}a/a9/MJw9-.svg`, i18n.t("tile.chars9")];
         }
+
         break;
       }
+
+      default:
+        tile.Suit.suit satisfies never;
     }
   }
 

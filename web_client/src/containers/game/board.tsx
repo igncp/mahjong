@@ -4,11 +4,11 @@ import {
   SettingFilled,
   ThunderboltOutlined,
 } from "@ant-design/icons";
+import type { ServiceGameSummary } from "bindings/ServiceGameSummary";
 import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ServiceGameSummary } from "src/sdk/core";
-import { ModelServiceGameSummary } from "src/sdk/service-game-summary";
+import type { ModelServiceGameSummary } from "src/sdk/service-game-summary";
 import Modal from "src/ui/common/modal";
 import Text from "src/ui/common/text";
 import Tooltip from "src/ui/common/tooltip";
@@ -71,6 +71,7 @@ const GameBoard = ({
               tiles.length === tileIndex + 1 &&
               typeof serviceGameSummary.game_summary.round.discarded_tile ===
                 "number";
+
             const tile = serviceGameM.getTile(tileId);
 
             return (
@@ -103,11 +104,13 @@ const GameBoard = ({
 
           const playerVisibleMelds = new Set(
             isCurrentPlayer
-              ? serviceGameSummary.game_summary.hand
+              ? serviceGameSummary.game_summary.hand.list
                   .filter((h) => !h.concealed)
                   .map((h) => h.set_id)
                   .filter(Boolean)
-              : serviceGameSummary.game_summary.other_hands[player.id]?.visible
+              : serviceGameSummary.game_summary.other_hands[
+                  player.id
+                ]?.visible.list
                   .map((handTile) => handTile.set_id)
                   .filter(Boolean)
           ).size;

@@ -4,8 +4,7 @@ import type { AppProps } from "next/app";
 import qs from "qs";
 import { HTML5toTouch } from "rdndmb-html5-to-touch";
 import { DndProvider } from "react-dnd-multi-backend";
-import { initReactI18next } from "react-i18next";
-import { I18nextProvider } from "react-i18next";
+import { I18nextProvider, initReactI18next } from "react-i18next";
 
 import { DnDPreview } from "src/containers/dnd-preview";
 import { TOKEN_KEY } from "src/lib/constants";

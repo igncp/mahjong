@@ -1,9 +1,11 @@
-import { MouseEventHandler, memo, useMemo } from "react";
-import { ConnectDropTarget, useDrag } from "react-dnd";
+import type { Tile } from "bindings/Tile";
+import type { LegacyRef, MouseEventHandler } from "react";
+import { memo, useMemo } from "react";
+import type { ConnectDropTarget } from "react-dnd";
+import { useDrag } from "react-dnd";
 import { useTranslation } from "react-i18next";
 
 import { getTileInfo } from "src/lib/tile-info";
-import { Tile } from "src/sdk/core";
 import { useEffectExceptOnMount } from "src/sdk/hooks";
 
 import Tooltip from "./common/tooltip";
@@ -16,7 +18,7 @@ type Props = {
   onClick?: MouseEventHandler<HTMLSpanElement>;
   onIsDraggingChange?: (isDragging: boolean) => void;
   paddingLeft?: number;
-  tile: Tile;
+  tile?: Tile;
   tooltipFormatter?: (title?: string) => React.ReactNode;
 };
 
@@ -32,6 +34,7 @@ const TileImg = ({
   tooltipFormatter,
 }: Props) => {
   const { i18n } = useTranslation();
+
   const [{ isDragging }, dragRef] = useDrag(
     () => ({
       canDrag: !!draggableType,
@@ -43,8 +46,17 @@ const TileImg = ({
     }),
     [draggableType, draggableItem]
   );
+
+  const { language } = i18n;
+
   const [image, title] =
-    useMemo(() => getTileInfo(tile, i18n), [i18n.language]) || [];
+    useMemo(() => {
+      language;
+
+      if (!tile) return [];
+
+      return getTileInfo(tile, i18n);
+    }, [language, tile, i18n]) || [];
 
   useEffectExceptOnMount(() => {
     onIsDraggingChange?.(isDragging);
@@ -55,7 +67,10 @@ const TileImg = ({
   }
 
   const imgEl = (
-    <span onClick={onClick} ref={dropRef}>
+    <span
+      onClick={onClick}
+      ref={dropRef as unknown as LegacyRef<HTMLSpanElement>}
+    >
       <span
         style={{
           display: "inline-block",
@@ -65,7 +80,11 @@ const TileImg = ({
         }}
       />
       <img
-        ref={draggableType ? dragRef : undefined}
+        ref={
+          draggableType
+            ? (dragRef as unknown as LegacyRef<HTMLImageElement>)
+            : undefined
+        }
         src={image}
         style={{
           height: "50px",

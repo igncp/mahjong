@@ -1,27 +1,28 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { message } from "antd";
+import type { ServiceGameSummary } from "bindings/ServiceGameSummary";
+import type { Wind } from "bindings/Wind";
 import { useRouter } from "next/router";
+import type { LegacyRef } from "react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { first } from "rxjs";
 
 import { SiteUrls } from "src/lib/site/urls";
 import { getTileInfo } from "src/lib/tile-info";
-import {
+import type {
   Board,
   GameId,
   PlayerId,
-  ServiceGameSummary,
   SetId,
   TUserLoadGameResponse,
-  Wind,
 } from "src/sdk/core";
 import { useIsMobile } from "src/sdk/hooks";
 import { HttpClient } from "src/sdk/http-client";
+import type { ModelState } from "src/sdk/service-game-summary";
 import {
   ModelServiceGameSummary,
   ModelServiceGameSummaryError,
-  ModelState,
 } from "src/sdk/service-game-summary";
 import Alert from "src/ui/common/alert";
 import Button from "src/ui/common/button";
@@ -33,7 +34,8 @@ import { useGameUI } from "src/ui/game/use-game-ui";
 import TileImg from "src/ui/tile-img";
 
 import PageContent from "../page-content";
-import GameBoard, { BoardPlayer } from "./board";
+import type { BoardPlayer } from "./board";
+import GameBoard from "./board";
 import styles from "./player.module.scss";
 
 export interface IProps {
@@ -71,7 +73,7 @@ const Game = ({ gameId, userId }: IProps) => {
       .pipe(first())
       .subscribe({
         error: (error) => {
-          console.log("debug: player.tsx: error", error);
+          console.error("debug: player.tsx: error", error);
           router.push(SiteUrls.index);
 
           return [];
@@ -84,10 +86,11 @@ const Game = ({ gameId, userId }: IProps) => {
     return () => {
       socket$.value.close();
     };
-  }, [gameId]);
+  }, [gameId, router, userId, setServiceGame]);
 
   serviceGameMRef.current =
     serviceGameMRef.current || new ModelServiceGameSummary();
+
   const serviceGameM = serviceGameMRef.current;
 
   useEffect(() => {
@@ -112,7 +115,7 @@ const Game = ({ gameId, userId }: IProps) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [serviceGameM, messageApi]);
+  }, [serviceGameM, messageApi, t]);
 
   const getCanDiscardTile = () => {
     if (!serviceGameSummary) return false;
@@ -120,7 +123,7 @@ const Game = ({ gameId, userId }: IProps) => {
     const { hand } = serviceGameSummary.game_summary;
 
     // This should be from API
-    return hand.length === 14;
+    return hand.list.length === 14;
   };
 
   serviceGameM.updateStates(
@@ -132,11 +135,13 @@ const Game = ({ gameId, userId }: IProps) => {
     () =>
       serviceGameSummary?.game_summary.players.map((player) => {
         const playerSummary = serviceGameSummary?.players[player];
+
         return {
           id: playerSummary.id,
           name: playerSummary.name,
         };
       }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [serviceGameSummary?.game_summary.players.join("")]
   );
 
@@ -147,10 +152,10 @@ const Game = ({ gameId, userId }: IProps) => {
   });
 
   const windToText: Record<Wind, string> = {
-    [Wind.East]: t("game.wind.east"),
-    [Wind.North]: t("game.wind.north"),
-    [Wind.South]: t("game.wind.south"),
-    [Wind.West]: t("game.wind.west"),
+    East: t("game.wind.east"),
+    North: t("game.wind.north"),
+    South: t("game.wind.south"),
+    West: t("game.wind.west"),
   };
 
   if (!serviceGameSummary) return null;
@@ -158,10 +163,11 @@ const Game = ({ gameId, userId }: IProps) => {
   const { hand } = serviceGameSummary.game_summary;
   const handWithoutMelds = serviceGameM.getPlayerHandWithoutMelds();
 
-  const setsIds = hand.reduce((acc, tile) => {
+  const setsIds = hand.list.reduce((acc, tile) => {
     if (tile.set_id) {
       acc.add(tile.set_id);
     }
+
     return acc;
   }, new Set<SetId>());
 
@@ -173,13 +179,16 @@ const Game = ({ gameId, userId }: IProps) => {
     serviceGameSummary.game_summary.players[
       serviceGameSummary.game_summary.round.dealer_player_index
     ];
+
   const dealerPlayer = serviceGameSummary.players[dealerPlayerId];
 
-  const isDraggingOther = handTilesProps.some((props) => props.hasItemOver);
+  const isDraggingOther = handTilesProps?.some((props) => props.hasItemOver);
 
   const canPassRound = serviceGameSummary.game_summary.board.length === 92;
+
   const canDrawTile =
-    player.id === userId && serviceGameSummary.game_summary.hand.length < 14;
+    player.id === userId &&
+    serviceGameSummary.game_summary.hand.list.length < 14;
 
   return (
     <PageContent headerCollapsible={isMobile}>
@@ -212,7 +221,7 @@ const Game = ({ gameId, userId }: IProps) => {
           </Text>
         </>
       )}{" "}
-      <span ref={boardDropRef}>
+      <span ref={boardDropRef as unknown as LegacyRef<HTMLSpanElement>}>
         <GameBoard
           activePlayer={turnPlayer.id}
           canDropInBoard={canDropInBoard}
@@ -228,17 +237,15 @@ const Game = ({ gameId, userId }: IProps) => {
       <div>
         <Card
           title={
-            <>
-              <Tooltip title={t("game.discardInfo")}>
-                {t("game.hand")}: {hand.length} <InfoCircleOutlined rev="" />
-              </Tooltip>
-            </>
+            <Tooltip title={t("game.discardInfo")}>
+              {t("game.hand")}: {hand.list.length} <InfoCircleOutlined rev="" />
+            </Tooltip>
           }
         >
           <div className={styles.handTiles}>
-            {handWithoutMelds.map((handTile, handTileIndex) => {
+            {handWithoutMelds.list.map((handTile, handTileIndex) => {
               const { hasItemOver, ...handTileProps } =
-                handTilesProps[handTileIndex];
+                handTilesProps?.[handTileIndex] || {};
 
               return (
                 <Fragment key={`${handTile.id}-${handTileIndex}`}>
@@ -375,7 +382,7 @@ const Game = ({ gameId, userId }: IProps) => {
       </div>
       <div className={styles.smallGrid}>
         {Array.from(setsIds).map((setId) => {
-          const setTiles = hand.filter((tile) => tile.set_id === setId);
+          const setTiles = hand.list.filter((tile) => tile.set_id === setId);
           const isConcealed = setTiles.every((tile) => tile.concealed);
 
           return (
@@ -417,7 +424,7 @@ const Game = ({ gameId, userId }: IProps) => {
           const meldByClaiming =
             possibleMeld.tiles.filter(
               (tileId) =>
-                serviceGameSummary.game_summary.hand.find(
+                serviceGameSummary.game_summary.hand.list.find(
                   (handTile) => handTile.id === tileId
                 ) === undefined
             ).length !== 0;
@@ -465,13 +472,16 @@ const Game = ({ gameId, userId }: IProps) => {
             return acc;
           }
 
-          const sets = new Set(playerHand.visible.map((tile) => tile.set_id));
+          const sets = new Set(
+            playerHand.visible.list.map((tile) => tile.set_id)
+          );
+
           const otherPlayer = gameState[0]?.players[playerId];
 
           Array.from(sets)
             .sort()
             .forEach((setId) => {
-              const tiles = playerHand.visible
+              const tiles = playerHand.visible.list
                 .filter((tile) => tile.set_id === setId)
                 .map((tile) => tile.id);
 

@@ -1,5 +1,5 @@
 import { Table as AntdTable } from "antd";
-import { ColumnsType } from "antd/es/table";
+import type { ColumnsType } from "antd/es/table";
 
 type Props<A extends object> = {
   className?: string;

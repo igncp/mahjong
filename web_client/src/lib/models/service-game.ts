@@ -1,6 +1,6 @@
 import { format_tile, get_possible_melds } from "pkg";
 
-import { PlayerId, PossibleMeld, ServiceGame, TileId } from "src/sdk/core";
+import type { PlayerId, PossibleMeld, ServiceGame, TileId } from "src/sdk/core";
 import { getDeck } from "src/sdk/service-game-summary";
 
 export class ModelServiceGame {

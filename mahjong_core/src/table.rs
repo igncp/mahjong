@@ -1,9 +1,10 @@
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::{Hands, PlayerId, TileId};
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default, PartialEq, TS)]
 pub struct Board(pub Vec<TileId>);
 #[derive(Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
 pub struct DrawWall(pub Vec<TileId>);

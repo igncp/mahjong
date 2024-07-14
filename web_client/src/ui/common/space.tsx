@@ -8,10 +8,10 @@ type Props = {
   wrap?: boolean;
 };
 
-const Space = (props: Props) => (
+const Space = ({ fullWidth, style, ...props }: Props) => (
   <AntdSpace
     {...props}
-    style={{ width: props.fullWidth ? "100%" : undefined, ...props.style }}
+    style={{ width: fullWidth ? "100%" : undefined, ...style }}
   />
 );
 

@@ -1,5 +1,6 @@
 import dynamic from "next/dynamic";
-import { FC, useEffect, useState } from "react";
+import type { FC } from "react";
+import { useEffect, useState } from "react";
 
 import { tokenObserver } from "src/sdk/auth";
 import { UserRole } from "src/sdk/core";
@@ -10,6 +11,7 @@ import type { TProps as TDashboardPlayerProps } from "./dashboard-player";
 const DashboardAdmin = dynamic(() => import("./dashboard-admin"), {
   ssr: false,
 }) as FC;
+
 const DashboardPlayer = dynamic(() => import("./dashboard-player"), {
   ssr: false,
 }) as FC<TDashboardPlayerProps>;

@@ -91,19 +91,19 @@ const AuthForm = () => {
         .pipe(first())
         .subscribe({
           error: (err) => {
-            console.log("debug: auth-form.tsx: err", err);
+            console.error("debug: auth-form.tsx: err", err);
             setError(t("auth.error.unknown"));
           },
           next: (response) => {
             setSubmitting(false);
 
             if (typeof response === "string") {
-              const error =
+              const errorText =
                 {
                   ["E_INVALID_USER_PASS"]: t("auth.error.invalidUserPass"),
                 }[response] || t("auth.error.unknown");
 
-              setError(error);
+              setError(errorText);
 
               return;
             }
@@ -119,6 +119,7 @@ const AuthForm = () => {
 
   useEffect(() => {
     formik.validateForm();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t]);
 
   const loginWithGithub = () => {

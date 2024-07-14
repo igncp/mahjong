@@ -97,11 +97,11 @@ mod test {
 
         for player in game.players.iter() {
             let hand = game.table.hands.get(player);
-            assert_eq!(hand.len(), 13);
+            assert_eq!(hand.len(), 0);
             assert_eq!(game.score.get(player), Some(&0));
         }
 
-        assert_eq!(game.table.draw_wall.len(), DEFAULT_DECK.0.len() - 4 * 13);
+        assert_eq!(game.table.draw_wall.len(), DEFAULT_DECK.0.len());
         assert_eq!(game.table.board.len(), 0);
     }
 }

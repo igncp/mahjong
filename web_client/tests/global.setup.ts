@@ -12,6 +12,7 @@ import { authFile } from "./utils";
 
 setup("Login and clear test games", async ({ baseURL, page }) => {
   // Keeping this log for visibility in the tests
+  // eslint-disable-next-line no-console
   console.log("debug: global.setup.ts: baseURL", baseURL);
 
   const api = new API(baseURL as string, page);

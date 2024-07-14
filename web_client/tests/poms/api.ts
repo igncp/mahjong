@@ -1,4 +1,4 @@
-import { Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 import { TOKEN_KEY } from "src/lib/constants";
 import { tokenObserver } from "src/sdk/auth";

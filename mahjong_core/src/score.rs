@@ -1,14 +1,14 @@
 // http://mahjongtime.com/hong-kong-mahjong-scoring.html
 
+use crate::{deck::DEFAULT_DECK, Flower, Game, PlayerId, Season, Tile};
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::{Deserialize, Serialize};
-
-use crate::{deck::DEFAULT_DECK, Flower, Game, PlayerId, Season, Tile};
+use ts_rs::TS;
 
 pub type ScoreItem = u32;
 pub type ScoreMap = FxHashMap<PlayerId, ScoreItem>;
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub struct Score(pub ScoreMap);
 
 // Proxied
@@ -27,6 +27,18 @@ impl Score {
 
     pub fn iter(&self) -> impl Iterator<Item = (&PlayerId, &ScoreItem)> {
         self.0.iter()
+    }
+}
+
+impl Score {
+    pub fn new(players: &Vec<PlayerId>) -> Self {
+        let mut score = ScoreMap::default();
+
+        for player_id in players {
+            score.insert(player_id.clone(), 0);
+        }
+
+        Self(score)
     }
 }
 

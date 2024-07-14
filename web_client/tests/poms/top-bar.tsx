@@ -1,4 +1,5 @@
-import { BasePage, CommonPageOptions } from "./base-page";
+import type { CommonPageOptions } from "./base-page";
+import { BasePage } from "./base-page";
 
 const selectors = {
   signout: '[data-name="signout-button"]',

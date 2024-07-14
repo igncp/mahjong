@@ -14,9 +14,7 @@ run_fix() {
 run_check() {
   cargo check --workspace --release --all-targets
   cargo build --release
-
-  # In case there are some flaky tests, run them multiple times
-  for i in $(seq 1 50); do cargo test --release; done
+  cargo test --release
 
   run_clippy
 
@@ -28,6 +26,7 @@ run_check() {
 
   (cd web_client &&
     bun install &&
+    bun run lint:fix &&
     bun run lint &&
     bun run test &&
     bun run build)

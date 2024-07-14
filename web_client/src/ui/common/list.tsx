@@ -15,6 +15,7 @@ const List = <A,>(props: Props<A>) => {
   const { t } = useTranslation();
 
   const emptyText = t("list.empty");
+
   const locale = useMemo(
     () => ({
       emptyText,

@@ -23,7 +23,7 @@ mod test {
         let table = DEFAULT_DECK.create_table(&players);
 
         assert_eq!(table.board.0.len(), 0);
-        assert_eq!(table.draw_wall.0.len(), 144 - 4 * 13);
+        assert_eq!(table.draw_wall.0.len(), 144);
         assert_eq!(table.hands.0.keys().len(), 4);
     }
 }

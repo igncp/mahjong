@@ -1,10 +1,12 @@
-import { MouseEventHandler, useCallback, useMemo } from "react";
+import type { ServiceGameSummary } from "bindings/ServiceGameSummary";
+import type { MouseEventHandler } from "react";
+import { useCallback, useMemo } from "react";
 import { useDrop } from "react-dnd";
 import { useTranslation } from "react-i18next";
 import { Subject } from "rxjs";
 
-import { ServiceGameSummary, TileId } from "src/sdk/core";
-import { ModelServiceGameSummary } from "src/sdk/service-game-summary";
+import type { TileId } from "src/sdk/core";
+import type { ModelServiceGameSummary } from "src/sdk/service-game-summary";
 import { getIsSameTile } from "src/sdk/tile-content";
 
 export const DROP_BG = "#e7e7e7";
@@ -29,12 +31,15 @@ export const useGameUI = ({
 }: Opts) => {
   const { t } = useTranslation();
   const canDiscardTile = getCanDiscardTile();
+
   const handWithoutMelds = serviceGameSummary
     ? serviceGameM.getPlayerHandWithoutMelds()
-    : [];
-  const handMelds = (serviceGameSummary?.game_summary.hand || []).filter(
-    (t) => !!t.set_id
+    : null;
+
+  const handMelds = (serviceGameSummary?.game_summary.hand.list || []).filter(
+    (h) => !!h.set_id
   );
+
   const [{ canDropInBoard }, boardDropRef] = useDrop(
     {
       accept: DropType.HAND_TILE,
@@ -52,6 +57,7 @@ export const useGameUI = ({
   );
 
   const handDrops = Array.from({ length: 14 }).map((_, index) =>
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     useDrop(
       {
         accept: DropType.HAND_TILE,
@@ -59,9 +65,9 @@ export const useGameUI = ({
           isOver: !!monitor.isOver(),
         }),
         drop: ({ tileId }: { tileId: TileId }) => {
-          const handWithoutMelds = serviceGameM.getPlayerHandWithoutMelds();
-          const handIds = handWithoutMelds.map((t) => t.id);
-          const tileIndex = handIds.findIndex((t) => t === tileId);
+          const handWithoutMeldsNew = serviceGameM.getPlayerHandWithoutMelds();
+          const handIds = handWithoutMeldsNew.list.map((h) => h.id);
+          const tileIndex = handIds.findIndex((h) => h === tileId);
 
           if (tileIndex === -1) {
             return;
@@ -77,15 +83,19 @@ export const useGameUI = ({
     )
   );
 
-  const handHash = handWithoutMelds.map((t) => t.id).join(",");
+  const handHash = handWithoutMelds?.list.map((h) => h.id).join(",");
+
   const draggableItems = useMemo(
     () =>
-      handWithoutMelds.map((handTile) => ({
+      handWithoutMelds?.list.map((handTile) => ({
         tileId: handTile.id,
       })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [handHash]
   );
+
   const isDragging$ = useMemo(() => new Subject<boolean>(), []);
+
   const onIsDraggingChange = useCallback(
     (isDragging: boolean) => {
       isDragging$.next(isDragging);
@@ -94,27 +104,33 @@ export const useGameUI = ({
   );
 
   const handTilesMemo = useMemo(
-    () => handWithoutMelds.map((handTile) => serviceGameM.getTile(handTile.id)),
+    () =>
+      handWithoutMelds?.list.map((handTile) =>
+        serviceGameM.getTile(handTile.id)
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [handHash]
   );
 
   const handClickProps = useMemo(
     () =>
-      handWithoutMelds.map((handTile) => {
+      handWithoutMelds?.list.map((handTile) => {
         const handler: MouseEventHandler<HTMLSpanElement> = (e) => {
-          const canDiscardTile = getCanDiscardTile();
+          const canDiscardTileNew = getCanDiscardTile();
 
-          if (e.detail === 2 && canDiscardTile) {
+          if (e.detail === 2 && canDiscardTileNew) {
             serviceGameM.discardTile(handTile.id);
           }
         };
 
         return handler;
       }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [handHash]
   );
 
   const board = serviceGameSummary?.game_summary.board;
+
   const visibleMelds = Object.values(
     serviceGameSummary?.game_summary.other_hands || {}
   )
@@ -123,18 +139,24 @@ export const useGameUI = ({
 
   const tooltipFormatters = useMemo(
     () =>
-      handWithoutMelds.map((handTile) =>
+      handWithoutMelds?.list.map((handTile) =>
         // eslint-disable-next-line react/display-name
         (title?: string) => {
           const tile = serviceGameM.getTile(handTile.id);
-          const sameTilesInBoard = board?.filter((t) => {
-            const boardTile = serviceGameM.getTile(t);
+
+          const sameTilesInBoard = board?.filter((ti) => {
+            const boardTile = serviceGameM.getTile(ti);
+
             return getIsSameTile(boardTile, tile);
           }).length;
+
           const sameTilesInMelds = visibleMelds
+            .map((h) => h.list)
+            .flat()
             .concat(handMelds)
             .filter((otherHandTile) => {
               const otherTile = serviceGameM.getTile(otherHandTile.id);
+
               return getIsSameTile(otherTile, tile);
             }).length;
 
@@ -153,19 +175,22 @@ export const useGameUI = ({
           );
         }
       ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [handHash, board, t, visibleMelds, handMelds]
   );
 
-  const handTilesProps = handWithoutMelds.map((_handTile, handTileIndex) => ({
-    draggableItem: draggableItems[handTileIndex],
-    draggableType: "handTile",
-    dropRef: handDrops[handTileIndex][1],
-    hasItemOver: handDrops[handTileIndex][0].isOver,
-    onClick: handClickProps[handTileIndex],
-    onIsDraggingChange,
-    tile: handTilesMemo[handTileIndex],
-    tooltipFormatter: tooltipFormatters[handTileIndex],
-  }));
+  const handTilesProps = handWithoutMelds?.list.map(
+    (_handTile, handTileIndex) => ({
+      draggableItem: draggableItems?.[handTileIndex],
+      draggableType: "handTile",
+      dropRef: handDrops[handTileIndex][1],
+      hasItemOver: handDrops[handTileIndex][0].isOver,
+      onClick: handClickProps?.[handTileIndex],
+      onIsDraggingChange,
+      tile: handTilesMemo?.[handTileIndex],
+      tooltipFormatter: tooltipFormatters?.[handTileIndex],
+    })
+  );
 
   return {
     boardDropRef,

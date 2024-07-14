@@ -14,9 +14,7 @@
 - BE: promote anonymous account to real account
 - BE: decouple mahjong specific logic from server to a different package
 - BE: single script to setup everthing for development
-- CORE: Add fixtures to the AI tests
 - CORE: Other rules from https://en.wikipedia.org/wiki/Mahjong
-- CORE: Replace current tests naming with Chinese characters
 - CORE: Replace bool returning functions with side effects
 - CORE: Divide the draw wall in four segments + dead wall
 - CORE: minimum points win support
@@ -26,6 +24,7 @@
 - CORE: Bonus tiles directions
 - CORE: Drawing phase
 - CORE: Support three players: high effort
+- CORE: Shuffle wall as a specific step of the game
 - FS: Use the deciding of dealer and drawing phases
 - FS: Refactor logic to support multiple types of games (e.g. listed in wikipedia)
     - Move most business logic to the core (rust/ts)

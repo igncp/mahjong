@@ -5,8 +5,9 @@ use crate::{
 };
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct RoundSummary {
     consecutive_same_seats: usize,
     dealer_player_index: usize,
@@ -16,13 +17,13 @@ pub struct RoundSummary {
     wind: Wind,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct OtherPlayerHand {
     pub tiles: usize,
     pub visible: Hand,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct OtherPlayerHands(pub FxHashMap<PlayerId, OtherPlayerHand>);
 
 impl OtherPlayerHands {
@@ -47,7 +48,8 @@ impl OtherPlayerHands {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct GameSummary {
     pub board: Board,
     pub draw_wall_count: usize,

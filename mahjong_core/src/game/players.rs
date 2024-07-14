@@ -1,12 +1,13 @@
 use crate::macros::derive_game_common;
 use rand::{seq::SliceRandom, thread_rng};
+use ts_rs::TS;
 
 pub type PlayerId = String;
 
 pub type PlayersVec = Vec<PlayerId>;
 
 derive_game_common! {
-#[derive(Default)]
+#[derive(Default, TS)]
 pub struct Players(pub PlayersVec);
 }
 

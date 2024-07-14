@@ -1,9 +1,11 @@
 use crate::{DragonTile, FlowerTile, SeasonTile, SuitTile, WindTile};
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 pub type TileId = i32;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub enum Tile {
     Dragon(DragonTile),
     Suit(SuitTile),
