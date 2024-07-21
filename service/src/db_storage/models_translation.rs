@@ -7,16 +7,20 @@ use super::schema;
 use crate::auth::{AuthInfo, AuthInfoAnonymous, AuthInfoData, AuthInfoEmail, AuthInfoGithub};
 use diesel::prelude::*;
 use diesel::PgConnection;
+use mahjong_core::deck::DEFAULT_DECK;
 use mahjong_core::{
     game::GameStyle,
     round::{Round, RoundTileClaimed},
 };
 use mahjong_core::{
-    Board, DrawWall, Game, GameId, Hand, HandTile, Hands, PlayerId, Score, ScoreMap, TileId,
+    Board, BonusTiles, DrawWall, DrawWallPlace, Game, GameId, Hand, HandTile, Hands, PlayerId,
+    Score, ScoreMap, TileId,
 };
 use rustc_hash::FxHashMap;
 use schema::player::dsl as player_dsl;
-use service_contracts::{GameSettings, Provider, ServiceGame, ServicePlayer, ServicePlayerGame};
+use service_contracts::{
+    AuthProvider, GameSettings, ServiceGame, ServicePlayer, ServicePlayerGame,
+};
 use std::str::FromStr;
 use tracing::debug;
 
@@ -52,19 +56,19 @@ impl DieselAuthInfo {
 
     pub fn into_raw_get_data(self, connection: &mut PgConnection) -> AuthInfo {
         let data = match self.provider.as_str() {
-            val if val == Provider::Email.to_string() => {
+            val if val == AuthProvider::Email.to_string() => {
                 let data = DieselAuthInfoEmail::get_by_id(connection, &self.user_id)
                     .expect("User not found");
 
                 AuthInfoData::Email(data.into_raw())
             }
-            val if val == Provider::Github.to_string() => {
+            val if val == AuthProvider::Github.to_string() => {
                 let data = DieselAuthInfoGithub::get_by_id(connection, &self.user_id)
                     .expect("Github not found");
 
                 AuthInfoData::Github(data.into_raw())
             }
-            val if val == Provider::Anonymous.to_string() => {
+            val if val == AuthProvider::Anonymous.to_string() => {
                 let data = DieselAuthInfoAnonymous::get_by_id(connection, &self.user_id)
                     .expect("Anonymous not found");
 
@@ -83,9 +87,9 @@ impl DieselAuthInfo {
     pub fn from_raw(raw: &AuthInfo) -> Self {
         Self {
             provider: match raw.data {
-                AuthInfoData::Email(_) => Provider::Email.to_string(),
-                AuthInfoData::Github(_) => Provider::Github.to_string(),
-                AuthInfoData::Anonymous(_) => Provider::Anonymous.to_string(),
+                AuthInfoData::Email(_) => AuthProvider::Email.to_string(),
+                AuthInfoData::Github(_) => AuthProvider::Github.to_string(),
+                AuthInfoData::Anonymous(_) => AuthProvider::Anonymous.to_string(),
             },
             role: serde_json::to_string(&raw.role).unwrap(),
             user_id: raw.user_id.clone(),
@@ -469,6 +473,7 @@ impl DieselGame {
             style: game_style.clone().unwrap(),
             consecutive_same_seats: self.round_consecutive_same_seats as usize,
             east_player_index: self.round_east_player_index as usize,
+            initial_winds: self.round_initial_winds.map(|w| w as u8),
         };
         let game = Game {
             name: self.name,
@@ -565,6 +570,7 @@ impl DieselGame {
             style: raw.style.to_string(),
             round_consecutive_same_seats: raw.round.consecutive_same_seats as i32,
             round_east_player_index: raw.round.east_player_index as i32,
+            round_initial_winds: raw.round.initial_winds.map(|w| w as i32),
         }
     }
 
@@ -836,17 +842,19 @@ impl DieselGameDrawWall {
             wait_common();
         }
 
+        let mut draw_wall_vec = vec![];
+
         let draw_wall = service_game
             .game
             .table
             .draw_wall
-            .0
-            .iter()
+            .iter_all(&mut draw_wall_vec)
             .enumerate()
-            .map(|(tile_index, tile_id)| Self {
+            .map(|(tile_index, draw_wall_tile)| Self {
                 game_id: service_game.game.id.clone(),
-                tile_id: *tile_id,
+                tile_id: draw_wall_tile.0,
                 tile_index: tile_index as i32,
+                place: draw_wall_tile.1.to_string(),
             })
             .collect::<Vec<Self>>();
 
@@ -876,10 +884,17 @@ impl DieselGameDrawWall {
             wait_common();
         }
         .into_iter()
-        .map(|game_draw_wall| game_draw_wall.tile_id as TileId)
-        .collect::<Vec<TileId>>();
+        .map(|game_draw_wall| {
+            (
+                game_draw_wall.tile_id,
+                DrawWallPlace::from_str(&game_draw_wall.place).unwrap_or_else(|_| {
+                    panic!("Unknown draw wall place: {}", game_draw_wall.place)
+                }),
+            )
+        })
+        .collect::<Vec<(TileId, DrawWallPlace)>>();
 
-        DrawWall(draw_wall_content)
+        DrawWall::new_full(draw_wall_content)
     }
 
     pub fn delete_games(connection: &mut PgConnection, game_ids: &[GameId]) {
@@ -933,6 +948,30 @@ impl DieselGameHand {
                 });
             });
 
+        service_game
+            .game
+            .table
+            .bonus_tiles
+            .0
+            .iter()
+            .for_each(|(player_id, player_bonus_tiles)| {
+                player_bonus_tiles
+                    .iter()
+                    .enumerate()
+                    .for_each(|(tile_index, tile_id)| {
+                        let game_hand = Self {
+                            concealed: 0,
+                            game_id: service_game.game.id.clone(),
+                            player_id: player_id.clone(),
+                            set_id: None,
+                            tile_id: *tile_id,
+                            tile_index: tile_index as i32,
+                        };
+
+                        hands.push(game_hand);
+                    });
+            });
+
         loop {
             if diesel::insert_into(game_hand_table)
                 .values(&hands)
@@ -945,9 +984,10 @@ impl DieselGameHand {
         }
     }
 
-    pub fn read_from_game(connection: &mut PgConnection, game_id: &GameId) -> Hands {
+    pub fn read_from_game(connection: &mut PgConnection, game_id: &GameId) -> (Hands, BonusTiles) {
         use schema::game_hand::dsl as game_hand_dsl;
         let mut hands = Hands::default();
+        let mut bonus_tiles = BonusTiles::default();
 
         loop {
             if let Ok(data) = game_hand_dsl::game_hand
@@ -962,24 +1002,29 @@ impl DieselGameHand {
         .into_iter()
         .for_each(|game_hand| {
             let tile_id = game_hand.tile_id as TileId;
-            let player_id = game_hand.player_id;
-            let concealed = game_hand.concealed == 1;
-            let set_id = game_hand.set_id;
-            let mut current_hand = hands
-                .0
-                .get(&player_id)
-                .unwrap_or(&Hand::new(Vec::new()))
-                .clone();
-            current_hand.push(HandTile {
-                id: tile_id,
-                concealed,
-                set_id,
-            });
+            if DEFAULT_DECK.get_sure(tile_id).is_bonus() {
+                let player_bonus_tiles = bonus_tiles.get_or_create(&game_hand.player_id);
+                player_bonus_tiles.push(tile_id);
+            } else {
+                let player_id = game_hand.player_id;
+                let concealed = game_hand.concealed == 1;
+                let set_id = game_hand.set_id;
+                let mut current_hand = hands
+                    .0
+                    .get(&player_id)
+                    .unwrap_or(&Hand::new(Vec::new()))
+                    .clone();
+                current_hand.push(HandTile {
+                    id: tile_id,
+                    concealed,
+                    set_id,
+                });
 
-            hands.0.insert(player_id, current_hand);
+                hands.0.insert(player_id, current_hand);
+            }
         });
 
-        hands
+        (hands, bonus_tiles)
     }
 
     pub fn delete_games(connection: &mut PgConnection, game_ids: &[GameId]) {

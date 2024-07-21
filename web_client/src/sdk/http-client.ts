@@ -1,14 +1,42 @@
+import type { AdminPostMovePlayerResponse } from "bindings/AdminPostMovePlayerResponse";
+import type { AdminPostSortHandsResponse } from "bindings/AdminPostSortHandsResponse";
+import type { GetDeckResponse } from "bindings/GetDeckResponse";
 import type { UserGetDashboardResponse } from "bindings/UserGetDashboardResponse";
 import type { UserGetGamesQuery } from "bindings/UserGetGamesQuery";
+import type { UserGetGamesResponse } from "bindings/UserGetGamesResponse";
 import type { UserGetInfoResponse } from "bindings/UserGetInfoResponse";
+import type { UserGetLoadGameResponse } from "bindings/UserGetLoadGameResponse";
+import type { UserLoadGameQuery } from "bindings/UserLoadGameQuery";
 import type { UserPatchInfoRequest } from "bindings/UserPatchInfoRequest";
+import type { UserPatchInfoResponse } from "bindings/UserPatchInfoResponse";
+import type { UserPostAIContinueRequest } from "bindings/UserPostAIContinueRequest";
+import type { UserPostAIContinueResponse } from "bindings/UserPostAIContinueResponse";
 import type { UserPostBreakMeldRequest } from "bindings/UserPostBreakMeldRequest";
+import type { UserPostBreakMeldResponse } from "bindings/UserPostBreakMeldResponse";
+import type { UserPostClaimTileRequest } from "bindings/UserPostClaimTileRequest";
+import type { UserPostClaimTileResponse } from "bindings/UserPostClaimTileResponse";
+import type { UserPostCreateGameRequest } from "bindings/UserPostCreateGameRequest";
+import type { UserPostCreateGameResponse } from "bindings/UserPostCreateGameResponse";
 import type { UserPostCreateMeldRequest } from "bindings/UserPostCreateMeldRequest";
+import type { UserPostCreateMeldResponse } from "bindings/UserPostCreateMeldResponse";
+import type { UserPostDiscardTileRequest } from "bindings/UserPostDiscardTileRequest";
+import type { UserPostDiscardTileResponse } from "bindings/UserPostDiscardTileResponse";
+import type { UserPostDrawTileRequest } from "bindings/UserPostDrawTileRequest";
+import type { UserPostDrawTileResponse } from "bindings/UserPostDrawTileResponse";
 import type { UserPostMovePlayerRequest } from "bindings/UserPostMovePlayerRequest";
+import type { UserPostMovePlayerResponse } from "bindings/UserPostMovePlayerResponse";
 import type { UserPostPassRoundRequest } from "bindings/UserPostPassRoundRequest";
+import type { UserPostPassRoundResponse } from "bindings/UserPostPassRoundResponse";
+import type { UserPostSayMahjongRequest } from "bindings/UserPostSayMahjongRequest";
+import type { UserPostSayMahjongResponse } from "bindings/UserPostSayMahjongResponse";
+import type { UserPostSetAuthAnonRequest } from "bindings/UserPostSetAuthAnonRequest";
+import type { UserPostSetAuthAnonResponse } from "bindings/UserPostSetAuthAnonResponse";
+import type { UserPostSetAuthRequest } from "bindings/UserPostSetAuthRequest";
 import type { UserPostSetAuthResponse } from "bindings/UserPostSetAuthResponse";
 import type { UserPostSetGameSettingsRequest } from "bindings/UserPostSetGameSettingsRequest";
+import type { UserPostSetGameSettingsResponse } from "bindings/UserPostSetGameSettingsResponse";
 import type { UserPostSortHandRequest } from "bindings/UserPostSortHandRequest";
+import type { UserPostSortHandResponse } from "bindings/UserPostSortHandResponse";
 import type { WebSocketQuery } from "bindings/WebSocketQuery";
 import qs from "qs";
 import { BehaviorSubject, from } from "rxjs";
@@ -28,43 +56,13 @@ import type {
   TAdminPostDiscardTileRequest,
   TAdminPostDiscardTileResponse,
   TAdminPostDrawCardResponse,
-  TAdminPostDrawWallSwapTilesRequest,
-  TAdminPostDrawWallSwapTilesResponse,
-  TAdminPostMovePlayerResponse,
   TAdminPostNewGameResponse,
   TAdminPostSayMahjongRequest,
   TAdminPostSayMahjongResponse,
-  TAdminPostSortHandsResponse,
-  TGetDeckResponse,
   TSocketMessageFromClient,
   TSocketMessageFromServer,
   TSocketWrapper,
   TTestDeleteGamesResponse,
-  TUserGetGamesResponse,
-  TUserLoadGameQuery,
-  TUserLoadGameResponse,
-  TUserPatchInfoResponse,
-  TUserPostBreakMeldResponse,
-  TUserPostClaimTileRequest,
-  TUserPostClaimTileResponse,
-  TUserPostContinueAIRequest,
-  TUserPostContinueAIResponse,
-  TUserPostCreateGameRequest,
-  TUserPostCreateGameResponse,
-  TUserPostCreateMeldResponse,
-  TUserPostDiscardTileRequest,
-  TUserPostDiscardTileResponse,
-  TUserPostDrawTileRequest,
-  TUserPostDrawTileResponse,
-  TUserPostMovePlayerResponse,
-  TUserPostPassRoundResponse,
-  TUserPostSayMahjongRequest,
-  TUserPostSayMahjongResponse,
-  TUserPostSetAnonAuthRequest,
-  TUserPostSetAnonAuthResponse,
-  TUserPostSetAuthRequest,
-  TUserPostSetGameSettingsResponse,
-  TUserPostSortHandResponse,
 } from "./core";
 
 let baseUrl = "";
@@ -133,16 +131,6 @@ export const HttpClient = {
     });
   },
 
-  async adminDrawWallSwapTiles(
-    gameId: GameId,
-    body: TAdminPostDrawWallSwapTilesRequest
-  ): Promise<TAdminPostDrawWallSwapTilesResponse> {
-    return await fetchJson(`/v1/admin/game/${gameId}/draw-wall-swap-tiles`, {
-      body: JSON.stringify(body),
-      method: "POST",
-    });
-  },
-
   adminGetGame(gameId: GameId) {
     return from(fetchJson<TAdminGetGameResponse>(`/v1/admin/game/${gameId}`));
   },
@@ -151,7 +139,7 @@ export const HttpClient = {
     return from(fetchJson<TAdminGetGamesResponse>("/v1/admin/game"));
   },
 
-  async adminMovePlayer(gameId: GameId): Promise<TAdminPostMovePlayerResponse> {
+  async adminMovePlayer(gameId: GameId): Promise<AdminPostMovePlayerResponse> {
     return await fetchJson(`/v1/admin/game/${gameId}/move-player`, {
       method: "POST",
     });
@@ -175,7 +163,7 @@ export const HttpClient = {
     });
   },
 
-  async adminSortHands(gameId: GameId): Promise<TAdminPostSortHandsResponse> {
+  async adminSortHands(gameId: GameId): Promise<AdminPostSortHandsResponse> {
     return await fetchJson(`/v1/admin/game/${gameId}/sort-hands`, {
       method: "POST",
     });
@@ -245,7 +233,7 @@ export const HttpClient = {
   },
 
   getDeck() {
-    return from(fetchJson<TGetDeckResponse>(`/v1/deck`));
+    return from(fetchJson<GetDeckResponse>(`/v1/deck`));
   },
 
   getHealth: async (): Promise<void> =>
@@ -259,7 +247,7 @@ export const HttpClient = {
     );
   },
 
-  setAuth(body: TUserPostSetAuthRequest) {
+  setAuth(body: UserPostSetAuthRequest) {
     return from(
       fetchJson<UserPostSetAuthResponse>("/v1/user", {
         body: JSON.stringify(body),
@@ -268,9 +256,9 @@ export const HttpClient = {
     );
   },
 
-  setAuthAnonymous(body: TUserPostSetAnonAuthRequest) {
+  setAuthAnonymous(body: UserPostSetAuthAnonRequest) {
     return from(
-      fetchJson<TUserPostSetAnonAuthResponse>("/v1/user-anonymous", {
+      fetchJson<UserPostSetAuthAnonResponse>("/v1/user-anonymous", {
         body: JSON.stringify(body),
         method: "POST",
       })
@@ -287,7 +275,7 @@ export const HttpClient = {
 
   userBreakMeld(gameId: GameId, body: UserPostBreakMeldRequest) {
     return from(
-      fetchJson<TUserPostBreakMeldResponse>(
+      fetchJson<UserPostBreakMeldResponse>(
         `/v1/user/game/${gameId}/break-meld`,
         {
           body: JSON.stringify(body),
@@ -297,9 +285,9 @@ export const HttpClient = {
     );
   },
 
-  userClaimTile(gameId: GameId, body: TUserPostClaimTileRequest) {
+  userClaimTile(gameId: GameId, body: UserPostClaimTileRequest) {
     return from(
-      fetchJson<TUserPostClaimTileResponse>(
+      fetchJson<UserPostClaimTileResponse>(
         `/v1/user/game/${gameId}/claim-tile`,
         {
           body: JSON.stringify(body),
@@ -309,9 +297,9 @@ export const HttpClient = {
     );
   },
 
-  userContinueAI(gameId: GameId, body: TUserPostContinueAIRequest) {
+  userContinueAI(gameId: GameId, body: UserPostAIContinueRequest) {
     return from(
-      fetchJson<TUserPostContinueAIResponse>(
+      fetchJson<UserPostAIContinueResponse>(
         `/v1/user/game/${gameId}/ai-continue`,
         {
           body: JSON.stringify(body),
@@ -321,9 +309,9 @@ export const HttpClient = {
     );
   },
 
-  userCreateGame(body: TUserPostCreateGameRequest) {
+  userCreateGame(body: UserPostCreateGameRequest) {
     return from(
-      fetchJson<TUserPostCreateGameResponse>("/v1/user/game", {
+      fetchJson<UserPostCreateGameResponse>("/v1/user/game", {
         body: JSON.stringify(body),
         method: "POST",
       })
@@ -332,7 +320,7 @@ export const HttpClient = {
 
   userCreateMeld(gameId: GameId, body: UserPostCreateMeldRequest) {
     return from(
-      fetchJson<TUserPostCreateMeldResponse>(
+      fetchJson<UserPostCreateMeldResponse>(
         `/v1/user/game/${gameId}/create-meld`,
         {
           body: JSON.stringify(body),
@@ -342,9 +330,9 @@ export const HttpClient = {
     );
   },
 
-  userDiscardTile(gameId: GameId, body: TUserPostDiscardTileRequest) {
+  userDiscardTile(gameId: GameId, body: UserPostDiscardTileRequest) {
     return from(
-      fetchJson<TUserPostDiscardTileResponse>(
+      fetchJson<UserPostDiscardTileResponse>(
         `/v1/user/game/${gameId}/discard-tile`,
         {
           body: JSON.stringify(body),
@@ -354,21 +342,18 @@ export const HttpClient = {
     );
   },
 
-  userDrawTile(gameId: GameId, body: TUserPostDrawTileRequest) {
+  userDrawTile(gameId: GameId, body: UserPostDrawTileRequest) {
     return from(
-      fetchJson<TUserPostDrawTileResponse>(
-        `/v1/user/game/${gameId}/draw-tile`,
-        {
-          body: JSON.stringify(body),
-          method: "POST",
-        }
-      )
+      fetchJson<UserPostDrawTileResponse>(`/v1/user/game/${gameId}/draw-tile`, {
+        body: JSON.stringify(body),
+        method: "POST",
+      })
     );
   },
 
   userGetGames(query: UserGetGamesQuery) {
     return from(
-      fetchJson<TUserGetGamesResponse>(`/v1/user/game?${qs.stringify(query)}`)
+      fetchJson<UserGetGamesResponse>(`/v1/user/game?${qs.stringify(query)}`)
     );
   },
 
@@ -376,9 +361,9 @@ export const HttpClient = {
     return from(fetchJson<UserGetInfoResponse>(`/v1/user/info/${userId}`));
   },
 
-  userLoadGame(gameId: GameId, query: TUserLoadGameQuery) {
+  userLoadGame(gameId: GameId, query: UserLoadGameQuery) {
     return from(
-      fetchJson<TUserLoadGameResponse>(
+      fetchJson<UserGetLoadGameResponse>(
         `/v1/user/game/${gameId}?${qs.stringify(query)}`
       )
     );
@@ -386,7 +371,7 @@ export const HttpClient = {
 
   userMovePlayer(gameId: GameId, body: UserPostMovePlayerRequest) {
     return from(
-      fetchJson<TUserPostMovePlayerResponse>(
+      fetchJson<UserPostMovePlayerResponse>(
         `/v1/user/game/${gameId}/move-player`,
         {
           body: JSON.stringify(body),
@@ -398,7 +383,7 @@ export const HttpClient = {
 
   userPassRound(gameId: GameId, body: UserPostPassRoundRequest) {
     return from(
-      fetchJson<TUserPostPassRoundResponse>(
+      fetchJson<UserPostPassRoundResponse>(
         `/v1/user/game/${gameId}/pass-round`,
         {
           body: JSON.stringify(body),
@@ -410,16 +395,16 @@ export const HttpClient = {
 
   userPatchInfo(userId: PlayerId, body: UserPatchInfoRequest) {
     return from(
-      fetchJson<TUserPatchInfoResponse>(`/v1/user/info/${userId}`, {
+      fetchJson<UserPatchInfoResponse>(`/v1/user/info/${userId}`, {
         body: JSON.stringify(body),
         method: "PATCH",
       })
     );
   },
 
-  userSayMahjong(gameId: GameId, body: TUserPostSayMahjongRequest) {
+  userSayMahjong(gameId: GameId, body: UserPostSayMahjongRequest) {
     return from(
-      fetchJson<TUserPostSayMahjongResponse>(
+      fetchJson<UserPostSayMahjongResponse>(
         `/v1/user/game/${gameId}/say-mahjong`,
         {
           body: JSON.stringify(body),
@@ -431,7 +416,7 @@ export const HttpClient = {
 
   userSetGameSettings(gameId: GameId, body: UserPostSetGameSettingsRequest) {
     return from(
-      fetchJson<TUserPostSetGameSettingsResponse>(
+      fetchJson<UserPostSetGameSettingsResponse>(
         `/v1/user/game/${gameId}/settings`,
         {
           body: JSON.stringify(body),
@@ -443,13 +428,10 @@ export const HttpClient = {
 
   userSortHand(gameId: GameId, body: UserPostSortHandRequest) {
     return from(
-      fetchJson<TUserPostSortHandResponse>(
-        `/v1/user/game/${gameId}/sort-hand`,
-        {
-          body: JSON.stringify(body),
-          method: "POST",
-        }
-      )
+      fetchJson<UserPostSortHandResponse>(`/v1/user/game/${gameId}/sort-hand`, {
+        body: JSON.stringify(body),
+        method: "POST",
+      })
     );
   },
 };

@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod test {
     use crate::{
-        round::{NextTurnError, Round},
-        Game, GamePhase,
+        game::GameStyle,
+        round::{DecideDealerWinds, NextTurnError, Round},
+        Game, GamePhase, Wind, WINDS_ROUND_ORDER,
     };
     use pretty_assertions::assert_eq;
     use strum::IntoEnumIterator;
@@ -125,21 +126,21 @@ mod test {
 
     const MOVE_WIN_FIXTURES: &[(&str, &str, usize)] = &[
         (
-            "Turn: P3, Dealer: P3, Round: 5, Wind: West, Phase: Playing
+            "Turn: P3, Dealer: P3, Round: 5, Wind: 西, Phase: Playing
              Consecutive: 2, Drawn: 一萬",
-            "Turn: P4, Dealer: P4, Round: 6, Wind: West, Phase: Playing",
+            "Turn: P4, Dealer: P4, Round: 6, Wind: 西, Phase: Playing",
             0,
         ),
         (
-            "Turn: P1, Dealer: P1, Round: 5, Wind: South, Phase: Playing
+            "Turn: P1, Dealer: P1, Round: 5, Wind: 南, Phase: Playing
              Consecutive: 0, Drawn: 一萬, First East: P2",
-            "Turn: P2, Dealer: P2, Round: 6, Wind: West, Phase: Playing",
+            "Turn: P2, Dealer: P2, Round: 6, Wind: 西, Phase: Playing",
             1,
         ),
         (
-            "Turn: P2, Dealer: P4, Round: 1, Wind: North, Phase: Playing
+            "Turn: P2, Dealer: P4, Round: 1, Wind: 北, Phase: Playing
              Consecutive: 0, Drawn: 一萬",
-            "Turn: P2, Dealer: P1, Round: 2, Wind: North, Phase: End",
+            "Turn: P2, Dealer: P1, Round: 2, Wind: 北, Phase: End",
             1,
         ),
     ];
@@ -161,5 +162,35 @@ mod test {
                 "test_index: {test_index}",
             );
         }
+    }
+
+    #[test]
+    fn test_initial_winds() {
+        let mut round = Round::new(&GameStyle::HongKong);
+        assert_eq!(round.initial_winds, None);
+
+        let winds: [Wind; 4] = [Wind::North, Wind::West, Wind::South, Wind::East];
+        round.set_initial_winds(Some(winds.clone())).unwrap();
+        assert_eq!(round.initial_winds, Some(23));
+        assert_eq!(
+            round.get_initial_winds_slice(),
+            DecideDealerWinds::new(Some(winds)).unwrap()
+        );
+
+        let winds_2 = [Wind::South, Wind::North, Wind::East, Wind::West];
+        round.set_initial_winds(Some(winds_2.clone())).unwrap();
+        assert_eq!(round.initial_winds, Some(10));
+        assert_eq!(
+            round.get_initial_winds_slice(),
+            DecideDealerWinds::new(Some(winds_2)).unwrap()
+        );
+
+        let winds_3 = WINDS_ROUND_ORDER.clone();
+        round.set_initial_winds(Some(winds_3.clone())).unwrap();
+        assert_eq!(round.initial_winds, Some(0));
+        assert_eq!(
+            round.get_initial_winds_slice(),
+            DecideDealerWinds::new(Some(winds_3)).unwrap()
+        );
     }
 }

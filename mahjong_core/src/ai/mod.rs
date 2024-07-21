@@ -1,6 +1,6 @@
 use crate::game::{DrawTileResult, InitialDrawError};
 use crate::meld::PossibleMeld;
-use crate::{Game, GamePhase, PlayerId, TileId};
+use crate::{Game, GamePhase, PlayerId, TileId, Wind, WINDS_ROUND_ORDER};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use rustc_hash::FxHashSet;
@@ -14,9 +14,11 @@ pub struct StandardAI<'a> {
     pub auto_stop_claim_meld: FxHashSet<PlayerId>,
     pub can_draw_round: bool,
     pub can_pass_turn: bool,
+    pub dealer_order_deterministic: Option<bool>,
     pub draw_tile_for_real_player: bool,
     pub game: &'a mut Game,
     pub sort_on_draw: bool,
+    pub with_dead_wall: bool,
 }
 
 #[derive(Debug, Eq, PartialEq, EnumIter, Clone)]
@@ -42,6 +44,7 @@ pub enum PlayExitLocation {
     TileDiscarded,
     TileDrawn,
     TurnPassed,
+    WaitingDealerOrder,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -71,9 +74,11 @@ impl<'a> StandardAI<'a> {
             auto_stop_claim_meld,
             can_draw_round: false,
             can_pass_turn: true,
+            dealer_order_deterministic: None,
             draw_tile_for_real_player: true,
             game,
             sort_on_draw: false,
+            with_dead_wall: false,
         }
     }
 
@@ -87,7 +92,7 @@ impl<'a> StandardAI<'a> {
 
         match self.game.phase {
             GamePhase::InitialShuffle => {
-                self.game.prepare_table();
+                self.game.prepare_table(self.with_dead_wall);
 
                 return PlayActionResult {
                     changed: true,
@@ -95,15 +100,34 @@ impl<'a> StandardAI<'a> {
                 };
             }
             GamePhase::DecidingDealer => {
-                self.game.decide_dealer();
+                if self.dealer_order_deterministic.is_some() {
+                    let dealer_order_deterministic = self.dealer_order_deterministic.unwrap();
+
+                    self.game
+                        .round
+                        .set_initial_winds(Some(if dealer_order_deterministic {
+                            WINDS_ROUND_ORDER.clone()
+                        } else {
+                            let mut winds: [Wind; 4] = WINDS_ROUND_ORDER.clone();
+                            winds.shuffle(&mut thread_rng());
+                            winds
+                        }))
+                        .unwrap();
+                } else if self.game.round.initial_winds.is_none() {
+                    return PlayActionResult {
+                        changed: false,
+                        exit_location: PlayExitLocation::WaitingDealerOrder,
+                    };
+                }
+
+                self.game.decide_dealer().unwrap();
+
                 return PlayActionResult {
                     changed: true,
                     exit_location: PlayExitLocation::DecidedDealer,
                 };
             }
             GamePhase::Beginning => {
-                self.can_draw_round = true;
-
                 self.game.start();
 
                 return PlayActionResult {
@@ -341,7 +365,7 @@ impl<'a> StandardAI<'a> {
             }
         }
 
-        if self.game.table.draw_wall.0.is_empty() && self.can_draw_round {
+        if self.game.table.draw_wall.is_empty() && self.can_draw_round {
             let round_passed = self.game.pass_null_round();
 
             if round_passed.is_ok() {
@@ -362,7 +386,7 @@ impl<'a> StandardAI<'a> {
         let current_player = self.game.get_current_player();
         let current_hand = self.game.table.hands.get(&current_player);
 
-        current_hand.len() < self.game.style.tiles_after_claim()
+        current_hand.unwrap().len() < self.game.style.tiles_after_claim()
             && self.game.round.tile_claimed.is_some()
     }
 }

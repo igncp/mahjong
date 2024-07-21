@@ -41,13 +41,9 @@ run_docker() (
   echo "DEPLOY_SKIP='$DEPLOY_SKIP'"
   echo "DEPLOY_ONLY='$DEPLOY_ONLY'"
 
-  if [ -z "$(echo "$DEPLOY_SKIP" | grep 'web' || true)" ] &&
-    [ -z "$(echo "$DEPLOY_ONLY" | grep -v 'web' || true)" ]; then
-    web
-  fi
-
   if [ -z "$(echo "$DEPLOY_SKIP" | grep 'front' || true)" ] &&
     [ -z "$(echo "$DEPLOY_ONLY" | grep -v 'front' || true)" ]; then
+    web
     docker_front
   fi
 

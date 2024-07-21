@@ -20,6 +20,7 @@ pub enum GamePhase {
 
 derive_game_common! {
 #[derive(PartialEq, Eq, TS)]
+#[ts(export)]
 pub enum GameStyle {
     HongKong,
 }}
@@ -28,6 +29,8 @@ pub type GameId = String;
 pub type GameVersion = String;
 
 derive_game_common! {
+#[derive(TS)]
+#[ts(export)]
 pub struct Game {
     pub id: GameId,
     pub name: String,

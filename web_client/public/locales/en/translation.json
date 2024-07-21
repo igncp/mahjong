@@ -70,6 +70,8 @@
       "desc": "Block time for next turn pass after discard"
     },
     "board": "Board",
+    "bonusTiles_one": "Bonus tile: {{count}}",
+    "bonusTiles_other": "Bonus tiles: {{count}}",
     "breakMeld": "Break meld",
     "claiming": "claiming",
     "claimTile": "Claim tile",

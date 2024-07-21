@@ -8,7 +8,7 @@ actix = "0.13.0"
 actix-web = "4.3.1"
 actix-web-actors = "4.2.0"
 async-trait = "0.1.71"
-mahjong_core = { path = "../mahjong_core" }
+mahjong_core = { path = "../mahjong_core", default-features = false }
 service_contracts = { path = "../service_contracts" }
 rand = "0.8.5"
 serde = { version = "1.0.167", features = ["derive"] }
@@ -27,3 +27,4 @@ serde_qs = "0.12.0"
 chrono = "0.4.31"
 redis = "0.23.3"
 diesel_migrations = "2.1.0"
+ts-rs = "9.0.1"

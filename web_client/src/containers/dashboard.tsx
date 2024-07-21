@@ -3,7 +3,6 @@ import type { FC } from "react";
 import { useEffect, useState } from "react";
 
 import { tokenObserver } from "src/sdk/auth";
-import { UserRole } from "src/sdk/core";
 import { useUserTokenClaims } from "src/sdk/hooks";
 
 import type { TProps as TDashboardPlayerProps } from "./dashboard-player";
@@ -28,7 +27,7 @@ const Dashboard = () => {
 
   if (!claims) return null;
 
-  if (claims.role === UserRole.Admin) {
+  if (claims.role === "Admin") {
     return <DashboardAdmin />;
   }
 

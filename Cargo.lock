@@ -1252,6 +1252,7 @@ dependencies = [
  "service_contracts",
  "tracing",
  "tracing-subscriber",
+ "ts-rs",
  "uuid",
 ]
 

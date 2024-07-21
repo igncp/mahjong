@@ -21,13 +21,13 @@ use serde::{Deserialize, Serialize};
 use service_contracts::{
     AdminGetGamesResponse, AdminPostAIContinueRequest, AdminPostBreakMeldRequest,
     AdminPostClaimTileRequest, AdminPostCreateMeldRequest, AdminPostDiscardTileRequest,
-    AdminPostSayMahjongRequest, AdminPostSwapDrawTilesRequest, UserGetGamesQuery,
-    UserGetGamesResponse, UserLoadGameQuery, UserPatchInfoRequest, UserPostAIContinueRequest,
-    UserPostBreakMeldRequest, UserPostClaimTileRequest, UserPostCreateGameRequest,
-    UserPostCreateMeldRequest, UserPostDiscardTileRequest, UserPostDrawTileRequest,
-    UserPostMovePlayerRequest, UserPostPassRoundRequest, UserPostSayMahjongRequest,
-    UserPostSetAuthAnonRequest, UserPostSetAuthRequest, UserPostSetGameSettingsRequest,
-    UserPostSortHandRequest, WebSocketQuery,
+    AdminPostSayMahjongRequest, GetDeckResponse, UserGetGamesQuery, UserGetGamesResponse,
+    UserLoadGameQuery, UserPatchInfoRequest, UserPostAIContinueRequest, UserPostBreakMeldRequest,
+    UserPostClaimTileRequest, UserPostCreateGameRequest, UserPostCreateMeldRequest,
+    UserPostDiscardTileRequest, UserPostDrawTileRequest, UserPostMovePlayerRequest,
+    UserPostPassRoundRequest, UserPostSayMahjongRequest, UserPostSetAuthAnonRequest,
+    UserPostSetAuthRequest, UserPostSetGameSettingsRequest, UserPostSortHandRequest,
+    WebSocketQuery,
 };
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -85,7 +85,9 @@ async fn admin_get_games(storage: DataStorage, req: HttpRequest) -> impl Respond
 
 #[get("/v1/deck")]
 async fn get_deck() -> impl Responder {
-    HttpResponse::Ok().json(&DEFAULT_DECK.clone())
+    let response = GetDeckResponse(DEFAULT_DECK.clone().0);
+
+    HttpResponse::Ok().json(response)
 }
 
 #[get("/v1/user/game")]
@@ -111,7 +113,7 @@ async fn user_get_games(storage: DataStorage, req: HttpRequest) -> impl Responde
 
     match games {
         Ok(games) => {
-            let response: UserGetGamesResponse = games;
+            let response = UserGetGamesResponse(games);
             HttpResponse::Ok().json(response)
         }
         Err(_) => HttpResponse::InternalServerError().body("Error getting games"),
@@ -420,36 +422,6 @@ async fn admin_post_game_claim_tile(
 
     match game_wrapper {
         Ok(mut game_wrapper) => game_wrapper.handle_admin_claim_tile(&body.player_id).await,
-        Err(err) => err,
-    }
-}
-
-#[post("/v1/admin/game/{game_id}/draw-wall-swap-tiles")]
-async fn admin_post_game_swap_tiles(
-    manager: GamesManagerData,
-    storage: DataStorage,
-    body: web::Json<AdminPostSwapDrawTilesRequest>,
-    game_id: web::Path<String>,
-    srv: DataSocketServer,
-    req: HttpRequest,
-) -> impl Responder {
-    let auth_handler = AuthHandler::new(&storage, &req);
-
-    if !auth_handler.verify_admin() {
-        return AuthHandler::get_unauthorized();
-    }
-
-    let game_lock = { manager.lock().unwrap().get_game_mutex(&game_id) };
-    let _game_lock = game_lock.lock().unwrap();
-
-    let game_wrapper = GameWrapper::from_storage(&storage, &game_id, srv, None).await;
-
-    match game_wrapper {
-        Ok(mut game_wrapper) => {
-            game_wrapper
-                .handle_draw_wall_swap_tiles(&body.tile_id_a, &body.tile_id_b)
-                .await
-        }
         Err(err) => err,
     }
 }
@@ -1159,7 +1131,6 @@ impl MahjongServer {
                 .service(admin_post_game_move_player)
                 .service(admin_post_game_say_mahjong)
                 .service(admin_post_game_sort_hands)
-                .service(admin_post_game_swap_tiles)
                 .service(get_deck)
                 .service(get_health)
                 .service(get_ws)

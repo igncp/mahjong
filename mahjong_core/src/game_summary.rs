@@ -1,6 +1,7 @@
 use crate::{
     game::{GameStyle, GameVersion, Players},
     meld::{PlayerDiff, PossibleMeld},
+    table::BonusTiles,
     Board, Game, GameId, GamePhase, Hand, HandTile, Hands, PlayerId, Score, TileId, Wind,
 };
 use rustc_hash::FxHashMap;
@@ -52,8 +53,9 @@ impl OtherPlayerHands {
 #[ts(export)]
 pub struct GameSummary {
     pub board: Board,
+    pub bonus_tiles: BonusTiles,
     pub draw_wall_count: usize,
-    pub hand: Hand,
+    pub hand: Option<Hand>,
     pub id: GameId,
     pub other_hands: OtherPlayerHands,
     pub phase: GamePhase,
@@ -61,8 +63,8 @@ pub struct GameSummary {
     pub players: Players,
     pub round: RoundSummary,
     pub score: Score,
-    pub version: GameVersion,
     pub style: GameStyle,
+    pub version: GameVersion,
 }
 
 impl GameSummary {
@@ -92,8 +94,9 @@ impl GameSummary {
 
         Some(Self {
             board: game.table.board.clone(),
+            bonus_tiles: game.table.bonus_tiles.clone(),
             draw_wall_count,
-            hand: game.table.hands.get(player_id).clone(),
+            hand: game.table.hands.get(player_id),
             id: game.id.clone(),
             other_hands,
             phase: game.phase.clone(),
@@ -101,8 +104,8 @@ impl GameSummary {
             players: game.players.clone(),
             round,
             score: game.score.clone(),
-            version: game.version.clone(),
             style: game.style.clone(),
+            version: game.version.clone(),
         })
     }
 
@@ -111,15 +114,26 @@ impl GameSummary {
     }
 
     fn get_can_claim_tile(&self) -> bool {
-        self.hand.len() < self.style.tiles_after_claim() && self.round.discarded_tile.is_some()
+        if self.hand.is_none() {
+            return false;
+        }
+
+        self.hand.clone().unwrap().len() < self.style.tiles_after_claim()
+            && self.round.discarded_tile.is_some()
     }
 
     pub fn get_possible_melds(&self) -> Vec<PossibleMeld> {
+        let tested_hand = self.hand.clone();
+        if tested_hand.is_none() {
+            return vec![];
+        }
+
+        let mut tested_hand = tested_hand.unwrap();
+
         let mut possible_melds: Vec<PossibleMeld> = vec![];
         let can_claim_tile = self.get_can_claim_tile();
 
         let mut claimed_tile: Option<TileId> = None;
-        let mut tested_hand = self.hand.clone();
         let mut player_diff: PlayerDiff = None;
         let player_index = self
             .players

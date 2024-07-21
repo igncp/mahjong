@@ -25,7 +25,7 @@ Board: 一筒,二筒,三筒
 - P2: 八筒
 - P3: 九筒
 Board: 二萬,三筒...
-Turn: P1, Dealer: P1, Round: 1, Wind: East, Phase: Beginning
+Turn: P1, Dealer: P1, Round: 1, Wind: 東, Phase: Beginning
 Consecutive: 0, Discarded: 二萬
 "#
             .trim()

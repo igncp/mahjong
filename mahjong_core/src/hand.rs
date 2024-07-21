@@ -7,7 +7,7 @@ use crate::{
     PlayerId, Tile, TileId,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 use strum_macros::EnumIter;
 use ts_rs::TS;
 
@@ -53,29 +53,11 @@ impl HandTile {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Default, TS)]
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize, TS)]
 pub struct Hand {
     pub list: Vec<HandTile>,
+    #[serde(skip)]
     pub style: Option<GameStyle>,
-}
-
-impl<'de> Deserialize<'de> for Hand {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let v: Vec<HandTile> = Vec::deserialize(deserializer)?;
-        Ok(Self::new(v))
-    }
-}
-
-impl Serialize for Hand {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::ser::Serializer,
-    {
-        self.list.serialize(serializer)
-    }
 }
 
 type MeldsCollection<'a> = FxHashMap<String, Vec<&'a HandTile>>;
@@ -383,13 +365,14 @@ impl From<Hand> for Vec<TileId> {
 }
 
 pub type HandsMap = FxHashMap<PlayerId, Hand>;
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default, TS)]
+#[ts(export)]
 pub struct Hands(pub HandsMap);
 
 // Proxied
 impl Hands {
-    pub fn get(&self, player: &PlayerId) -> &Hand {
-        self.0.get(player).unwrap()
+    pub fn get(&self, player: &PlayerId) -> Option<Hand> {
+        self.0.get(player).cloned()
     }
 
     pub fn remove(&mut self, player: &PlayerId) -> Hand {

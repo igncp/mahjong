@@ -10,8 +10,9 @@ pub use github::{GithubAuth, GithubCallbackQuery};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use mahjong_core::PlayerId;
 use serde::{Deserialize, Serialize};
-use service_contracts::{AuthInfoSummary, Provider, ServicePlayer, UserPostSetAuthResponse};
+use service_contracts::{AuthInfoSummary, AuthProvider, ServicePlayer, UserPostSetAuthResponse};
 use tracing::{debug, error};
+use ts_rs::TS;
 use uuid::Uuid;
 
 mod github;
@@ -26,7 +27,8 @@ pub enum GetAuthInfo {
     PlayerId(PlayerId),
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, TS)]
+#[ts(export)]
 pub enum UserRole {
     Admin,
     Player,
@@ -66,8 +68,9 @@ pub struct AuthInfo {
     pub user_id: PlayerId,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Claims {
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
+struct TokenClaims {
     exp: usize,
     role: UserRole,
     sub: String,
@@ -281,7 +284,7 @@ impl<'a> AuthHandler<'a> {
         }
 
         let auth_info = self.auth_info.as_ref().unwrap();
-        let my_claims = Claims {
+        let my_claims = TokenClaims {
             exp: 9999999999,
             role: auth_info.role.clone(),
             sub: auth_info.user_id.clone(),
@@ -307,7 +310,7 @@ impl<'a> AuthHandler<'a> {
         Ok(response)
     }
 
-    fn get_token_claims(&self, outer_token: Option<&String>) -> Option<Claims> {
+    fn get_token_claims(&self, outer_token: Option<&String>) -> Option<TokenClaims> {
         let encoding_secret = std::env::var(ENV_AUTH_JWT_SECRET_KEY);
 
         if encoding_secret.is_err() {
@@ -335,7 +338,7 @@ impl<'a> AuthHandler<'a> {
             authorization.replace("Bearer ", "")
         };
 
-        let token_message = decode::<Claims>(
+        let token_message = decode::<TokenClaims>(
             &token,
             &DecodingKey::from_secret(&encoding_secret.into_bytes()),
             &Validation::new(Algorithm::HS256),
@@ -350,7 +353,7 @@ impl<'a> AuthHandler<'a> {
         Some(token_message.claims)
     }
 
-    fn get_verify_user_claims(claims: Option<Claims>, player_id: &PlayerId) -> bool {
+    fn get_verify_user_claims(claims: Option<TokenClaims>, player_id: &PlayerId) -> bool {
         if claims.is_none() {
             debug!("No claims for player_id: {player_id}");
             return false;
@@ -360,7 +363,7 @@ impl<'a> AuthHandler<'a> {
         claims.sub == *player_id
     }
 
-    fn get_verify_admin_claims(claims: Option<Claims>) -> bool {
+    fn get_verify_admin_claims(claims: Option<TokenClaims>) -> bool {
         if claims.is_none() {
             return false;
         }
@@ -423,15 +426,15 @@ impl<'a> AuthHandler<'a> {
         let user = user.unwrap();
         let summary = match user.data {
             AuthInfoData::Anonymous(_) => AuthInfoSummary {
-                provider: Provider::Anonymous,
+                provider: AuthProvider::Anonymous,
                 username: None,
             },
             AuthInfoData::Email(email) => AuthInfoSummary {
-                provider: Provider::Email,
+                provider: AuthProvider::Email,
                 username: Some(email.username),
             },
             AuthInfoData::Github(github) => AuthInfoSummary {
-                provider: Provider::Github,
+                provider: AuthProvider::Github,
                 username: Some(github.username),
             },
         };

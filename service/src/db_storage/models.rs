@@ -67,16 +67,17 @@ pub struct DieselGame {
     pub round_claimed_by: Option<PlayerId>,
     pub round_claimed_from: Option<PlayerId>,
     pub round_claimed_id: Option<i32>,
+    pub round_consecutive_same_seats: i32,
     pub round_dealer_index: i32,
+    pub round_east_player_index: i32,
     pub round_index: i32,
+    pub round_initial_winds: Option<i32>,
     pub round_player_index: i32,
     pub round_wall_tile_drawn: Option<i32>,
     pub round_wind: String,
+    pub style: String,
     pub updated_at: chrono::NaiveDateTime,
     pub version: GameVersion,
-    pub style: String,
-    pub round_consecutive_same_seats: i32,
-    pub round_east_player_index: i32,
 }
 
 #[derive(Identifiable, Insertable, Selectable, Queryable, Associations, Debug)]
@@ -106,12 +107,13 @@ pub struct DieselGameBoard {
     pub tile_index: i32,
 }
 
-#[derive(Insertable, Queryable, Clone)]
+#[derive(Insertable, Queryable, Clone, Debug)]
 #[diesel(table_name = game_draw_wall)]
 pub struct DieselGameDrawWall {
     pub game_id: GameId,
     pub tile_id: i32,
     pub tile_index: i32,
+    pub place: String,
 }
 
 #[derive(Insertable, Queryable, Clone)]

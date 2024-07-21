@@ -46,17 +46,18 @@ diesel::table! {
         round_claimed_by -> Nullable<Text>,
         round_claimed_from -> Nullable<Text>,
         round_claimed_id -> Nullable<Int4>,
+        round_consecutive_same_seats -> Int4,
         round_dealer_index -> Int4,
+        round_east_player_index -> Int4,
         round_index -> Int4,
+        round_initial_winds -> Nullable<Int4>,
         round_player_index -> Int4,
         round_wall_tile_drawn -> Nullable<Int4>,
         round_wind -> Text,
-        updated_at -> Timestamp,
-        version -> Text,
         #[max_length = 255]
         style -> Varchar,
-        round_consecutive_same_seats -> Int4,
-        round_east_player_index -> Int4,
+        updated_at -> Timestamp,
+        version -> Text,
     }
 }
 
@@ -69,10 +70,11 @@ diesel::table! {
 }
 
 diesel::table! {
-    game_draw_wall (game_id, tile_id) {
+    game_draw_wall (game_id, tile_id, place) {
         game_id -> Text,
         tile_id -> Int4,
         tile_index -> Int4,
+        place -> Text,
     }
 }
 

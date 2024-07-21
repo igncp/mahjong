@@ -36,7 +36,7 @@ export const useGameUI = ({
     ? serviceGameM.getPlayerHandWithoutMelds()
     : null;
 
-  const handMelds = (serviceGameSummary?.game_summary.hand.list || []).filter(
+  const handMelds = (serviceGameSummary?.game_summary.hand?.list || []).filter(
     (h) => !!h.set_id
   );
 
@@ -66,7 +66,7 @@ export const useGameUI = ({
         }),
         drop: ({ tileId }: { tileId: TileId }) => {
           const handWithoutMeldsNew = serviceGameM.getPlayerHandWithoutMelds();
-          const handIds = handWithoutMeldsNew.list.map((h) => h.id);
+          const handIds = (handWithoutMeldsNew?.list || []).map((h) => h.id);
           const tileIndex = handIds.findIndex((h) => h === tileId);
 
           if (tileIndex === -1) {

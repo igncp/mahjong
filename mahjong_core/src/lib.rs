@@ -5,7 +5,9 @@ pub use hand::{Hand, HandTile, SetId};
 pub use hand::{Hands, HandsMap};
 pub use score::{Score, ScoreItem, ScoreMap};
 use serde::{Deserialize, Serialize};
-pub use table::{Board, DrawWall, Table};
+use std::fmt::{self, Display, Formatter};
+use std::str::FromStr;
+pub use table::{Board, BonusTiles, DrawWall, DrawWallPlace, Table};
 pub use tile::{Tile, TileId};
 use ts_rs::TS;
 
@@ -19,6 +21,8 @@ mod macros;
 pub mod meld;
 pub mod round;
 pub mod score;
+#[cfg(feature = "summary")]
+mod summary_view;
 mod table;
 #[cfg(test)]
 mod tests;
@@ -41,7 +45,7 @@ pub struct SuitTile {
     pub suit: Suit,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, TS)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, TS)]
 #[ts(export)]
 pub enum Wind {
     East,
@@ -51,7 +55,7 @@ pub enum Wind {
 }
 
 // Note that this order is reversed to the compass directions, since it is counter-clockwise
-pub const WINDS_ROUND_ORDER: &[Wind] = &[Wind::East, Wind::South, Wind::West, Wind::North];
+pub const WINDS_ROUND_ORDER: &[Wind; 4] = &[Wind::East, Wind::South, Wind::West, Wind::North];
 pub const FLOWERS_ORDER: &[Flower] = &[
     Flower::Plum,
     Flower::Orchid,
@@ -117,4 +121,30 @@ pub enum Season {
 pub struct SeasonTile {
     pub id: TileId,
     pub value: Season,
+}
+
+impl FromStr for Wind {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "東" => Ok(Self::East),
+            "北" => Ok(Self::North),
+            "南" => Ok(Self::South),
+            "西" => Ok(Self::West),
+            _ => Err(()),
+        }
+    }
+}
+
+impl Display for Wind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let wind_str = match self {
+            Self::East => "東",
+            Self::North => "北",
+            Self::South => "南",
+            Self::West => "西",
+        };
+        write!(f, "{}", wind_str)
+    }
 }

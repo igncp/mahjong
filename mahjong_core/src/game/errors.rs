@@ -28,6 +28,11 @@ pub enum BreakMeldError {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, EnumIter)]
+pub enum DecideDealerError {
+    DuplicatedWinds,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, EnumIter)]
 pub enum InitialDrawError {
     NotEnoughTiles,
 }

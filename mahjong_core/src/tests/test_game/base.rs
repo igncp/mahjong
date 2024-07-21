@@ -9,7 +9,11 @@ mod test {
     #[test]
     fn test_draw_tile_from_wall_moves_tile() {
         let mut game = Game::new(None);
-        game.table.draw_wall = DrawWall::from_summary("三筒,四筒,五筒");
+        game.table.draw_wall.position_tiles(None);
+        let player_wind = game.get_player_wind();
+        game.table
+            .draw_wall
+            .replace_tail_summary(&player_wind, "五筒");
         game.table
             .hands
             .update_players_hands(&["一筒", "二筒", "", ""]);
@@ -17,7 +21,6 @@ mod test {
         let drawn_tile = game.draw_tile_from_wall();
         let expected_drawn_tile = Tile::from_summary("五筒").get_id();
 
-        assert_eq!(game.table.draw_wall, DrawWall::from_summary("三筒,四筒"));
         assert_eq!(drawn_tile, DrawTileResult::Normal(expected_drawn_tile));
         assert_eq!(game.round.wall_tile_drawn, Some(expected_drawn_tile));
         assert_eq!(
@@ -91,13 +94,15 @@ mod test {
 
     #[test]
     fn test_create_default_game() {
-        let game = Game::new(None);
+        let mut game = Game::new(None);
+
+        game.table.draw_wall.position_tiles(None);
 
         assert_eq!(game.players.len(), 4);
 
         for player in game.players.iter() {
             let hand = game.table.hands.get(player);
-            assert_eq!(hand.len(), 0);
+            assert_eq!(hand.unwrap().len(), 0);
             assert_eq!(game.score.get(player), Some(&0));
         }
 

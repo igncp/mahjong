@@ -2,6 +2,7 @@ use crate::{
     deck::DEFAULT_DECK, round::TileClaimed, HandTile, PlayerId, SetId, SuitTile, Tile, TileId,
 };
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 pub type PlayerDiff = Option<i32>;
 
@@ -196,7 +197,8 @@ pub fn get_is_pair(hand: &[&Tile]) -> bool {
     hand[0].is_same_content(hand[1])
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, TS)]
+#[ts(export)]
 pub struct PossibleMeld {
     pub discard_tile: Option<TileId>,
     pub is_mahjong: bool,

@@ -3,6 +3,7 @@ mod test {
     use crate::{
         deck::DEFAULT_DECK,
         game::{GameStyle, Players},
+        table::PositionTilesOpts,
         Game,
     };
     use pretty_assertions::assert_eq;
@@ -20,10 +21,22 @@ mod test {
             let player = num.to_string();
             players.push(player);
         }
-        let table = DEFAULT_DECK.create_table(&players);
+        let mut table = DEFAULT_DECK.create_table(&players);
+        table.draw_wall.position_tiles(None);
 
         assert_eq!(table.board.0.len(), 0);
-        assert_eq!(table.draw_wall.0.len(), 144);
+        assert_eq!(table.draw_wall.len(), 144);
         assert_eq!(table.hands.0.keys().len(), 4);
+
+        let mut table_dead_wall = DEFAULT_DECK.create_table(&players);
+        table_dead_wall
+            .draw_wall
+            .position_tiles(Some(PositionTilesOpts {
+                shuffle: None,
+                dead_wall: Some(true),
+            }));
+        assert_eq!(table_dead_wall.board.0.len(), 0);
+        assert_eq!(table_dead_wall.draw_wall.len(), 144 - 14);
+        assert_eq!(table_dead_wall.hands.0.keys().len(), 4);
     }
 }

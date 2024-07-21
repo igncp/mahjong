@@ -12,7 +12,7 @@ impl<'a> StandardAI<'a> {
         let game_clone = self.game.clone();
         let game_summary = GameSummary::from_game(&game_clone, player_id)?;
 
-        if !game_summary.hand.can_drop_tile() {
+        if !game_summary.hand.clone().unwrap().can_drop_tile() {
             return None;
         }
 
@@ -23,7 +23,7 @@ impl<'a> StandardAI<'a> {
 
         let mut drops: Vec<TileDrop> = vec![];
 
-        for tile in game_summary.hand.list.iter() {
+        for tile in game_summary.hand.unwrap().list.iter() {
             if tile.set_id.is_some() {
                 drops.push(TileDrop {
                     id: tile.id,

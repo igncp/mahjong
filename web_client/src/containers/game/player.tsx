@@ -1,6 +1,7 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { message } from "antd";
 import type { ServiceGameSummary } from "bindings/ServiceGameSummary";
+import type { UserGetLoadGameResponse } from "bindings/UserGetLoadGameResponse";
 import type { Wind } from "bindings/Wind";
 import { useRouter } from "next/router";
 import type { LegacyRef } from "react";
@@ -10,13 +11,7 @@ import { first } from "rxjs";
 
 import { SiteUrls } from "src/lib/site/urls";
 import { getTileInfo } from "src/lib/tile-info";
-import type {
-  Board,
-  GameId,
-  PlayerId,
-  SetId,
-  TUserLoadGameResponse,
-} from "src/sdk/core";
+import type { GameId, PlayerId, SetId } from "src/sdk/core";
 import { useIsMobile } from "src/sdk/hooks";
 import { HttpClient } from "src/sdk/http-client";
 import type { ModelState } from "src/sdk/service-game-summary";
@@ -45,7 +40,7 @@ export interface IProps {
 
 const Game = ({ gameId, userId }: IProps) => {
   const { i18n, t } = useTranslation();
-  const gameState = useState<null | TUserLoadGameResponse>(null);
+  const gameState = useState<null | UserGetLoadGameResponse>(null);
   const loadingState = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
   const isMobile = useIsMobile();
@@ -122,6 +117,8 @@ const Game = ({ gameId, userId }: IProps) => {
 
     const { hand } = serviceGameSummary.game_summary;
 
+    if (!hand?.list) return false;
+
     // This should be from API
     return hand.list.length === 14;
   };
@@ -160,10 +157,10 @@ const Game = ({ gameId, userId }: IProps) => {
 
   if (!serviceGameSummary) return null;
 
-  const { hand } = serviceGameSummary.game_summary;
+  const { bonus_tiles, hand } = serviceGameSummary.game_summary;
   const handWithoutMelds = serviceGameM.getPlayerHandWithoutMelds();
 
-  const setsIds = hand.list.reduce((acc, tile) => {
+  const setsIds = (hand?.list || []).reduce((acc, tile) => {
     if (tile.set_id) {
       acc.add(tile.set_id);
     }
@@ -188,7 +185,11 @@ const Game = ({ gameId, userId }: IProps) => {
 
   const canDrawTile =
     player.id === userId &&
+    serviceGameSummary.game_summary.hand?.list &&
     serviceGameSummary.game_summary.hand.list.length < 14;
+
+  const playerBonusTiles =
+    bonus_tiles[serviceGameSummary.game_summary.player_id];
 
   return (
     <PageContent headerCollapsible={isMobile}>
@@ -237,13 +238,16 @@ const Game = ({ gameId, userId }: IProps) => {
       <div>
         <Card
           title={
-            <Tooltip title={t("game.discardInfo")}>
-              {t("game.hand")}: {hand.list.length} <InfoCircleOutlined rev="" />
-            </Tooltip>
+            hand?.list ? (
+              <Tooltip title={t("game.discardInfo")}>
+                {t("game.hand")}: {hand.list.length}{" "}
+                <InfoCircleOutlined rev="" />
+              </Tooltip>
+            ) : null
           }
         >
           <div className={styles.handTiles}>
-            {handWithoutMelds.list.map((handTile, handTileIndex) => {
+            {(handWithoutMelds?.list || []).map((handTile, handTileIndex) => {
               const { hasItemOver, ...handTileProps } =
                 handTilesProps?.[handTileIndex] || {};
 
@@ -275,9 +279,14 @@ const Game = ({ gameId, userId }: IProps) => {
           type="info"
         />
         {(() => {
-          const board = gameState[0]?.game_summary.board as Board;
-          const lastTile = board[board?.length - 1];
-          const tile = serviceGameM.getTile(lastTile);
+          const board = gameState[0]?.game_summary.board;
+          const lastTile = board?.[board?.length - 1];
+
+          const tile =
+            typeof lastTile === "number"
+              ? serviceGameM.getTile(lastTile)
+              : lastTile;
+
           const claimTileTitle = tile ? getTileInfo(tile, i18n)?.[1] : null;
           const disabled = !gameState[0]?.game_summary.round.discarded_tile;
 
@@ -382,7 +391,10 @@ const Game = ({ gameId, userId }: IProps) => {
       </div>
       <div className={styles.smallGrid}>
         {Array.from(setsIds).map((setId) => {
-          const setTiles = hand.list.filter((tile) => tile.set_id === setId);
+          const setTiles = (hand?.list || []).filter(
+            (tile) => tile.set_id === setId
+          );
+
           const isConcealed = setTiles.every((tile) => tile.concealed);
 
           return (
@@ -424,7 +436,7 @@ const Game = ({ gameId, userId }: IProps) => {
           const meldByClaiming =
             possibleMeld.tiles.filter(
               (tileId) =>
-                serviceGameSummary.game_summary.hand.list.find(
+                (serviceGameSummary.game_summary.hand?.list || []).find(
                   (handTile) => handTile.id === tileId
                 ) === undefined
             ).length !== 0;
@@ -473,7 +485,7 @@ const Game = ({ gameId, userId }: IProps) => {
           }
 
           const sets = new Set(
-            playerHand.visible.list.map((tile) => tile.set_id)
+            playerHand.visible.list?.map((tile) => tile.set_id) || []
           );
 
           const otherPlayer = gameState[0]?.players[playerId];
@@ -518,6 +530,25 @@ const Game = ({ gameId, userId }: IProps) => {
 
           return acc;
         }, [] as React.ReactElement[])}
+        {!!playerBonusTiles?.length && (
+          <Card
+            className={styles.cardSmall}
+            title={t("game.bonusTiles", {
+              count: playerBonusTiles.length,
+            })}
+          >
+            <div className={styles.possibleMeld}>
+              <div>
+                {(playerBonusTiles || []).map((bonusTile) => (
+                  <TileImg
+                    key={bonusTile}
+                    tile={serviceGameM.getTile(bonusTile)}
+                  />
+                ))}
+              </div>
+            </div>
+          </Card>
+        )}
       </div>
       {contextHolder}
     </PageContent>

@@ -1,9 +1,11 @@
 pub use self::creation::GameNewOpts;
 pub use self::definition::{DrawTileResult, Game, GameId, GamePhase, GameStyle, GameVersion};
+use self::errors::DecideDealerError;
 pub use self::errors::{
     BreakMeldError, CreateMeldError, DiscardTileError, InitialDrawError, PassNullRoundError,
 };
 pub use self::players::{PlayerId, Players, PlayersVec};
+use crate::table::PositionTilesOpts;
 use crate::{
     deck::DEFAULT_DECK,
     hand::CanSayMahjongError,
@@ -14,8 +16,7 @@ use crate::{
     round::{Round, RoundTileClaimed},
     Hand, HandTile, TileId,
 };
-use rand::seq::SliceRandom;
-use rand::thread_rng;
+use crate::{Wind, WINDS_ROUND_ORDER};
 use rustc_hash::FxHashSet;
 use uuid::Uuid;
 
@@ -45,7 +46,7 @@ impl Game {
     }
 
     pub fn say_mahjong(&mut self, player_id: &PlayerId) -> Result<(), CanSayMahjongError> {
-        let hand = self.table.hands.get(player_id);
+        let hand = self.table.hands.get(player_id).unwrap();
 
         hand.can_say_mahjong()?;
 
@@ -62,7 +63,7 @@ impl Game {
     }
 
     pub fn pass_null_round(&mut self) -> Result<(), PassNullRoundError> {
-        if !self.table.draw_wall.0.is_empty() || self.round.tile_claimed.is_some() {
+        if self.table.draw_wall.can_draw() || self.round.tile_claimed.is_some() {
             for hand in self.table.hands.0.values() {
                 if hand.can_drop_tile() {
                     return Err(PassNullRoundError::HandCanDropTile);
@@ -87,38 +88,59 @@ impl Game {
         self.phase = GamePhase::DecidingDealer;
     }
 
-    pub fn decide_dealer(&mut self) {
+    pub fn decide_dealer(&mut self) -> Result<(), DecideDealerError> {
+        let mut new_players = self.players.clone();
+        let winds = self.round.get_initial_winds_slice();
+
+        winds.iter(|(player_index, player_wind)| {
+            let wind_index = WINDS_ROUND_ORDER
+                .iter()
+                .position(|w| w == player_wind)
+                .unwrap();
+
+            new_players.0[wind_index].clone_from(&self.players.0[player_index]);
+        });
+
         self.round.dealer_player_index = 0;
         self.round.east_player_index = 0;
         self.round.player_index = 0;
 
         self.phase = GamePhase::InitialShuffle;
+
+        Ok(())
     }
 
-    pub fn prepare_table(&mut self) {
+    pub fn prepare_table(&mut self, with_dead_wall: bool) {
         self.table = DEFAULT_DECK.create_table(&self.players);
-        self.table.draw_wall.0.shuffle(&mut thread_rng());
+        self.table.draw_wall.position_tiles(Some(PositionTilesOpts {
+            shuffle: Some(true),
+            dead_wall: Some(with_dead_wall),
+        }));
         self.phase = GamePhase::InitialDraw;
     }
 
     pub fn initial_draw(&mut self) -> Result<(), InitialDrawError> {
         let tiles_after_claim = self.style.tiles_after_claim();
 
-        for hand in self.table.hands.0.values_mut() {
-            for _ in 0..(tiles_after_claim - 1) {
-                let tile_id = self.table.draw_wall.0.pop();
+        for (player_id, hand) in self.table.hands.0.iter_mut() {
+            while hand.len() < tiles_after_claim - 1 {
+                let player_wind = self.round.get_player_wind(&self.players.0, player_id);
+                let tile_id = self.table.draw_wall.pop_for_wind(&player_wind);
 
                 if tile_id.is_none() {
                     return Err(InitialDrawError::NotEnoughTiles);
                 }
 
-                let tile = HandTile {
-                    id: tile_id.unwrap(),
-                    concealed: true,
-                    set_id: None,
-                };
+                let tile_id = tile_id.unwrap();
+                let is_bonus = DEFAULT_DECK.0.get(&tile_id).unwrap().is_bonus();
 
-                hand.push(tile);
+                if is_bonus {
+                    let bonus_tiles = self.table.bonus_tiles.get_or_create(player_id);
+
+                    bonus_tiles.push(tile_id);
+                } else {
+                    hand.push(HandTile::from_id(tile_id));
+                }
             }
         }
 
@@ -230,7 +252,7 @@ impl Game {
         let player_index = self
             .players
             .iter()
-            .position(|p| self.table.hands.get(p).len() == self.style.tiles_after_claim());
+            .position(|p| self.table.hands.get(p).unwrap().len() == self.style.tiles_after_claim());
 
         if player_index.is_none() {
             return melds;
@@ -244,6 +266,7 @@ impl Game {
             .hands
             .get(&player_id)
             .clone()
+            .unwrap()
             .list
             .into_iter()
             .filter(|t| t.set_id.is_none())
@@ -291,7 +314,15 @@ impl Game {
             return DrawTileResult::AlreadyDrawn;
         }
 
-        let tile_id = self.table.draw_wall.pop().unwrap();
+        let player_wind = self.get_player_wind();
+        let tile_id = self.table.draw_wall.pop_for_wind(&player_wind);
+
+        if tile_id.is_none() {
+            return DrawTileResult::WallExhausted;
+        }
+
+        let tile_id = tile_id.unwrap();
+
         let tile = DEFAULT_DECK.0.get(&tile_id).unwrap();
 
         if tile.is_bonus() {
@@ -319,7 +350,7 @@ impl Game {
         let player_with_max_tiles = self
             .players
             .iter()
-            .find(|p| self.table.hands.get(p).len() == self.style.tiles_after_claim());
+            .find(|p| self.table.hands.get(p).unwrap().len() == self.style.tiles_after_claim());
 
         if player_with_max_tiles.is_none() {
             return Err(DiscardTileError::NoPlayerCanDiscard);
@@ -382,6 +413,7 @@ impl Game {
         let tiles_set = tiles.iter().cloned().collect::<FxHashSet<TileId>>();
         let hand = self.table.hands.get(player_id);
         let sub_hand_tiles = hand
+            .unwrap()
             .list
             .iter()
             .filter(|t| tiles_set.contains(&t.id))
@@ -468,7 +500,10 @@ impl Game {
         if let Some(tile_claimed) = tile_claimed {
             tile_claimed.by?;
 
-            let hand = hand.unwrap_or(self.table.hands.get(player_id));
+            let hand = match hand {
+                Some(hand) => hand,
+                None => self.table.hands.0.get(player_id).unwrap(),
+            };
             if !hand.list.iter().any(|h| h.id == tile_claimed.id) {
                 return None;
             }
@@ -521,29 +556,17 @@ impl Game {
         true
     }
 
-    pub fn draw_wall_swap_tiles(&mut self, tile_id_a: &TileId, tile_id_b: &TileId) -> bool {
-        let draw_wall = &mut self.table.draw_wall;
-
-        let tile_index_a = draw_wall.0.iter().position(|t| t == tile_id_a);
-        let tile_index_b = draw_wall.0.iter().position(|t| t == tile_id_b);
-
-        if tile_index_a.is_none() || tile_index_b.is_none() {
-            return false;
-        }
-
-        let tile_index_a = tile_index_a.unwrap();
-        let tile_index_b = tile_index_b.unwrap();
-
-        draw_wall.0.swap(tile_index_a, tile_index_b);
-
-        true
-    }
-
     pub fn get_dealer(&self) -> Option<&PlayerId> {
         self.players.get(self.round.dealer_player_index)
     }
 
     pub fn update_version(&mut self) {
         self.version = Uuid::new_v4().to_string();
+    }
+
+    pub fn get_player_wind(&self) -> Wind {
+        let current_player = self.get_current_player();
+
+        self.round.get_player_wind(&self.players.0, &current_player)
     }
 }

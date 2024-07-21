@@ -14,13 +14,13 @@ use service_contracts::{
     AdminPostAIContinueRequest, AdminPostAIContinueResponse, AdminPostBreakMeldRequest,
     AdminPostBreakMeldResponse, AdminPostClaimTileResponse, AdminPostCreateMeldRequest,
     AdminPostCreateMeldResponse, AdminPostDiscardTileResponse, AdminPostDrawTileResponse,
-    AdminPostMovePlayerResponse, AdminPostSayMahjongResponse, AdminPostSwapDrawTilesResponse,
-    GameSettings, GameSettingsSummary, ServiceGame, ServiceGameSummary, ServicePlayer,
-    SocketMessage, UserPostAIContinueRequest, UserPostAIContinueResponse, UserPostBreakMeldRequest,
-    UserPostBreakMeldResponse, UserPostCreateGameResponse, UserPostCreateMeldRequest,
-    UserPostCreateMeldResponse, UserPostDiscardTileResponse, UserPostDrawTileResponse,
-    UserPostMovePlayerResponse, UserPostPassRoundResponse, UserPostSayMahjongResponse,
-    UserPostSetGameSettingsResponse, UserPostSortHandResponse,
+    AdminPostMovePlayerResponse, AdminPostSayMahjongResponse, GameSettings, GameSettingsSummary,
+    ServiceGame, ServiceGameSummary, ServicePlayer, SocketMessage, UserPostAIContinueRequest,
+    UserPostAIContinueResponse, UserPostBreakMeldRequest, UserPostBreakMeldResponse,
+    UserPostCreateGameResponse, UserPostCreateMeldRequest, UserPostCreateMeldResponse,
+    UserPostDiscardTileResponse, UserPostDrawTileResponse, UserPostMovePlayerResponse,
+    UserPostPassRoundResponse, UserPostSayMahjongResponse, UserPostSetGameSettingsResponse,
+    UserPostSortHandResponse,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::debug;
@@ -140,10 +140,10 @@ impl<'a> GameWrapper<'a> {
 
         self.sync_game_updated();
 
-        let game_summary: UserPostSayMahjongResponse =
-            ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
+        let game = ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
+        let response = UserPostSayMahjongResponse(game);
 
-        self.save_and_return(&game_summary, "Error saying mahjong")
+        self.save_and_return(&response, "Error saying mahjong")
             .await
     }
 
@@ -199,8 +199,9 @@ impl<'a> GameWrapper<'a> {
     }
 
     pub async fn handle_user_new_game(&self, player_id: &PlayerId) -> HttpResponse {
-        let response: UserPostCreateGameResponse =
+        let game_summary =
             ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
+        let response = UserPostCreateGameResponse(game_summary);
 
         self.save_and_return(response, "Error creating game").await
     }
@@ -243,12 +244,13 @@ impl<'a> GameWrapper<'a> {
         let existing_settings = self.service_game.settings.clone();
         self.service_game.settings = settings.to_game_settings(player_id, &existing_settings);
 
-        let game_summary: UserPostSetGameSettingsResponse =
+        let game_summary =
             ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
+        let response = UserPostSetGameSettingsResponse(game_summary);
 
         self.sync_game_updated();
 
-        self.save_and_return(game_summary, "Error setting game settings")
+        self.save_and_return(response, "Error setting game settings")
             .await
     }
 
@@ -290,8 +292,8 @@ impl<'a> GameWrapper<'a> {
 
         self.sync_game_updated();
 
-        let response: UserPostDrawTileResponse =
-            ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
+        let game = ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
+        let response = UserPostDrawTileResponse(game);
 
         self.save_and_return(&response, "Error when drawing tile")
             .await
@@ -306,33 +308,11 @@ impl<'a> GameWrapper<'a> {
 
         self.sync_game_updated();
 
-        let game_summary: UserPostPassRoundResponse =
+        let game_summary =
             ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
+        let response = UserPostPassRoundResponse(game_summary);
 
-        self.save_and_return(&game_summary, "Error passing round")
-            .await
-    }
-
-    pub async fn handle_draw_wall_swap_tiles(
-        &mut self,
-        tile_id_a: &TileId,
-        tile_id_b: &TileId,
-    ) -> HttpResponse {
-        let swapped = self
-            .service_game
-            .game
-            .draw_wall_swap_tiles(tile_id_a, tile_id_b);
-
-        if !swapped {
-            return HttpResponse::BadRequest().body("Error when swapping tiles");
-        }
-
-        self.sync_game_updated();
-
-        let response: AdminPostSwapDrawTilesResponse = self.service_game.clone();
-
-        self.save_and_return(&response, "Error when swapping tiles")
-            .await
+        self.save_and_return(&response, "Error passing round").await
     }
 
     pub async fn handle_admin_ai_continue(
@@ -441,8 +421,9 @@ impl<'a> GameWrapper<'a> {
             Ok(()) => {
                 self.sync_game_updated();
 
-                let response: UserPostMovePlayerResponse =
+                let game_summary =
                     ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
+                let response = UserPostMovePlayerResponse(game_summary);
 
                 self.save_and_return(response, "Error moving player").await
             }
@@ -473,8 +454,8 @@ impl<'a> GameWrapper<'a> {
                 .await
         } else {
             let player_id = self.service_game.game.get_current_player().clone();
-            let response: UserPostDiscardTileResponse =
-                ServiceGameSummary::from_service_game(&game, &player_id).unwrap();
+            let game_summary = ServiceGameSummary::from_service_game(&game, &player_id).unwrap();
+            let response = UserPostDiscardTileResponse(game_summary);
 
             self.save_and_return(&response, "Error when discarding the tile")
                 .await
@@ -526,8 +507,9 @@ impl<'a> GameWrapper<'a> {
 
         self.sync_game_updated();
 
-        let response: UserPostBreakMeldResponse =
+        let game =
             ServiceGameSummary::from_service_game(&self.service_game, &body.player_id).unwrap();
+        let response = UserPostBreakMeldResponse(game);
 
         self.save_and_return(&response, "Error when breaking meld")
             .await
@@ -577,8 +559,9 @@ impl<'a> GameWrapper<'a> {
 
         self.sync_game_updated();
 
-        let response: UserPostCreateMeldResponse =
+        let game =
             ServiceGameSummary::from_service_game(&self.service_game, &body.player_id).unwrap();
+        let response = UserPostCreateMeldResponse(game);
 
         self.save_and_return(&response, "Error when creating meld")
             .await
@@ -595,7 +578,7 @@ impl<'a> GameWrapper<'a> {
             Ok(_) => {
                 self.sync_game_updated();
 
-                let response: &AdminPostMovePlayerResponse = &self.service_game;
+                let response = AdminPostMovePlayerResponse(self.service_game.clone());
 
                 self.save_and_return(response, "Error moving player").await
             }
@@ -632,8 +615,9 @@ impl<'a> GameWrapper<'a> {
 
         self.sync_game_updated();
 
-        let response: UserPostSortHandResponse =
+        let game_summary =
             ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
+        let response = UserPostSortHandResponse(game_summary);
 
         debug!("Sorted hand for player: {:?}", player_id);
 
@@ -645,7 +629,7 @@ impl<'a> GameWrapper<'a> {
 
         if success {
             self.sync_game_updated();
-            let response: &AdminPostClaimTileResponse = &self.service_game;
+            let response = AdminPostClaimTileResponse(self.service_game.to_owned());
 
             self.save_and_return(response, "Error claiming tile").await
         } else {

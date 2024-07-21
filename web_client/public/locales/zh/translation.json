@@ -69,6 +69,7 @@
       "desc": "棄牌後下一回合的格擋時間"
     },
     "board": "遊戲板",
+    "bonusTiles_other": "獎勵牌: {{count}}",
     "breakMeld": "打破融合",
     "claiming": "如果領取麻將牌",
     "claimTile": "認領瓷磚",

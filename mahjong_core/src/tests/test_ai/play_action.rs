@@ -34,7 +34,9 @@ mod test {
                      Drawn: 三筒"
                 }
                 PlayExitLocation::StartGame => "Phase: Beginning",
-                PlayExitLocation::DecidedDealer => "Phase: Deciding Dealer",
+                PlayExitLocation::DecidedDealer => {
+                    "Phase: Deciding Dealer, Initial Winds: 東,南,西,北"
+                }
                 PlayExitLocation::InitialDraw => {
                     "Wall: Random
                      Phase: Initial Draw"
@@ -58,28 +60,29 @@ mod test {
                      - P3: 一筒,一筒,九筒,九筒 一萬,二萬,三萬 四萬,五萬,六萬 七萬,八萬,九萬
                      - P4: 一筒,一筒,九筒,九筒 一萬,二萬,三萬 四萬,五萬,六萬 七萬,八萬,九萬
                      Wall:
-                     Turn: P1, Dealer: P1, Round: 1, Wind: East, Phase: Playing"
+                     Turn: P1, Dealer: P1, Round: 1, Wind: 東, Phase: Playing"
                 }
                 PlayExitLocation::AIPlayerTurnPassed => {
                     "- P1: 一筒,一筒,九筒,九筒 一萬,二萬,三萬 四萬,五萬,六萬 七萬,八萬,九萬
                      - P2: 一筒,一筒,九筒,九筒 一萬,二萬,三萬 四萬,五萬,六萬 七萬,八萬,九萬
                      - P3: 一筒,一筒,九筒,九筒 一萬,二萬,三萬 四萬,五萬,六萬 七萬,八萬,九萬
                      - P4: 一筒,一筒,九筒,九筒 一萬,二萬,三萬 四萬,五萬,六萬 七萬,八萬,九萬
-                     Turn: P2, Dealer: P1, Round: 1, Wind: East, Phase: Playing
+                     Turn: P2, Dealer: P1, Round: 1, Wind: 東, Phase: Playing
                      Discarded: 二筒, Drawn: 二筒"
                 }
                 PlayExitLocation::AIPlayerTileDrawn => {
                     "Wall: Random
-                     Turn: P2, Dealer: P1, Round: 1, Wind: East, Phase: Playing"
+                     Turn: P2, Dealer: P1, Round: 1, Wind: 東, Phase: Playing"
                 }
                 PlayExitLocation::TileDrawn => {
                     "Wall: Random
-                     Turn: P1, Dealer: P1, Round: 1, Wind: East, Phase: Playing"
+                     Turn: P1, Dealer: P1, Round: 1, Wind: 東, Phase: Playing"
                 }
                 PlayExitLocation::InitialShuffle => "Phase: Initial Shuffle",
                 PlayExitLocation::InitialDrawError(e) => match e {
                     InitialDrawError::NotEnoughTiles => "Phase: Initial Draw",
                 },
+                PlayExitLocation::WaitingDealerOrder => "Phase: Deciding Dealer",
             };
 
             if summary.is_empty() {

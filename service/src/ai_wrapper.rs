@@ -22,6 +22,10 @@ impl<'a> AIWrapper<'a> {
             standard_ai.draw_tile_for_real_player = draw_tile_for_real_player;
         }
 
+        standard_ai.dealer_order_deterministic = Some(false);
+        // This should be a setting in future
+        standard_ai.with_dead_wall = false;
+
         Self {
             standard_ai,
             game_settings: &mut service_game.settings,

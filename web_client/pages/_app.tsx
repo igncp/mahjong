@@ -47,16 +47,16 @@ const setupApp = async () => {
         ? localStorage.setItem(TOKEN_KEY, token)
         : localStorage.removeItem(TOKEN_KEY);
     });
+
+    setBaseUrl(env.SERVICE_URL);
+
+    // This has an issue when building due to wasm
+    const { setupServiceGameSummary } = await import(
+      "src/lib/models/service-game-summary"
+    ).catch(() => ({ setupServiceGameSummary: () => {} }));
+
+    setupServiceGameSummary();
   }
-
-  setBaseUrl(env.SERVICE_URL);
-
-  // This has an issue when building due to wasm
-  const { setupServiceGameSummary } = await import(
-    "src/lib/models/service-game-summary"
-  ).catch(() => ({ setupServiceGameSummary: () => {} }));
-
-  setupServiceGameSummary();
 };
 
 setupApp();

@@ -16,9 +16,10 @@ fn average<T: Add<Output = T> + Div<Output = T> + Default + Copy + Into<f64>>(
 pub struct Stats {
     games_num: usize,
     games_per_second: Vec<(f32, usize)>,
-    winners: FxHashMap<PlayerId, u32>,
     rounds_num: Vec<u32>,
     start_time: chrono::NaiveTime,
+    top_scores: Vec<u32>,
+    winners: FxHashMap<PlayerId, u32>,
 }
 
 impl Stats {
@@ -28,6 +29,7 @@ impl Stats {
             games_per_second: vec![],
             rounds_num: vec![],
             start_time: Utc::now().time(),
+            top_scores: vec![],
             winners: FxHashMap::default(),
         }
     }
@@ -46,6 +48,8 @@ impl Stats {
 
         self.games_num += 1;
         self.rounds_num.push(game.round.round_index + 1);
+        let top_score = game.score.0.values().max().unwrap();
+        self.top_scores.push(*top_score);
     }
 
     pub fn print_if_interval(&mut self, seconds: usize) -> bool {
@@ -57,6 +61,9 @@ impl Stats {
             let games_per_s = (self.games_num as f32 - last_average.1 as f32) / diff as f32;
 
             self.games_per_second.push((games_per_s, self.games_num));
+            let top_score = *self.top_scores.iter().max().unwrap();
+
+            self.top_scores = vec![];
 
             let gps = self
                 .games_per_second
@@ -72,6 +79,7 @@ impl Stats {
             println!("Number of games: {:?}", self.games_num);
             println!("Average games per second: {:.2}", average_games_per_s);
             println!("Average rounds per game: {:.2}", average_rounds_per_game);
+            println!("Top score in last batch: {:?}", top_score);
             println!("---\n");
         }
 

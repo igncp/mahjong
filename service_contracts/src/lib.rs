@@ -3,8 +3,8 @@ use std::fmt::{self, Display};
 use ts_rs::TS;
 
 use mahjong_core::{
-    game::GameVersion, game_summary::GameSummary, hand::SetIdContent, Game, GameId, Hand, Hands,
-    PlayerId, TileId,
+    deck::DeckContent, game::GameVersion, game_summary::GameSummary, hand::SetIdContent, Game,
+    GameId, Hand, Hands, PlayerId, TileId,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::{Deserialize, Serialize};
@@ -36,7 +36,8 @@ impl Default for GameSettings {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct ServiceGame {
     pub created_at: i64,
     pub game: Game,
@@ -168,11 +169,14 @@ pub type AdminGetGamesResponse = Vec<ServicePlayerGame>;
 pub struct UserGetGamesQuery {
     pub player_id: String,
 }
-pub type UserGetGamesResponse = Vec<ServicePlayerGame>;
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct UserGetGamesResponse(pub Vec<ServicePlayerGame>);
 
 pub type AdminPostDrawTileResponse = Hand;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct AdminPostCreateMeldRequest {
     pub player_id: String,
     pub tiles: FxHashSet<TileId>,
@@ -186,53 +190,80 @@ pub struct AdminPostBreakMeldRequest {
 }
 pub type AdminPostBreakMeldResponse = Hand;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct AdminPostDiscardTileRequest {
     pub tile_id: TileId,
 }
 pub type AdminPostDiscardTileResponse = ServiceGame;
 
-pub type UserPostDiscardTileRequest = AdminPostDiscardTileRequest;
-pub type UserPostDiscardTileResponse = ServiceGameSummary;
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct UserPostDiscardTileRequest {
+    pub tile_id: TileId,
+}
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct UserPostDiscardTileResponse(pub ServiceGameSummary);
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct UserPostDrawTileRequest {
     pub game_version: GameVersion,
     pub player_id: PlayerId,
 }
-pub type UserPostDrawTileResponse = ServiceGameSummary;
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct UserPostDrawTileResponse(pub ServiceGameSummary);
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct UserPostCreateGameRequest {
     pub ai_player_names: Option<Vec<String>>,
     pub player_id: PlayerId,
 }
-pub type UserPostCreateGameResponse = ServiceGameSummary;
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct UserPostCreateGameResponse(pub ServiceGameSummary);
 
 pub type AdminPostMovePlayerRequest = ();
-pub type AdminPostMovePlayerResponse = ServiceGame;
+
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct AdminPostMovePlayerResponse(pub ServiceGame);
 
 pub type AdminPostSortHandsRequest = ();
-pub type AdminPostSortHandsResponse = Hands;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct AdminPostSortHandsResponse(pub Hands);
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct AdminPostClaimTileRequest {
     pub player_id: PlayerId,
 }
-pub type AdminPostClaimTileResponse = ServiceGame;
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct AdminPostClaimTileResponse(pub ServiceGame);
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
 pub struct UserLoadGameQuery {
     pub player_id: PlayerId,
 }
-pub type UserGetLoadGameResponse = ServiceGameSummary;
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct UserGetLoadGameResponse(pub ServiceGameSummary);
 
 #[derive(Deserialize, Serialize, TS)]
 #[ts(export)]
 pub struct UserPostMovePlayerRequest {
     pub player_id: PlayerId,
 }
-pub type UserPostMovePlayerResponse = ServiceGameSummary;
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct UserPostMovePlayerResponse(pub ServiceGameSummary);
 
 #[derive(Deserialize, Serialize, TS)]
 #[ts(export)]
@@ -241,7 +272,9 @@ pub struct UserPostSortHandRequest {
     pub player_id: PlayerId,
     pub tiles: Option<Vec<TileId>>,
 }
-pub type UserPostSortHandResponse = ServiceGameSummary;
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct UserPostSortHandResponse(pub ServiceGameSummary);
 
 #[derive(Deserialize, Serialize, TS)]
 #[ts(export)]
@@ -249,7 +282,9 @@ pub struct UserPostCreateMeldRequest {
     pub player_id: PlayerId,
     pub tiles: FxHashSet<TileId>,
 }
-pub type UserPostCreateMeldResponse = ServiceGameSummary;
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct UserPostCreateMeldResponse(pub ServiceGameSummary);
 
 #[derive(Deserialize, Serialize, TS)]
 #[ts(export)]
@@ -257,15 +292,9 @@ pub struct UserPostBreakMeldRequest {
     pub player_id: PlayerId,
     pub set_id: SetIdContent,
 }
-pub type UserPostBreakMeldResponse = ServiceGameSummary;
-
 #[derive(Deserialize, Serialize, TS)]
 #[ts(export)]
-pub struct AdminPostSwapDrawTilesRequest {
-    pub tile_id_a: TileId,
-    pub tile_id_b: TileId,
-}
-pub type AdminPostSwapDrawTilesResponse = ServiceGame;
+pub struct UserPostBreakMeldResponse(pub ServiceGameSummary);
 
 #[derive(Deserialize, Serialize, TS)]
 #[ts(export)]
@@ -285,27 +314,35 @@ pub struct AdminPostAIContinueResponse {
     pub changed: bool,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
 pub struct UserPostAIContinueRequest {
     pub player_id: PlayerId,
 }
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
 pub struct UserPostAIContinueResponse {
     pub service_game_summary: ServiceGameSummary,
     pub changed: bool,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
 pub struct UserPostClaimTileRequest {
     pub player_id: PlayerId,
 }
-pub type UserPostClaimTileResponse = ServiceGameSummary;
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct UserPostClaimTileResponse(pub ServiceGameSummary);
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
 pub struct UserPostSayMahjongRequest {
     pub player_id: PlayerId,
 }
-pub type UserPostSayMahjongResponse = ServiceGameSummary;
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct UserPostSayMahjongResponse(pub ServiceGameSummary);
 
 #[derive(Deserialize, Serialize, TS)]
 #[ts(export)]
@@ -313,7 +350,9 @@ pub struct UserPostSetGameSettingsRequest {
     pub player_id: PlayerId,
     pub settings: GameSettingsSummary,
 }
-pub type UserPostSetGameSettingsResponse = ServiceGameSummary;
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct UserPostSetGameSettingsResponse(pub ServiceGameSummary);
 
 #[derive(Deserialize, Serialize, Debug, TS)]
 #[ts(export)]
@@ -327,7 +366,8 @@ pub struct UserPostSetAuthResponse {
     pub token: String,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, TS)]
+#[ts(export)]
 pub struct UserPostSetAuthAnonRequest {
     pub id_token: String,
 }
@@ -342,7 +382,9 @@ pub struct UserPostSetAuthAnonResponse {
 pub struct UserPostPassRoundRequest {
     pub player_id: PlayerId,
 }
-pub type UserPostPassRoundResponse = ServiceGameSummary;
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct UserPostPassRoundResponse(pub ServiceGameSummary);
 
 #[derive(Deserialize, Serialize, TS)]
 #[ts(export)]
@@ -369,7 +411,7 @@ pub struct DashboardGame {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, TS)]
 #[ts(export)]
-pub enum Provider {
+pub enum AuthProvider {
     Anonymous,
     Email,
     Github,
@@ -378,7 +420,7 @@ pub enum Provider {
 #[derive(Deserialize, Serialize, Clone, TS)]
 #[ts(export)]
 pub struct AuthInfoSummary {
-    pub provider: Provider,
+    pub provider: AuthProvider,
     pub username: Option<String>,
 }
 
@@ -396,9 +438,18 @@ pub struct UserGetDashboardResponse {
 pub struct UserPatchInfoRequest {
     pub name: String,
 }
-pub type UserPatchInfoResponse = UserGetInfoResponse;
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct UserPatchInfoResponse {
+    pub name: String,
+    pub total_score: i32,
+}
 
-impl Display for Provider {
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct GetDeckResponse(pub DeckContent);
+
+impl Display for AuthProvider {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let result = match self {
             Self::Anonymous => "anonymous".to_string(),

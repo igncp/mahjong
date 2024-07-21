@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-
-set -e
-
-# This script is source from the flake
-
-cargo run --bin mahjong_cli -- "$@"

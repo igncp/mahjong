@@ -9,6 +9,7 @@
 - FE: search of a specific tile (show how many in board, how many in other melds)
 - FE: Audio effects
 - FE: Perspective of tiles
+- FE: Display the last tile in board in different size
 - BE: can say mahjong tests
 - BE: leaderboard using redis
 - BE: promote anonymous account to real account
@@ -16,18 +17,17 @@
 - BE: single script to setup everthing for development
 - CORE: Other rules from https://en.wikipedia.org/wiki/Mahjong
 - CORE: Replace bool returning functions with side effects
-- CORE: Divide the draw wall in four segments + dead wall
 - CORE: minimum points win support
+- CORE: dead wall functionality
 - CORE: Support declaring concealed melds
 - CORE: Support charleston in the drawing phase
+- CORE: Average rounds are too high in the simulation
 - CORE: Support the deciding of the dealer with dice
 - CORE: Bonus tiles directions
-- CORE: Drawing phase
 - CORE: Support three players: high effort
-- CORE: Shuffle wall as a specific step of the game
-- FS: Use the deciding of dealer and drawing phases
 - FS: Refactor logic to support multiple types of games (e.g. listed in wikipedia)
     - Move most business logic to the core (rust/ts)
+- FS: Support rhythym of play setting
 - Move other projects bash scripts to the main scripts dir
 - Convert DB operations into transactions
 - Change player names when they are AI

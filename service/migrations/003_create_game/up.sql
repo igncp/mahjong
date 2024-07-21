@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS game (
+    created_at TIMESTAMP NOT NULL,
+    id TEXT PRIMARY KEY UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    phase TEXT NOT NULL,
+    round_claimed_by TEXT NULL,
+    round_claimed_from TEXT NULL,
+    round_claimed_id INT NULL,
+    round_consecutive_same_seats INT NOT NULL DEFAULT 0,
+    round_dealer_index INT NOT NULL,
+    round_east_player_index INT NOT NULL DEFAULT 0,
+    round_index INT NOT NULL,
+    round_initial_winds INT NULL DEFAULT NULL,
+    round_player_index INT NOT NULL,
+    round_wall_tile_drawn INT NULL,
+    round_wind TEXT NOT NULL,
+    style VARCHAR(255) NOT NULL DEFAULT 'Hong Kong',
+    updated_at TIMESTAMP NOT NULL,
+    version TEXT NOT NULL
+);

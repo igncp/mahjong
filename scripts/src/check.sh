@@ -26,7 +26,7 @@ run_check() {
 
   (cd web_client &&
     bun install &&
-    bun run lint:fix &&
+    bash scripts/format_bindings.sh &&
     bun run lint &&
     bun run test &&
     bun run build)

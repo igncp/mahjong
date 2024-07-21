@@ -9,7 +9,7 @@ mod test {
         let first_player = game.players.first();
         let mut game_summary = GameSummary::from_game(&game, first_player).unwrap();
 
-        game_summary.hand = Hand::from_summary("一萬,一萬,一萬,三索,三索");
+        game_summary.hand = Some(Hand::from_summary("一萬,一萬,一萬,三索,三索"));
 
         let discarded_tile = Tile::id_from_summary("三索");
         game_summary.board.0.push(discarded_tile);

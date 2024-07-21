@@ -1,0 +1,9 @@
+mod test_ai;
+mod test_deck;
+mod test_game;
+mod test_game_summary;
+mod test_hand;
+mod test_meld;
+mod test_round;
+mod test_score;
+mod test_table;

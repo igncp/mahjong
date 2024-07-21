@@ -69,35 +69,26 @@ const Game = ({ gameId }: IProps) => {
             gap: "10px",
           }}
         >
-          {serviceGame.game.table.draw_wall.map((tileId, tileIndex) => {
-            const isLast =
-              tileIndex === serviceGame.game.table.draw_wall.length - 1;
+          {Object.entries(serviceGame.game.table.draw_wall.segments)
+            .map(([wind, segment]) =>
+              segment.map((tileId) => ({
+                tileId,
+                wind,
+              }))
+            )
+            .flat()
+            .map(({ tileId, wind }, tileIndex, arr) => {
+              const isLast = tileIndex === arr.length - 1;
 
-            return (
-              <span
-                key={tileId}
-                onClick={async () => {
-                  const lastTile =
-                    serviceGame.game.table.draw_wall[
-                      serviceGame.game.table.draw_wall.length - 1
-                    ];
-
-                  const newGame = await HttpClient.adminDrawWallSwapTiles(
-                    gameId,
-                    {
-                      tile_id_a: tileId,
-                      tile_id_b: lastTile,
-                    }
-                  );
-
-                  setServiceGame(newGame);
-                }}
-                style={{ cursor: !isLast ? "pointer" : "default" }}
-              >
-                {serviceGameM.getTileString(tileId)}
-              </span>
-            );
-          })}
+              return (
+                <span
+                  key={tileId}
+                  style={{ cursor: !isLast ? "pointer" : "default" }}
+                >
+                  [{serviceGameM.getTileString(tileId)}, {wind}]
+                </span>
+              );
+            })}
         </span>
       </p>
       <p>

@@ -102,18 +102,20 @@ const GameBoard = ({
           const isCurrentPlayer =
             player.id === serviceGameSummary.game_summary.player_id;
 
-          const playerVisibleMelds = new Set(
-            isCurrentPlayer
-              ? serviceGameSummary.game_summary.hand.list
-                  .filter((h) => !h.concealed)
-                  .map((h) => h.set_id)
-                  .filter(Boolean)
-              : serviceGameSummary.game_summary.other_hands[
-                  player.id
-                ]?.visible.list
-                  .map((handTile) => handTile.set_id)
-                  .filter(Boolean)
-          ).size;
+          const playerVisibleMelds = serviceGameSummary.game_summary.hand?.list
+            ? new Set(
+                isCurrentPlayer
+                  ? serviceGameSummary.game_summary.hand.list
+                      .filter((h) => !h.concealed)
+                      .map((h) => h.set_id)
+                      .filter(Boolean)
+                  : serviceGameSummary.game_summary.other_hands[
+                      player.id
+                    ]?.visible.list
+                      .map((handTile) => handTile.set_id)
+                      .filter(Boolean)
+              ).size
+            : 0;
 
           const tooltip = (
             <>
@@ -122,6 +124,14 @@ const GameBoard = ({
               <span>
                 {t("game.points", {
                   count: serviceGameSummary.game_summary.score[player.id],
+                })}
+              </span>
+              <br />
+              <span>
+                {t("game.bonusTiles", {
+                  count:
+                    serviceGameSummary.game_summary.bonus_tiles[player.id]
+                      ?.length || 0,
                 })}
               </span>
             </>

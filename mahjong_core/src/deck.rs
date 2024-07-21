@@ -1,6 +1,7 @@
 use lazy_static::lazy_static;
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::{
     game::Players, table::BonusTiles, Board, Dragon, DragonTile, DrawWall, Flower, FlowerTile,
@@ -87,7 +88,8 @@ lazy_static! {
     pub static ref DEFAULT_DECK: Deck = Deck(DECK_CONTENT.clone());
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct Deck(pub DeckContent);
 
 impl Deck {
@@ -103,7 +105,7 @@ impl Deck {
 
     pub fn create_table(&self, players: &Players) -> Table {
         let Self(deck_content) = self;
-        let draw_wall = DrawWall(deck_content.keys().cloned().collect::<Vec<TileId>>());
+        let draw_wall = DrawWall::new(deck_content.keys().cloned().collect::<Vec<TileId>>());
 
         let hands_map = players
             .iter()

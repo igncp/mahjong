@@ -185,7 +185,7 @@ impl Storage for DBStorage {
         let score = DieselGameScore::read_from_game(&mut connection, id);
         let board = DieselGameBoard::read_from_game(&mut connection, id);
         let draw_wall = DieselGameDrawWall::read_from_game(&mut connection, id);
-        let hands = DieselGameHand::read_from_game(&mut connection, id);
+        let (hands, bonus_tiles) = DieselGameHand::read_from_game(&mut connection, id);
         let settings = DieselGameSettings::read_from_game(&mut connection, id);
 
         if settings.is_none() {
@@ -197,6 +197,7 @@ impl Storage for DBStorage {
         game.set_players(&Players(game_players));
         game.score = score;
         game.table.hands = hands;
+        game.table.bonus_tiles = bonus_tiles;
         game.table.board = board;
         game.table.draw_wall = draw_wall;
 

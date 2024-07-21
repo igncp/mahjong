@@ -1,10 +1,12 @@
+import type { Deck } from "bindings/Deck";
 import type { GameSettingsSummary } from "bindings/GameSettingsSummary";
 import type { Hand } from "bindings/Hand";
+import type { PossibleMeld } from "bindings/PossibleMeld";
 import type { ServiceGameSummary } from "bindings/ServiceGameSummary";
 import type { Tile } from "bindings/Tile";
 import { Subject } from "rxjs";
 
-import type { Deck, PossibleMeld, TileId } from "./core";
+import type { TileId } from "./core";
 import { HttpClient } from "./http-client";
 
 export type ModelState<A> = [A, (v: A) => void];
@@ -13,8 +15,8 @@ let deck: Deck;
 let format_tile: (tile: Tile) => string;
 let get_possible_melds_summary: (game: ServiceGameSummary) => PossibleMeld[];
 
-export const setDeck = (newDeck: Deck) => {
-  deck = newDeck;
+export const setDeck = (newDeck: Map<keyof Deck, Deck[keyof Deck]>) => {
+  deck = Object.fromEntries(newDeck.entries());
 };
 
 export const getDeck = () => deck;
@@ -23,7 +25,7 @@ export const setFormatTile = (newFormatTile: typeof format_tile) => {
   format_tile = newFormatTile;
 };
 
-export const getTile = (tileId: TileId) => deck.get(tileId) as Tile;
+export const getTile = (tileId: TileId) => deck[tileId] as Tile;
 
 export const setGetPossibleMeldsSummary = (
   newGetPossibleMeldsSummary: typeof get_possible_melds_summary
@@ -120,7 +122,6 @@ export class ModelServiceGameSummary {
     this.loadingState[1](true);
 
     HttpClient.userDiscardTile(this.gameState[0].game_summary.id, {
-      player_id: this.gameState[0].game_summary.player_id,
       tile_id: tileId,
     }).subscribe({
       error: () => {
@@ -133,8 +134,10 @@ export class ModelServiceGameSummary {
     });
   }
 
-  getPlayerHandWithoutMelds(): Hand {
+  getPlayerHandWithoutMelds(): Hand | null {
     const { hand } = this.gameState[0].game_summary;
+
+    if (!hand?.list) return null;
 
     return { ...hand, list: hand.list.filter((tile) => !tile.set_id) };
   }
@@ -151,6 +154,8 @@ export class ModelServiceGameSummary {
 
   getPossibleMelds(): PossibleMeld[] {
     try {
+      if (this.gameState[0].game_summary.phase !== "Playing") return [];
+
       const possibleMelds = get_possible_melds_summary(this.gameState[0]);
 
       return possibleMelds;
@@ -272,7 +277,11 @@ export class ModelServiceGameSummary {
         tileIdToIndex.set(tileId, index);
       });
 
-      const newHand = { ...this.gameState[0].game_summary.hand };
+      const prevHand = this.gameState[0].game_summary.hand;
+
+      if (!prevHand) return;
+
+      const newHand = { ...prevHand };
 
       newHand.list = newHand.list.slice().sort((a, b) => {
         const aIndex = tileIdToIndex.get(a.id);

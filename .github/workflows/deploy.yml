@@ -10,11 +10,11 @@ on:
     inputs:
       deploySkip:
         required: false
-        description: "Skip (web|service|front)"
+        description: "Skip (service|front)"
         default: ""
       deployOnly:
         required: false
-        description: "Only (web|service|front)"
+        description: "Only (service|front)"
         default: ""
 
 jobs:

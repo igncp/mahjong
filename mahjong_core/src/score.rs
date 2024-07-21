@@ -101,7 +101,7 @@ impl Game {
             .get(winner_player)
             .unwrap_or(&empty_bonus);
 
-        if self.table.draw_wall.0.is_empty() {
+        if self.table.draw_wall.is_empty() {
             rules.push(ScoringRule::LastWallTile);
         }
 

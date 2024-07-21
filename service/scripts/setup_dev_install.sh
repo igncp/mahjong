@@ -24,3 +24,5 @@ DATABASE_URL=$(grep DATABASE_URL .env | cut -d '=' -f2- | sed 's/"//g')
 DATABASE_URL=$DATABASE_URL diesel setup
 
 DATABASE_URL=$DATABASE_URL diesel migration run
+
+echo "Database setup complete for $DATABASE_URL"

@@ -19,10 +19,12 @@
     in {
       devShell = pkgs.mkShell {
         TS_RS_EXPORT_DIR = "../web_client/bindings";
+        RUST_BACKTRACE = 1;
+
         shellHook =
           ''
             export PATH=$PATH:$HOME/.cargo/bin
-            export PATH=$PATH:$PWD/cli
+            export PATH=$PATH:$PWD
           ''
           + (
             if (is-docker-ci || is-checks-ci)
@@ -38,7 +40,7 @@
           )
           ++ (
             if is-docker-ci == false && is-checks-ci == false
-            then [libargon2]
+            then [libargon2 gh]
             else []
           )
           ++ rust.extra-shell-packages;
