@@ -56,28 +56,6 @@ $card-row-offset: 55px;
   }
 }
 
-.handTiles {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-
-  img {
-    cursor: pointer;
-    margin-bottom: $common-gap;
-  }
-}
-
-.meldTile {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: $common-gap;
-  align-items: center;
-  justify-content: center;
-
-  padding: $common-gap 0;
-}
-
 .smallGrid {
   @include desktop-above {
     grid-template-rows: $card-height-desktop + $card-row-offset;
@@ -99,37 +77,4 @@ $card-row-offset: 55px;
   @media (max-width: $small-width) {
     grid-template-columns: 1fr;
   }
-}
-
-.otherPlayer {
-  display: flex;
-  flex-direction: row;
-  gap: $common-gap;
-  align-items: center;
-
-  padding: 0 $common-gap;
-}
-
-.possibleMeld {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: $common-gap;
-  align-items: center;
-  justify-content: center;
-
-  padding: $common-gap 0;
-
-  background-color: white;
-}
-
-.topInfo {
-  @include mobile {
-    justify-content: center;
-  }
-
-  display: flex;
-  flex-wrap: wrap;
-  gap: $common-gap;
-  align-items: center;
 }

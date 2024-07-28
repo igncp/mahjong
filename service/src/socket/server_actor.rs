@@ -3,49 +3,16 @@ use rand::{self, rngs::ThreadRng, Rng};
 use rustc_hash::{FxHashMap, FxHashSet};
 use service_contracts::SocketMessage;
 
-#[derive(Message)]
-#[rtype(result = "()")]
-pub struct SocketMessageStr(pub String);
-
-#[derive(Message)]
-#[rtype(usize)]
-pub struct SocketMessageConnect {
-    pub room: String,
-    pub addr: Recipient<SocketMessageStr>,
-}
-
-#[derive(Message)]
-#[rtype(result = "()")]
-pub struct SocketMessageDisconnect {
-    pub id: usize,
-}
-
-#[derive(Message)]
-#[rtype(result = "()")]
-pub struct SocketClientMessage {
-    pub id: usize,
-    pub msg: SocketMessage,
-    pub room: String,
-}
-
-type RoomName = String;
-
-pub struct SocketMessageListRooms;
-
-impl actix::Message for SocketMessageListRooms {
-    type Result = Vec<RoomName>;
-}
-
-pub struct SocketMessageListSessions;
-
-impl actix::Message for SocketMessageListSessions {
-    type Result = FxHashMap<RoomName, usize>;
-}
+use super::{
+    session::{RoomId, SessionId},
+    SocketClientMessage, SocketMessageConnect, SocketMessageDisconnect, SocketMessageListRooms,
+    SocketMessageListSessions, SocketMessageStr,
+};
 
 #[derive(Debug)]
 pub struct MahjongWebsocketServer {
-    sessions: FxHashMap<usize, Recipient<SocketMessageStr>>,
-    rooms: FxHashMap<String, FxHashSet<usize>>,
+    sessions: FxHashMap<SessionId, Recipient<SocketMessageStr>>,
+    rooms: FxHashMap<RoomId, FxHashSet<SessionId>>,
     rng: ThreadRng,
 }
 
@@ -59,15 +26,13 @@ impl MahjongWebsocketServer {
             rng: rand::thread_rng(),
         }
     }
-}
 
-impl MahjongWebsocketServer {
-    fn send_message(&self, room: &str, message: &SocketMessage, skip_id: usize) {
+    fn send_message(&self, room: &str, message: &SocketMessage, skip_id: SessionId) {
         let message = serde_json::to_string(&message).unwrap();
         if let Some(sessions) = self.rooms.get(room) {
-            for id in sessions {
-                if *id != skip_id {
-                    if let Some(addr) = self.sessions.get(id) {
+            for session_id in sessions {
+                if *session_id != skip_id {
+                    if let Some(addr) = self.sessions.get(session_id) {
                         addr.do_send(SocketMessageStr(message.to_owned()));
                     }
                 }
@@ -81,17 +46,17 @@ impl Actor for MahjongWebsocketServer {
 }
 
 impl Handler<SocketMessageConnect> for MahjongWebsocketServer {
-    type Result = usize;
+    type Result = SessionId;
 
     fn handle(&mut self, msg: SocketMessageConnect, _: &mut Context<Self>) -> Self::Result {
         let sent_msg = SocketMessage::PlayerJoined;
         self.send_message(&msg.room, &sent_msg, 0);
-        let id = self.rng.gen::<usize>();
-        self.sessions.insert(id, msg.addr);
+        let session_id = self.rng.gen::<SessionId>();
+        self.sessions.insert(session_id, msg.addr);
 
-        self.rooms.entry(msg.room).or_default().insert(id);
+        self.rooms.entry(msg.room).or_default().insert(session_id);
 
-        id
+        session_id
     }
 }
 
@@ -99,7 +64,7 @@ impl Handler<SocketMessageDisconnect> for MahjongWebsocketServer {
     type Result = ();
 
     fn handle(&mut self, msg: SocketMessageDisconnect, _: &mut Context<Self>) {
-        let mut rooms: Vec<String> = Vec::new();
+        let mut rooms: Vec<RoomId> = Vec::new();
         if self.sessions.remove(&msg.id).is_some() {
             for (name, sessions) in &mut self.rooms {
                 if sessions.remove(&msg.id) {

@@ -22,9 +22,12 @@ impl<'a> AIWrapper<'a> {
             standard_ai.draw_tile_for_real_player = draw_tile_for_real_player;
         }
 
+        if !service_game.settings.auto_sort_players.is_empty() {
+            standard_ai.sort_on_initial_draw = true;
+        }
+
         standard_ai.dealer_order_deterministic = Some(false);
-        // This should be a setting in future
-        standard_ai.with_dead_wall = false;
+        standard_ai.with_dead_wall = service_game.settings.dead_wall;
 
         Self {
             standard_ai,
@@ -48,10 +51,12 @@ impl<'a> AIWrapper<'a> {
             });
 
         let current_player = self.standard_ai.game.get_current_player();
-        self.standard_ai.sort_on_draw = self
-            .game_settings
-            .auto_sort_players
-            .contains(&current_player);
+        if let Some(current_player) = current_player {
+            self.standard_ai.sort_on_draw = self
+                .game_settings
+                .auto_sort_players
+                .contains(&current_player);
+        }
 
         let result = self.standard_ai.play_action();
 

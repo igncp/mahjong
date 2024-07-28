@@ -64,7 +64,7 @@ impl GamesLoop {
                         continue;
                     }
 
-                    game_wrapper.unwrap().handle_server_ai_continue().await;
+                    let _ = game_wrapper.unwrap().handle_server_ai_continue().await;
                 }
             }
         });

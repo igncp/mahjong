@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod test {
+    use crate::deck::DEFAULT_DECK;
     use crate::hand::HandPossibleMeld;
     use crate::meld::{get_is_chow, get_is_kong, get_is_pung, PlayerDiff, SetCheckOpts};
     use crate::{Hand, Tile};
@@ -54,10 +55,15 @@ mod test {
             parsed_arr.iter().enumerate()
         {
             let sub_hand = Hand::from_summary(tiles);
+            let sub_hand_slice = sub_hand
+                .list
+                .iter()
+                .map(|h| &DEFAULT_DECK.0[h.id])
+                .collect::<Vec<&Tile>>();
             let opts = SetCheckOpts {
                 board_tile_player_diff: *board_tile_player_diff,
                 claimed_tile: claimed_tile.map(Tile::id_from_summary),
-                sub_hand: &sub_hand.into(),
+                sub_hand: &sub_hand_slice,
             };
 
             assert_eq!(func(&opts), *expected_result, "index: {index}");

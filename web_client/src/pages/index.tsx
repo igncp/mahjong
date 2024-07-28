@@ -8,7 +8,7 @@ const Home = () => {
   const { asPath } = useRouter();
   const routes = asPath.split("#");
   const mainPath = routes[1] || "";
-  const paths = mainPath.split("/");
+  const paths = mainPath.split("/").filter((path) => path);
 
   // This hook has issues in the page level
   const { t } =
@@ -24,12 +24,12 @@ const Home = () => {
       )}
       {(() => {
         switch (true) {
-          case paths[1] === "game":
+          case paths[0] === "game":
             return (
               <GameScreen
-                gameId={paths[2] as string}
-                gameType={paths[3] || ""}
-                userId={paths[4] || ""}
+                gameId={paths[1] as string}
+                gameType={paths[2] || ""}
+                userId={paths[3] || ""}
               />
             );
 

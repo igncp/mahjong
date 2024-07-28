@@ -37,14 +37,13 @@ mod test {
     fn test_can_say_mahjong() {
         for error in CanSayMahjongError::iter() {
             let summary = match error {
-                CanSayMahjongError::CantDrop => "".to_string(),
+                CanSayMahjongError::CantDrop => "",
                 CanSayMahjongError::NotPair => {
                     "一萬,二萬 一筒,一筒,一筒 二筒,二筒,二筒 三筒,三筒,三筒 四筒,四筒,四筒"
-                        .to_string()
                 }
             };
 
-            let result = Hand::from_summary(&summary).can_say_mahjong();
+            let result = Hand::from_summary(summary).can_say_mahjong();
 
             assert_eq!(error, result.unwrap_err());
         }

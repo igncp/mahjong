@@ -4,6 +4,7 @@ export type GameSettingsSummary = {
   ai_enabled: boolean;
   auto_sort: boolean;
   auto_stop_claim_meld: boolean;
+  dead_wall: boolean;
   discard_wait_ms: null | number;
   fixed_settings: boolean;
   last_discard_time: string;

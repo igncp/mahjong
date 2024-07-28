@@ -5,7 +5,8 @@ mod test {
 
     #[test]
     fn test_get_possible_melds() {
-        let game = Game::new(None);
+        let mut game = Game::new(None);
+        game.start_with_players();
         let first_player = game.players.first();
         let mut game_summary = GameSummary::from_game(&game, first_player).unwrap();
 

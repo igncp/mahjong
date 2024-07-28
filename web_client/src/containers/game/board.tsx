@@ -30,9 +30,9 @@ export type BoardPlayer = {
 };
 
 interface IProps {
-  activePlayer: BoardPlayer["id"];
+  activePlayer: BoardPlayer["id"] | undefined;
   canDropInBoard: boolean;
-  dealerPlayer: BoardPlayer["id"];
+  dealerPlayer: BoardPlayer["id"] | undefined;
   isMobile: boolean;
   players: [BoardPlayer, BoardPlayer, BoardPlayer, BoardPlayer];
   serviceGameM: ModelServiceGameSummary;
@@ -55,9 +55,23 @@ const GameBoard = ({
   const [displaySettingsModal, setDisplaySettingsModal] = useState(false);
   const { t } = useTranslation();
 
-  const bannerDisplay = `${t("game.board")} (${
-    serviceGameSummary.game_summary.board.length
-  } / 92)`;
+  const playerIndex = players.findIndex(
+    (player) => player.id === serviceGameSummary.game_summary.player_id,
+  );
+
+  const sortedPlayers = [
+    ...players.slice(playerIndex),
+    ...players.slice(0, playerIndex),
+  ];
+
+  const bannerDisplay = `${t("game.board")}: ${t(
+    "game.boardRemaining",
+    "{{existing}}, {{count}} remaining",
+    {
+      count: serviceGameSummary.game_summary.draw_wall_count,
+      existing: serviceGameSummary.game_summary.board.length,
+    },
+  )}`;
 
   return (
     <div className={[styles.wrapper, isMobile ? styles.mobile : ""].join(" ")}>
@@ -89,15 +103,15 @@ const GameBoard = ({
                 <TileImg tile={tile} />
               </span>
             );
-          }
+          },
         )}
-        {players.map((player, playerIndex) => {
+        {sortedPlayers.map((player, idx) => {
           const userStyle = [
             styles.userBottom,
             styles.userLeft,
             styles.userTop,
             styles.userRight,
-          ][playerIndex];
+          ][idx];
 
           const isCurrentPlayer =
             player.id === serviceGameSummary.game_summary.player_id;
@@ -113,7 +127,7 @@ const GameBoard = ({
                       player.id
                     ]?.visible.list
                       .map((handTile) => handTile.set_id)
-                      .filter(Boolean)
+                      .filter(Boolean),
               ).size
             : 0;
 
@@ -151,7 +165,7 @@ const GameBoard = ({
                     {dealerPlayer === player.id && (
                       <span
                         className={[styles.dealerIcon, styles.boardIcon].join(
-                          " "
+                          " ",
                         )}
                       >
                         <DealerIcon rev="" />
@@ -161,13 +175,13 @@ const GameBoard = ({
                       (_, index) => (
                         <span
                           className={[styles.meldIcon, styles.boardIcon].join(
-                            " "
+                            " ",
                           )}
                           key={index}
                         >
                           <MeldIcon rev="" />
                         </span>
-                      )
+                      ),
                     )}
                   </span>
                 </span>

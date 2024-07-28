@@ -13,9 +13,10 @@ pub enum GamePhase {
     Beginning,
     DecidingDealer,
     End,
-    InitialShuffle,
     InitialDraw,
+    InitialShuffle,
     Playing,
+    WaitingPlayers,
 }}
 
 derive_game_common! {
@@ -67,8 +68,9 @@ impl Display for GamePhase {
             Self::DecidingDealer => write!(f, "Deciding Dealer"),
             Self::End => write!(f, "End"),
             Self::InitialDraw => write!(f, "Initial Draw"),
-            Self::Playing => write!(f, "Playing"),
             Self::InitialShuffle => write!(f, "Initial Shuffle"),
+            Self::Playing => write!(f, "Playing"),
+            Self::WaitingPlayers => write!(f, "Waiting Players"),
         }
     }
 }

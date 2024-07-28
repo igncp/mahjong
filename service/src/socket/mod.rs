@@ -1,8 +1,10 @@
-pub use server::{
-    MahjongWebsocketServer, SocketClientMessage, SocketMessageConnect, SocketMessageDisconnect,
-    SocketMessageListRooms, SocketMessageListSessions, SocketMessageStr,
+pub use messages::{
+    SocketClientMessage, SocketMessageConnect, SocketMessageDisconnect, SocketMessageListRooms,
+    SocketMessageListSessions, SocketMessageStr,
 };
+pub use server_actor::MahjongWebsocketServer;
 pub use session::MahjongWebsocketSession;
 
-mod server;
+mod messages;
+mod server_actor;
 mod session;

@@ -7,3 +7,4 @@ mod test_meld;
 mod test_round;
 mod test_score;
 mod test_table;
+mod utils;

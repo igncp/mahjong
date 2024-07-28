@@ -22,5 +22,10 @@ pub fn setup_logs() {
         .with_ansi(false)
         .finish();
 
+    if logger_level == Level::DEBUG {
+        std::env::set_var("RUST_LOG", "debug");
+        env_logger::init();
+    }
+
     tracing::subscriber::set_global_default(subscriber).unwrap();
 }

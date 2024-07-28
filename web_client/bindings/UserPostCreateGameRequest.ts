@@ -2,5 +2,7 @@
 
 export type UserPostCreateGameRequest = {
   ai_player_names: Array<string> | null;
+  auto_sort_own: boolean | null;
+  dead_wall: boolean | null;
   player_id: string;
 };

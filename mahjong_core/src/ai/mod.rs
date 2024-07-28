@@ -18,6 +18,7 @@ pub struct StandardAI<'a> {
     pub draw_tile_for_real_player: bool,
     pub game: &'a mut Game,
     pub sort_on_draw: bool,
+    pub sort_on_initial_draw: bool,
     pub with_dead_wall: bool,
 }
 
@@ -29,13 +30,13 @@ pub enum PlayExitLocation {
     AutoStoppedDrawMahjong,
     AutoStoppedDrawNormal,
     ClaimedTile,
+    CompletedPlayers,
     CouldNotClaimTile,
     DecidedDealer,
     InitialDraw,
     InitialDrawError(InitialDrawError),
     InitialShuffle,
     MeldCreated,
-    NoAIPlayers,
     NoAction,
     NoAutoDrawTile,
     RoundPassed,
@@ -45,6 +46,7 @@ pub enum PlayExitLocation {
     TileDrawn,
     TurnPassed,
     WaitingDealerOrder,
+    WaitingPlayers,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -78,19 +80,25 @@ impl<'a> StandardAI<'a> {
             draw_tile_for_real_player: true,
             game,
             sort_on_draw: false,
+            sort_on_initial_draw: false,
             with_dead_wall: false,
         }
     }
 
     pub fn play_action(&mut self) -> PlayActionResult {
-        if self.ai_players.is_empty() {
-            return PlayActionResult {
-                changed: false,
-                exit_location: PlayExitLocation::NoAIPlayers,
-            };
-        }
-
         match self.game.phase {
+            GamePhase::WaitingPlayers => {
+                return match self.game.complete_players() {
+                    Ok(_) => PlayActionResult {
+                        changed: true,
+                        exit_location: PlayExitLocation::CompletedPlayers,
+                    },
+                    Err(_) => PlayActionResult {
+                        changed: false,
+                        exit_location: PlayExitLocation::WaitingPlayers,
+                    },
+                };
+            }
             GamePhase::InitialShuffle => {
                 self.game.prepare_table(self.with_dead_wall);
 
@@ -137,6 +145,12 @@ impl<'a> StandardAI<'a> {
             }
             GamePhase::InitialDraw => match self.game.initial_draw() {
                 Ok(_) => {
+                    if self.sort_on_initial_draw {
+                        for player in self.game.table.hands.0.clone().keys() {
+                            self.game.table.hands.sort_player_hand(player);
+                        }
+                    }
+
                     return PlayActionResult {
                         changed: true,
                         exit_location: PlayExitLocation::InitialDraw,
@@ -223,7 +237,7 @@ impl<'a> StandardAI<'a> {
             }
         }
 
-        let current_player = self.game.get_current_player();
+        let current_player = self.game.get_current_player().unwrap();
 
         if self.ai_players.contains(&current_player) {
             let is_tile_claimed = self.game.round.tile_claimed.is_some();
@@ -234,7 +248,7 @@ impl<'a> StandardAI<'a> {
                 match tile_drawn {
                     DrawTileResult::Bonus(_) | DrawTileResult::Normal(_) => {
                         if let DrawTileResult::Normal(_) = tile_drawn {
-                            if self.sort_on_draw {
+                            if self.sort_on_initial_draw {
                                 self.game.table.hands.sort_player_hand(&current_player);
                             }
                         }
@@ -384,7 +398,10 @@ impl<'a> StandardAI<'a> {
 
     pub fn get_is_after_discard(&self) -> bool {
         let current_player = self.game.get_current_player();
-        let current_hand = self.game.table.hands.get(&current_player);
+        if current_player.is_none() {
+            return false;
+        }
+        let current_hand = self.game.table.hands.get(&current_player.unwrap());
 
         current_hand.unwrap().len() < self.game.style.tiles_after_claim()
             && self.game.round.tile_claimed.is_some()

@@ -18,6 +18,7 @@ pub struct GameSettings {
     pub ai_enabled: bool,
     pub auto_sort_players: FxHashSet<PlayerId>,
     pub auto_stop_claim_meld: FxHashSet<PlayerId>,
+    pub dead_wall: bool,
     pub discard_wait_ms: Option<i32>,
     pub fixed_settings: bool,
     pub last_discard_time: i128,
@@ -29,6 +30,7 @@ impl Default for GameSettings {
             ai_enabled: true,
             auto_sort_players: FxHashSet::default(),
             auto_stop_claim_meld: FxHashSet::default(),
+            dead_wall: false,
             discard_wait_ms: Some(1000),
             fixed_settings: false,
             last_discard_time: 0,
@@ -52,6 +54,7 @@ pub struct GameSettingsSummary {
     pub ai_enabled: bool,
     pub auto_sort: bool,
     pub auto_stop_claim_meld: bool,
+    pub dead_wall: bool,
     pub discard_wait_ms: Option<i32>,
     pub fixed_settings: bool,
     pub last_discard_time: String,
@@ -63,6 +66,7 @@ impl GameSettingsSummary {
             ai_enabled: settings.ai_enabled,
             auto_sort: settings.auto_sort_players.iter().any(|p| p == player_id),
             auto_stop_claim_meld: settings.auto_stop_claim_meld.iter().any(|p| p == player_id),
+            dead_wall: settings.dead_wall,
             discard_wait_ms: settings.discard_wait_ms,
             fixed_settings: settings.fixed_settings,
             last_discard_time: settings.last_discard_time.to_string(),
@@ -220,6 +224,8 @@ pub struct UserPostDrawTileResponse(pub ServiceGameSummary);
 #[ts(export)]
 pub struct UserPostCreateGameRequest {
     pub ai_player_names: Option<Vec<String>>,
+    pub auto_sort_own: Option<bool>,
+    pub dead_wall: Option<bool>,
     pub player_id: PlayerId,
 }
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -353,6 +359,10 @@ pub struct UserPostSetGameSettingsRequest {
 #[derive(Deserialize, Serialize, TS)]
 #[ts(export)]
 pub struct UserPostSetGameSettingsResponse(pub ServiceGameSummary);
+
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct UserPostJoinGameResponse(pub PlayerId);
 
 #[derive(Deserialize, Serialize, Debug, TS)]
 #[ts(export)]

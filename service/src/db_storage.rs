@@ -131,11 +131,13 @@ impl Storage for DBStorage {
         DieselPlayer::update_from_game(&mut connection, service_game);
 
         let diesel_game_extra = DieselGameExtra {
-            created_at: chrono::NaiveDateTime::from_timestamp_millis(service_game.created_at)
-                .unwrap(),
+            created_at: chrono::DateTime::from_timestamp_millis(service_game.created_at)
+                .unwrap()
+                .naive_utc(),
             game: service_game.game.clone(),
-            updated_at: chrono::NaiveDateTime::from_timestamp_millis(service_game.updated_at)
-                .unwrap(),
+            updated_at: chrono::DateTime::from_timestamp_millis(service_game.updated_at)
+                .unwrap()
+                .naive_utc(),
         };
 
         let diesel_game = DieselGame::from_raw(&diesel_game_extra);
@@ -144,6 +146,7 @@ impl Storage for DBStorage {
 
         let diesel_game_players = DieselGamePlayer::from_game(&service_game.game);
         DieselGamePlayer::update(&mut connection, &diesel_game_players, &service_game.game);
+
         DieselGameScore::update_from_game(&mut connection, service_game);
         DieselGameBoard::update_from_game(&mut connection, service_game);
         DieselGameDrawWall::update_from_game(&mut connection, service_game);
@@ -194,7 +197,7 @@ impl Storage for DBStorage {
 
         let game_extra = result.unwrap();
         let mut game = game_extra.game;
-        game.set_players(&Players(game_players));
+        game.players = Players(game_players);
         game.score = score;
         game.table.hands = hands;
         game.table.bonus_tiles = bonus_tiles;
@@ -202,11 +205,11 @@ impl Storage for DBStorage {
         game.table.draw_wall = draw_wall;
 
         let service_game = ServiceGame {
-            created_at: game_extra.created_at.timestamp_millis(),
+            created_at: game_extra.created_at.and_utc().timestamp_millis(),
             game,
             players,
             settings: settings.unwrap(),
-            updated_at: game_extra.updated_at.timestamp_millis(),
+            updated_at: game_extra.updated_at.and_utc().timestamp_millis(),
         };
 
         Ok(Some(service_game))

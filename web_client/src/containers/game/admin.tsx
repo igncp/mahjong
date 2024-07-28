@@ -18,7 +18,7 @@ const Game = ({ gameId }: IProps) => {
   const router = useRouter();
 
   const [serviceGame, setServiceGame] = useState<null | TAdminGetGameResponse>(
-    null
+    null,
   );
 
   useEffect(() => {
@@ -74,7 +74,7 @@ const Game = ({ gameId }: IProps) => {
               segment.map((tileId) => ({
                 tileId,
                 wind,
-              }))
+              })),
             )
             .flat()
             .map(({ tileId, wind }, tileIndex, arr) => {
@@ -116,7 +116,7 @@ const Game = ({ gameId }: IProps) => {
         const handWithoutMelds = hand.list.filter((tile) => !tile.set_id);
 
         const playerPossibleMelds = possibleMelds.filter(
-          (p) => p.player_id === player.id
+          (p) => p.player_id === player.id,
         );
 
         const setsIds = hand.list.reduce((acc, tile) => {
@@ -144,7 +144,7 @@ const Game = ({ gameId }: IProps) => {
                       if (canDiscardTile) {
                         const newGame = await HttpClient.adminDiscardTile(
                           gameId,
-                          { tile_id: handTile.id }
+                          { tile_id: handTile.id },
                         );
 
                         setServiceGame(newGame);
@@ -161,7 +161,7 @@ const Game = ({ gameId }: IProps) => {
               </li>
               {Array.from(setsIds).map((setId) => {
                 const setTiles = hand.list.filter(
-                  (tile) => tile.set_id === setId
+                  (tile) => tile.set_id === setId,
                 );
 
                 const isConcealed = setTiles.every((tile) => tile.concealed);
@@ -182,7 +182,7 @@ const Game = ({ gameId }: IProps) => {
                             {
                               player_id: player.id,
                               set_id: setId,
-                            }
+                            },
                           );
 
                           serviceGame.game.table.hands[player.id] = newHand;
@@ -210,7 +210,7 @@ const Game = ({ gameId }: IProps) => {
                         {
                           player_id: player.id,
                           tiles: playerPossibleMeld.tiles,
-                        }
+                        },
                       );
 
                       serviceGame.game.table.hands[player.id] = handResponse;

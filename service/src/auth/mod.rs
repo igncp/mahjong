@@ -15,6 +15,9 @@ use tracing::{debug, error};
 use ts_rs::TS;
 use uuid::Uuid;
 
+pub use self::errors::{AuthInfoSummaryError, UnauthorizedError};
+
+mod errors;
 mod github;
 
 pub type Username = String;
@@ -138,14 +141,24 @@ impl<'a> AuthHandler<'a> {
         Ok(Some(matches))
     }
 
-    pub async fn validate_anon_user(&mut self, id_token: &String) -> Result<Option<bool>, String> {
+    pub async fn validate_anon_user(
+        &mut self,
+        id_token: &String,
+    ) -> Result<Option<bool>, UnauthorizedError> {
         let salt = Uuid::new_v4().to_string();
         let config = Config::default();
-        let hashed_token =
-            argon2::hash_encoded(id_token.as_bytes(), salt.as_bytes(), &config).unwrap();
+        let hashed_token = argon2::hash_encoded(id_token.as_bytes(), salt.as_bytes(), &config)
+            .map_err(|_| {
+                error!("Error hashing token");
+                UnauthorizedError
+            })?;
 
         let auth_info_opts = GetAuthInfo::AnonymousToken(hashed_token.clone());
-        let auth_info = self.storage.get_auth_info(auth_info_opts).await?;
+        let auth_info = self
+            .storage
+            .get_auth_info(auth_info_opts)
+            .await
+            .map_err(|_| UnauthorizedError)?;
 
         if auth_info.is_none() {
             debug!("Not found auth_info for id_token: {id_token}");
@@ -217,9 +230,12 @@ impl<'a> AuthHandler<'a> {
             id: user_id.clone(),
         };
 
+        let random_suffix = Uuid::new_v4().to_string().replace('-', "")[0..6].to_string();
+        let name = format!("Anonymous User {}", random_suffix);
+
         let player = ServicePlayer {
             id: user_id.clone(),
-            name: "Anonymous User".to_string(),
+            name,
             created_at: get_timestamp().to_string(),
 
             ..ServicePlayer::default()
@@ -373,16 +389,26 @@ impl<'a> AuthHandler<'a> {
         claims.role == UserRole::Admin
     }
 
-    pub fn verify_user(&self, player_id: &PlayerId) -> bool {
+    pub fn verify_user(&self, player_id: &PlayerId) -> Result<(), UnauthorizedError> {
         let claims = self.get_token_claims(None);
 
-        AuthHandler::get_verify_user_claims(claims, player_id)
+        let is_user = AuthHandler::get_verify_user_claims(claims, player_id);
+
+        if !is_user {
+            return Err(UnauthorizedError);
+        }
+
+        Ok(())
     }
 
-    pub fn get_user_from_token(&self) -> Option<String> {
+    pub fn get_user_from_token(&self) -> Result<String, UnauthorizedError> {
         let claims = self.get_token_claims(None);
 
-        claims.map(|c| c.sub)
+        if claims.is_none() {
+            return Err(UnauthorizedError);
+        }
+
+        Ok(claims.unwrap().sub)
     }
 
     pub fn verify_user_token(&self, player_id: &PlayerId, token: &String) -> bool {
@@ -391,10 +417,16 @@ impl<'a> AuthHandler<'a> {
         AuthHandler::get_verify_user_claims(claims, player_id)
     }
 
-    pub fn verify_admin(&self) -> bool {
+    pub fn verify_admin(&self) -> Result<(), UnauthorizedError> {
         let claims = self.get_token_claims(None);
 
-        AuthHandler::get_verify_admin_claims(claims)
+        let is_admin = AuthHandler::get_verify_admin_claims(claims);
+
+        if !is_admin {
+            return Err(UnauthorizedError);
+        }
+
+        Ok(())
     }
 
     pub fn verify_admin_token(&self, token: &String) -> bool {
@@ -407,8 +439,10 @@ impl<'a> AuthHandler<'a> {
         HttpResponse::Unauthorized().body("Unauthorized")
     }
 
-    pub async fn get_auth_info_summary(&self) -> Option<AuthInfoSummary> {
-        let user_id = self.get_user_from_token()?;
+    pub async fn get_auth_info_summary(&self) -> Result<AuthInfoSummary, AuthInfoSummaryError> {
+        let user_id = self
+            .get_user_from_token()
+            .map_err(|_| AuthInfoSummaryError::Unauthorized)?;
 
         let user = self
             .storage
@@ -416,14 +450,13 @@ impl<'a> AuthHandler<'a> {
             .await;
 
         if user.is_err() {
-            return None;
+            return Err(AuthInfoSummaryError::DatabaseError);
         }
 
-        let user = user.unwrap();
+        let user = user
+            .unwrap()
+            .map_or_else(|| Err(AuthInfoSummaryError::DatabaseError), Ok)?;
 
-        user.as_ref()?;
-
-        let user = user.unwrap();
         let summary = match user.data {
             AuthInfoData::Anonymous(_) => AuthInfoSummary {
                 provider: AuthProvider::Anonymous,
@@ -439,6 +472,6 @@ impl<'a> AuthHandler<'a> {
             },
         };
 
-        Some(summary)
+        Ok(summary)
     }
 }

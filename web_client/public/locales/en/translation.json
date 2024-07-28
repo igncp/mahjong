@@ -32,9 +32,13 @@
     }
   },
   "code": "Code",
+  "copied": "Copied",
+  "copyClipboard": "Copy to clipboard",
   "dashboard": {
     "authUsername": "Auth username",
+    "autoSortOwn": "Automatically sort own tiles after drawing a tile",
     "cancel": "Cancel",
+    "create": "Create",
     "defaultPlayerName": "Player {{number}}",
     "editName": "Edit the name",
     "name": {
@@ -44,16 +48,14 @@
     "newGame": "Create a new game",
     "no": "No",
     "openGame": "Open this game?",
-    "playerNum1": "1",
-    "playerNum2": "2",
-    "playerNum3": "3",
-    "playerNum4": "4",
+    "playersNum": "Number of real players",
     "save": "Save",
     "table": {
       "created": "Created at",
       "id": "ID",
       "played": "Last played at"
     },
+    "useDeadWall": "Use the dead wall (14 unused tiles)",
     "userPoints_one": "{{count}} points",
     "userPoints_other": "{{count}} points",
     "yes": "Yes"
@@ -70,12 +72,15 @@
       "desc": "Block time for next turn pass after discard"
     },
     "board": "Board",
+    "boardRemaining_one": "{{existing}}, {{count}} remaining",
+    "boardRemaining_other": "{{existing}}, {{count}} remaining",
     "bonusTiles_one": "Bonus tile: {{count}}",
     "bonusTiles_other": "Bonus tiles: {{count}}",
     "breakMeld": "Break meld",
     "claiming": "claiming",
     "claimTile": "Claim tile",
     "continueAI": "Continue AI",
+    "copyLink": "Copy this link and share with them:",
     "createMeld": "Create meld",
     "currentDealer": "current dealer:",
     "currentTurn": "Current turn",
@@ -103,6 +108,7 @@
     "points_other": "{{count}} points",
     "possibleMeld": "Possible meld",
     "sayMahjong": "Say Mahjong",
+    "scanQR": "Or tell them to scan this QR code:",
     "sortHand": "Sort hand",
     "visibleMeld": "Meld of {{player}}",
     "wait": {
@@ -112,6 +118,7 @@
       "block": "Block",
       "none": "None"
     },
+    "waitingPlayers": "Waiting for other players to join ...",
     "wind": {
       "east": "East",
       "north": "North",
@@ -122,6 +129,11 @@
   "header": {
     "logout": "Log out",
     "title": "Mahjong"
+  },
+  "join": {
+    "errorJoiningGame": "Error joining game",
+    "joinGame": "Do you want to join this game:",
+    "loginToJoin": "You need to login to join the game."
   },
   "list": {
     "empty": "No data"

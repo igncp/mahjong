@@ -118,15 +118,14 @@ impl Hand {
 
     pub fn sort_default(&mut self) {
         self.list.sort_by(|a, b| {
-            let tile_a = DEFAULT_DECK.0.get(&a.id);
-            let tile_b = DEFAULT_DECK.0.get(&b.id);
+            let tile_a = &DEFAULT_DECK.0.get(a.id);
+            let tile_b = &DEFAULT_DECK.0.get(b.id);
+
             if tile_a.is_none() || tile_b.is_none() {
                 return std::cmp::Ordering::Equal;
             }
 
-            let (tile_a, tile_b) = (tile_a.unwrap(), tile_b.unwrap());
-
-            tile_a.cmp_custom(tile_b)
+            tile_a.unwrap().cmp_custom(tile_b.unwrap())
         });
     }
 
@@ -206,7 +205,7 @@ impl Hand {
             .list
             .iter()
             .filter(|t| t.set_id.is_none())
-            .map(|t| DEFAULT_DECK.0.get(&t.id).unwrap())
+            .map(|t| &DEFAULT_DECK.0[t.id])
             .collect();
 
         let is_pair = get_is_pair(&tiles_without_meld);
@@ -249,19 +248,11 @@ impl Hand {
 
         for first_tile_index in 0..hand_filtered.len() {
             let first_tile = hand_filtered[first_tile_index].id;
-            let first_tile_full = DEFAULT_DECK.0.get(&first_tile);
-            if first_tile_full.is_none() {
-                continue;
-            }
-            let first_tile_full = first_tile_full.unwrap();
+            let first_tile_full = &DEFAULT_DECK.0[first_tile];
 
             for second_tile_index in (first_tile_index + 1)..hand_filtered.len() {
                 let second_tile = hand_filtered[second_tile_index].id;
-                let second_tile_full = DEFAULT_DECK.0.get(&second_tile);
-                if second_tile_full.is_none() {
-                    continue;
-                }
-                let second_tile_full = second_tile_full.unwrap();
+                let second_tile_full = &DEFAULT_DECK.0[second_tile];
 
                 if !first_tile_full.is_same_type(second_tile_full) {
                     continue;
@@ -269,16 +260,12 @@ impl Hand {
 
                 for third_tile_index in (second_tile_index + 1)..hand_filtered.len() {
                     let third_tile = hand_filtered[third_tile_index].id;
-                    let third_tile_full = DEFAULT_DECK.0.get(&third_tile);
-                    if third_tile_full.is_none() {
-                        continue;
-                    }
-                    let third_tile_full = third_tile_full.unwrap();
+                    let third_tile_full = &DEFAULT_DECK.0[third_tile];
                     if !first_tile_full.is_same_type(third_tile_full) {
                         continue;
                     }
 
-                    let sub_hand = vec![first_tile, second_tile, third_tile];
+                    let sub_hand = [first_tile_full, second_tile_full, third_tile_full];
 
                     let opts = SetCheckOpts {
                         board_tile_player_diff,
@@ -289,30 +276,27 @@ impl Hand {
                     if get_is_pung(&opts) || get_is_chow(&opts) {
                         let meld = HandPossibleMeld {
                             is_mahjong: false,
-                            tiles: sub_hand.clone(),
+                            tiles: vec![first_tile, second_tile, third_tile],
                         };
                         melds.push(meld);
                     }
 
                     for forth_tile in hand_filtered.iter().skip(third_tile_index + 1) {
-                        let forth_tile_full = DEFAULT_DECK.0.get(&forth_tile.id);
-                        if forth_tile_full.is_none() {
-                            continue;
-                        }
-                        let forth_tile_full = forth_tile_full.unwrap();
-                        if !first_tile_full.is_same_type(forth_tile_full) {
-                            continue;
-                        }
+                        let forth_tile_full = &DEFAULT_DECK.0[forth_tile.id];
 
-                        let mut full_sub_hand = sub_hand.clone();
-                        full_sub_hand.push(forth_tile.id);
                         let mut opts = opts.clone();
-                        opts.sub_hand = &full_sub_hand;
+                        let sub_hand_inner = [
+                            first_tile_full,
+                            second_tile_full,
+                            third_tile_full,
+                            forth_tile_full,
+                        ];
+                        opts.sub_hand = &sub_hand_inner;
 
                         if get_is_kong(&opts) {
                             let meld = HandPossibleMeld {
                                 is_mahjong: false,
-                                tiles: full_sub_hand.clone(),
+                                tiles: vec![first_tile, second_tile, third_tile, forth_tile.id],
                             };
                             melds.push(meld);
                         }

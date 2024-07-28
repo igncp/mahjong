@@ -75,7 +75,7 @@ const Settings = ({ serviceGameM, serviceGameSummary }: IProps) => {
         value: "no",
       },
     ],
-    [t]
+    [t],
   );
 
   const autoStopDrawMeldOptions: SelectOption[] = useMemo(
@@ -89,7 +89,7 @@ const Settings = ({ serviceGameM, serviceGameSummary }: IProps) => {
         value: "no",
       },
     ],
-    [t]
+    [t],
   );
 
   const discardWaitMsOptions: SelectOption[] = useMemo(
@@ -115,7 +115,7 @@ const Settings = ({ serviceGameM, serviceGameSummary }: IProps) => {
         value: "block",
       },
     ],
-    [t]
+    [t],
   );
 
   const onAutoSortChange = (value: string) => {
@@ -169,7 +169,7 @@ const Settings = ({ serviceGameM, serviceGameSummary }: IProps) => {
           <Select
             defaultValue={
               convertDiscardWaitMsValue(
-                serviceGameSummary.settings.discard_wait_ms
+                serviceGameSummary.settings.discard_wait_ms,
               ) || "none"
             }
             disabled={!serviceGameSummary.settings.ai_enabled}

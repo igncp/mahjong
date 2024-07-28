@@ -15,8 +15,8 @@ let deck: Deck;
 let format_tile: (tile: Tile) => string;
 let get_possible_melds_summary: (game: ServiceGameSummary) => PossibleMeld[];
 
-export const setDeck = (newDeck: Map<keyof Deck, Deck[keyof Deck]>) => {
-  deck = Object.fromEntries(newDeck.entries());
+export const setDeck = (newDeck: Deck) => {
+  deck = newDeck;
 };
 
 export const getDeck = () => deck;
@@ -28,7 +28,7 @@ export const setFormatTile = (newFormatTile: typeof format_tile) => {
 export const getTile = (tileId: TileId) => deck[tileId] as Tile;
 
 export const setGetPossibleMeldsSummary = (
-  newGetPossibleMeldsSummary: typeof get_possible_melds_summary
+  newGetPossibleMeldsSummary: typeof get_possible_melds_summary,
 ) => {
   get_possible_melds_summary = newGetPossibleMeldsSummary;
 };
@@ -148,7 +148,7 @@ export class ModelServiceGameSummary {
 
   getPlayingPlayerIndex() {
     return this.gameState[0].game_summary.players.findIndex(
-      (player) => player === this.gameState[0].game_summary.player_id
+      (player) => player === this.gameState[0].game_summary.player_id,
     );
   }
 
@@ -164,6 +164,10 @@ export class ModelServiceGameSummary {
     }
 
     return [];
+  }
+
+  getShareLink(gameId: string) {
+    return `${window.location.origin}/#/game/${gameId}/join`;
   }
 
   getTile(tileId: TileId) {
@@ -306,7 +310,7 @@ export class ModelServiceGameSummary {
 
   public updateStates(
     gameState: ModelState<ServiceGameSummary>,
-    loadingState: ModelState<boolean>
+    loadingState: ModelState<boolean>,
   ) {
     this.gameState = gameState;
     this.loadingState = loadingState;

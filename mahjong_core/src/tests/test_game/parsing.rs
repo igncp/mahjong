@@ -7,7 +7,7 @@ mod test {
 {
   "id": "game_id",
   "name": "game_name",
-  "phase": "Beginning",
+  "phase": "DecidingDealer",
   "players": [
     "0",
     "1",
@@ -150,7 +150,7 @@ mod test {
         "list": [
           {
             "concealed": true,
-            "id": 119,
+            "id": 17,
             "set_id": null
           }
         ]
@@ -173,6 +173,7 @@ mod test {
     #[test]
     fn test_game_parsing() {
         let mut game = Game::new(None);
+        game.start_with_players();
 
         game.table.draw_wall = DrawWall::new(vec![
             121, 12, 65, 62, 113, 78, 119, 63, 105, 88, 142, 85, 107, 21, 109, 81, 13, 66, 71, 106,
@@ -206,6 +207,7 @@ mod test {
     #[test]
     fn test_game_print_summary() {
         let mut game = Game::new(None);
+        game.start_with_players();
 
         game.table.hands.update_players_hands(&[
             "一索,七筒 二萬,二萬,二萬",
@@ -227,8 +229,6 @@ mod test {
         game.table
             .draw_wall
             .replace_tail_summary(&player_wind, "五筒");
-
-        game.start();
 
         assert_eq!(
             game.get_summary().trim(),

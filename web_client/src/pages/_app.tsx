@@ -11,7 +11,7 @@ import { TOKEN_KEY } from "src/lib/constants";
 import { env } from "src/lib/env";
 import { tokenObserver } from "src/sdk/auth";
 import { setBaseUrl } from "src/sdk/http-client";
-import "src/styles/global.css";
+import "src/styles/globals.css";
 
 if (typeof window !== "undefined") {
   i18n

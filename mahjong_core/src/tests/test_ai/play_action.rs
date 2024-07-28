@@ -26,8 +26,12 @@ mod test {
                 PlayExitLocation::AutoStoppedDrawNormal => "",
                 PlayExitLocation::NoAction => "",
                 PlayExitLocation::TileDiscarded => "",
-                PlayExitLocation::NoAIPlayers => "",
                 PlayExitLocation::TurnPassed => "",
+                PlayExitLocation::WaitingPlayers => {
+                    "- P1: 一筒,三筒,八筒,九筒 一萬,二萬,三萬 四萬,五萬,六萬 七萬,八萬,九萬
+                     - XP2
+                     Turn: P1, Phase: Waiting Players"
+                }
                 PlayExitLocation::SuccessMahjong => {
                     "- P2: 三筒,三筒 七筒,八筒,九筒 一萬,二萬,三萬 四萬,五萬,六萬 七萬,八萬,九萬
                      Turn: P2, Phase: Playing
@@ -83,6 +87,7 @@ mod test {
                     InitialDrawError::NotEnoughTiles => "Phase: Initial Draw",
                 },
                 PlayExitLocation::WaitingDealerOrder => "Phase: Deciding Dealer",
+                PlayExitLocation::CompletedPlayers => "Phase: Waiting Players",
             };
 
             if summary.is_empty() {
@@ -105,6 +110,7 @@ mod test {
 
             game_ai.can_draw_round = true;
 
+            println!("game_ai {}", game_ai.game.get_summary());
             let actual = game_ai.play_action();
 
             assert_eq!(

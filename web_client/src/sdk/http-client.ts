@@ -23,6 +23,7 @@ import type { UserPostDiscardTileRequest } from "bindings/UserPostDiscardTileReq
 import type { UserPostDiscardTileResponse } from "bindings/UserPostDiscardTileResponse";
 import type { UserPostDrawTileRequest } from "bindings/UserPostDrawTileRequest";
 import type { UserPostDrawTileResponse } from "bindings/UserPostDrawTileResponse";
+import type { UserPostJoinGameResponse } from "bindings/UserPostJoinGameResponse";
 import type { UserPostMovePlayerRequest } from "bindings/UserPostMovePlayerRequest";
 import type { UserPostMovePlayerResponse } from "bindings/UserPostMovePlayerResponse";
 import type { UserPostPassRoundRequest } from "bindings/UserPostPassRoundRequest";
@@ -87,7 +88,7 @@ const fetchJson = <T>(url: string, opts?: RequestInit): Promise<T> => {
 export const HttpClient = {
   async adminAIContinue(
     gameId: GameId,
-    opts: TAdminPostAIContinueRequest = {}
+    opts: TAdminPostAIContinueRequest = {},
   ): Promise<TAdminPostAIContinueResponse> {
     return await fetchJson(`/v1/admin/game/${gameId}/ai-continue`, {
       body: JSON.stringify(opts),
@@ -97,7 +98,7 @@ export const HttpClient = {
 
   async adminBreakMeld(
     gameId: GameId,
-    body: TAdminPostBreakMeldRequest
+    body: TAdminPostBreakMeldRequest,
   ): Promise<TAdminPostBreakMeldResponse> {
     return await fetchJson(`/v1/admin/game/${gameId}/break-meld`, {
       body: JSON.stringify(body),
@@ -107,7 +108,7 @@ export const HttpClient = {
 
   async adminCreateMeld(
     gameId: GameId,
-    body: TAdminPostCreateMeldRequest
+    body: TAdminPostCreateMeldRequest,
   ): Promise<TAdminPostCreateMeldResponse> {
     return await fetchJson(`/v1/admin/game/${gameId}/create-meld`, {
       body: JSON.stringify(body),
@@ -117,7 +118,7 @@ export const HttpClient = {
 
   async adminDiscardTile(
     gameId: GameId,
-    body: TAdminPostDiscardTileRequest
+    body: TAdminPostDiscardTileRequest,
   ): Promise<TAdminPostDiscardTileResponse> {
     return await fetchJson(`/v1/admin/game/${gameId}/discard-tile`, {
       body: JSON.stringify(body),
@@ -149,13 +150,13 @@ export const HttpClient = {
     return from(
       fetchJson<TAdminPostNewGameResponse>(`/v1/admin/game`, {
         method: "POST",
-      })
+      }),
     );
   },
 
   async adminSayMahjong(
     gameId: GameId,
-    body: TAdminPostSayMahjongRequest
+    body: TAdminPostSayMahjongRequest,
   ): Promise<TAdminPostSayMahjongResponse> {
     return await fetchJson(`/v1/admin/game/${gameId}/say-mahjong`, {
       body: JSON.stringify(body),
@@ -243,7 +244,7 @@ export const HttpClient = {
     return from(
       fetchJson<UserGetDashboardResponse>(`/v1/user/dashboard`, {
         method: "GET",
-      })
+      }),
     );
   },
 
@@ -252,16 +253,16 @@ export const HttpClient = {
       fetchJson<UserPostSetAuthResponse>("/v1/user", {
         body: JSON.stringify(body),
         method: "POST",
-      })
+      }),
     );
   },
 
   setAuthAnonymous(body: UserPostSetAuthAnonRequest) {
     return from(
-      fetchJson<UserPostSetAuthAnonResponse>("/v1/user-anonymous", {
+      fetchJson<UserPostSetAuthAnonResponse>("/v1/user/anonymous", {
         body: JSON.stringify(body),
         method: "POST",
-      })
+      }),
     );
   },
 
@@ -269,7 +270,7 @@ export const HttpClient = {
     return from(
       fetchJson<TTestDeleteGamesResponse>(`/v1/test/delete-games`, {
         method: "POST",
-      })
+      }),
     );
   },
 
@@ -280,8 +281,8 @@ export const HttpClient = {
         {
           body: JSON.stringify(body),
           method: "POST",
-        }
-      )
+        },
+      ),
     );
   },
 
@@ -292,8 +293,8 @@ export const HttpClient = {
         {
           body: JSON.stringify(body),
           method: "POST",
-        }
-      )
+        },
+      ),
     );
   },
 
@@ -304,8 +305,8 @@ export const HttpClient = {
         {
           body: JSON.stringify(body),
           method: "POST",
-        }
-      )
+        },
+      ),
     );
   },
 
@@ -314,7 +315,7 @@ export const HttpClient = {
       fetchJson<UserPostCreateGameResponse>("/v1/user/game", {
         body: JSON.stringify(body),
         method: "POST",
-      })
+      }),
     );
   },
 
@@ -325,8 +326,8 @@ export const HttpClient = {
         {
           body: JSON.stringify(body),
           method: "POST",
-        }
-      )
+        },
+      ),
     );
   },
 
@@ -337,8 +338,8 @@ export const HttpClient = {
         {
           body: JSON.stringify(body),
           method: "POST",
-        }
-      )
+        },
+      ),
     );
   },
 
@@ -347,13 +348,13 @@ export const HttpClient = {
       fetchJson<UserPostDrawTileResponse>(`/v1/user/game/${gameId}/draw-tile`, {
         body: JSON.stringify(body),
         method: "POST",
-      })
+      }),
     );
   },
 
   userGetGames(query: UserGetGamesQuery) {
     return from(
-      fetchJson<UserGetGamesResponse>(`/v1/user/game?${qs.stringify(query)}`)
+      fetchJson<UserGetGamesResponse>(`/v1/user/game?${qs.stringify(query)}`),
     );
   },
 
@@ -361,11 +362,19 @@ export const HttpClient = {
     return from(fetchJson<UserGetInfoResponse>(`/v1/user/info/${userId}`));
   },
 
+  userJoinGame(gameId: GameId) {
+    return from(
+      fetchJson<UserPostJoinGameResponse>(`/v1/user/game/${gameId}/join`, {
+        method: "POST",
+      }),
+    );
+  },
+
   userLoadGame(gameId: GameId, query: UserLoadGameQuery) {
     return from(
       fetchJson<UserGetLoadGameResponse>(
-        `/v1/user/game/${gameId}?${qs.stringify(query)}`
-      )
+        `/v1/user/game/${gameId}?${qs.stringify(query)}`,
+      ),
     );
   },
 
@@ -376,8 +385,8 @@ export const HttpClient = {
         {
           body: JSON.stringify(body),
           method: "POST",
-        }
-      )
+        },
+      ),
     );
   },
 
@@ -388,8 +397,8 @@ export const HttpClient = {
         {
           body: JSON.stringify(body),
           method: "POST",
-        }
-      )
+        },
+      ),
     );
   },
 
@@ -398,7 +407,7 @@ export const HttpClient = {
       fetchJson<UserPatchInfoResponse>(`/v1/user/info/${userId}`, {
         body: JSON.stringify(body),
         method: "PATCH",
-      })
+      }),
     );
   },
 
@@ -409,8 +418,8 @@ export const HttpClient = {
         {
           body: JSON.stringify(body),
           method: "POST",
-        }
-      )
+        },
+      ),
     );
   },
 
@@ -421,8 +430,8 @@ export const HttpClient = {
         {
           body: JSON.stringify(body),
           method: "POST",
-        }
-      )
+        },
+      ),
     );
   },
 
@@ -431,7 +440,7 @@ export const HttpClient = {
       fetchJson<UserPostSortHandResponse>(`/v1/user/game/${gameId}/sort-hand`, {
         body: JSON.stringify(body),
         method: "POST",
-      })
+      }),
     );
   },
 };

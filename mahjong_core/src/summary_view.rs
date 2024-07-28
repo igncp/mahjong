@@ -81,6 +81,7 @@ impl FromStr for GamePhase {
             "Initial Draw" => Ok(Self::InitialDraw),
             "Playing" => Ok(Self::Playing),
             "Initial Shuffle" => Ok(Self::InitialShuffle),
+            "Waiting Players" => Ok(Self::WaitingPlayers),
             _ => Err(()),
         }
     }
@@ -121,7 +122,7 @@ impl Game {
                 .board
                 .0
                 .iter()
-                .map(|tile| print_game_tile(DEFAULT_DECK.0.get(tile).unwrap()))
+                .map(|tile| print_game_tile(&DEFAULT_DECK.0[*tile]))
                 .collect::<Vec<String>>();
             parsed_board.reverse();
             if parsed_board.len() > 2 {
@@ -147,7 +148,7 @@ impl Game {
         result.push_str(&format!("{}", self.round.consecutive_same_seats));
         if let Some(tile) = self.round.tile_claimed.clone() {
             result.push_str(", Discarded: ");
-            result.push_str(&print_game_tile(DEFAULT_DECK.0.get(&tile.id).unwrap()));
+            result.push_str(&print_game_tile(&DEFAULT_DECK.0[tile.id]));
             if let Some(by) = tile.by {
                 result.push_str("(P");
                 result.push_str(&(by.parse::<usize>().unwrap() + 1).to_string());
@@ -156,7 +157,7 @@ impl Game {
         }
         if let Some(tile) = self.round.wall_tile_drawn {
             result.push_str(", Drawn: ");
-            result.push_str(&print_game_tile(DEFAULT_DECK.0.get(&tile).unwrap()));
+            result.push_str(&print_game_tile(&DEFAULT_DECK.0[tile]));
         }
 
         result.trim().to_string()
@@ -168,18 +169,42 @@ impl Game {
 
         let mut line = lines.next().unwrap().trim();
 
-        for (idx, player) in game.players.iter().enumerate() {
-            let prefix = format!("- P{}: ", idx + 1);
-            if !line.starts_with(&prefix) {
-                game.table.hands.update_player_hand(player, "");
+        for idx in 0..Self::get_players_num(&game.style) {
+            let prefix_player = format!("- P{}: ", idx + 1);
+            if line.starts_with(&prefix_player) {
+                let new_player = (idx).to_string();
+                game.players.push(new_player.clone());
+            } else {
+                let prefix_no_player = format!("- XP{}", idx + 1);
+
+                if line.starts_with(&prefix_no_player) {
+                    line = lines.next().unwrap().trim();
+                } else {
+                    // This means that the was a `- XP` before
+                    if game.players.0.len() != idx {
+                        continue;
+                    }
+                    let new_player = (idx).to_string();
+                    game.players.push(new_player.clone());
+                    game.table.hands.update_player_hand(new_player, "");
+                }
                 continue;
             }
+            let player_id = game.players.0.get(idx);
+            if player_id.is_none() {
+                continue;
+            }
+            let player_id = player_id.unwrap();
             let hand = Hand::from_summary(&line[5..]);
-            game.table.hands.0.insert(player.clone(), hand);
-            game.table.bonus_tiles.set_from_summary(player, &line[5..]);
+            game.table.hands.0.insert(player_id.clone(), hand);
+            game.table
+                .bonus_tiles
+                .set_from_summary(player_id, &line[5..]);
 
             line = lines.next().unwrap().trim();
         }
+
+        println!("line {:?}", line);
 
         let mut wall_line: Option<String> = None;
         if let Some(w) = line.strip_prefix("Wall:") {
@@ -209,6 +234,7 @@ impl Game {
                 game.round.wind = Wind::from_str(wind.trim()).unwrap();
             } else if let Some(phase) = fragment.strip_prefix("Phase: ") {
                 game.phase = GamePhase::from_str(phase.trim()).unwrap();
+                println!("game.phase {:?}", game.phase);
             } else if let Some(winds_str) = fragment.strip_prefix("Initial Winds: ") {
                 let mut winds: [Wind; 4] = [Wind::East, Wind::South, Wind::West, Wind::North];
                 winds_str.split(',').enumerate().for_each(|(i, w)| {

@@ -1,6 +1,7 @@
 use crate::macros::derive_game_common;
 use rand::{seq::SliceRandom, thread_rng};
 use ts_rs::TS;
+use uuid::Uuid;
 
 pub type PlayerId = String;
 
@@ -9,6 +10,12 @@ pub type PlayersVec = Vec<PlayerId>;
 derive_game_common! {
 #[derive(Default, TS)]
 pub struct Players(pub PlayersVec);
+}
+
+impl Players {
+    pub fn new_player() -> PlayerId {
+        Uuid::new_v4().to_string()
+    }
 }
 
 // Proxied methods

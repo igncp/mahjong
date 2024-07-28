@@ -1,4 +1,3 @@
-import type { Deck } from "bindings/Deck";
 import type { GameSummary } from "bindings/GameSummary";
 import type { Hand } from "bindings/Hand";
 import type { ServiceGame } from "bindings/ServiceGame";
@@ -8,7 +7,7 @@ import type { ServicePlayerGame } from "bindings/ServicePlayerGame";
 export type GameId = GameSummary["id"];
 export type GameVersion = GameSummary["version"];
 export type PlayerId = GameSummary["players"][number];
-export type TileId = keyof Deck;
+export type TileId = number;
 export type SetId = NonNullable<
   NonNullable<GameSummary["hand"]>["list"][number]["set_id"]
 >;

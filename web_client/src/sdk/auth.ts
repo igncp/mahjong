@@ -11,7 +11,7 @@ export const getAuthTokenHeader = (): { Authorization?: string } => {
 
 export const parseJwt = (
   token: null | string,
-  atob: (s: string) => string
+  atob: (s: string) => string,
 ): null | TokenClaims => {
   if (!token) {
     return null;
@@ -26,7 +26,7 @@ export const parseJwt = (
       .map(function (c) {
         return `%${`00${c.charCodeAt(0).toString(16)}`.slice(-2)}`;
       })
-      .join("")
+      .join(""),
   );
 
   return JSON.parse(jsonPayload);

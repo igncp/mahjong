@@ -5,12 +5,12 @@ import { parseJwt } from "./auth";
 
 export const useUserTokenClaims = (
   token: null | string,
-  atob: (s: string) => string
+  atob: (s: string) => string,
 ) => useMemo(() => parseJwt(token as string, atob), [token, atob]);
 
 export const useEffectExceptOnMount = (
   effect: EffectCallback,
-  dependencies: DependencyList
+  dependencies: DependencyList,
 ) => {
   const mounted = useRef(false);
 

@@ -56,7 +56,7 @@ $top-offset: 60px;
   &.userLeft {
     top: 0;
     bottom: 0;
-    transform: translateY($top-offset);
+    transform: translateY($top-offset - 40px);
     align-items: center;
   }
 

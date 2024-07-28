@@ -2,7 +2,7 @@ use crate::{DragonTile, FlowerTile, SeasonTile, SuitTile, WindTile};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-pub type TileId = i32;
+pub type TileId = usize;
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[ts(export)]
@@ -70,35 +70,50 @@ impl Tile {
         }
     }
 
+    fn cmp_custom_order(tile: &Self) -> u32 {
+        match tile {
+            Self::Suit(_) => 0,
+            Self::Dragon(_) => 1,
+            Self::Wind(_) => 2,
+            Self::Season(_) => 3,
+            Self::Flower(_) => 4,
+        }
+    }
+
     pub fn cmp_custom(&self, other: &Self) -> std::cmp::Ordering {
         match self {
-            Self::Suit(tile_a) => match other {
-                Self::Suit(tile_b) => {
+            Self::Suit(tile_a) => {
+                if let Self::Suit(tile_b) = other {
                     if tile_a.suit != tile_b.suit {
                         return tile_a.suit.cmp(&tile_b.suit);
                     }
 
-                    tile_a.value.cmp(&tile_b.value)
+                    return tile_a.value.cmp(&tile_b.value);
                 }
-                _ => std::cmp::Ordering::Less,
-            },
-            Self::Dragon(tile_a) => match other {
-                Self::Dragon(tile_b) => tile_a.value.cmp(&tile_b.value),
-                _ => std::cmp::Ordering::Greater,
-            },
-            Self::Wind(tile_a) => match other {
-                Self::Wind(tile_b) => tile_a.value.cmp(&tile_b.value),
-                _ => std::cmp::Ordering::Greater,
-            },
-            Self::Season(tile_a) => match other {
-                Self::Season(tile_b) => tile_a.value.cmp(&tile_b.value),
-                _ => std::cmp::Ordering::Greater,
-            },
-            Self::Flower(tile_a) => match other {
-                Self::Flower(tile_b) => tile_a.value.cmp(&tile_b.value),
-                _ => std::cmp::Ordering::Greater,
-            },
-        }
+            }
+            Self::Dragon(tile_a) => {
+                if let Self::Dragon(tile_b) = other {
+                    return tile_a.value.cmp(&tile_b.value);
+                }
+            }
+            Self::Wind(tile_a) => {
+                if let Self::Wind(tile_b) = other {
+                    return tile_a.value.cmp(&tile_b.value);
+                }
+            }
+            Self::Season(tile_a) => {
+                if let Self::Season(tile_b) = other {
+                    return tile_a.value.cmp(&tile_b.value);
+                }
+            }
+            Self::Flower(tile_a) => {
+                if let Self::Flower(tile_b) = other {
+                    return tile_a.value.cmp(&tile_b.value);
+                }
+            }
+        };
+
+        Self::cmp_custom_order(self).cmp(&Self::cmp_custom_order(other))
     }
 
     pub fn is_bonus(&self) -> bool {

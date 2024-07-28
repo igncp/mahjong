@@ -52,8 +52,8 @@ const AuthForm = () => {
             4,
             t(
               "auth.password.min",
-              "Your password must have at least 4 characters"
-            ) as string
+              "Your password must have at least 4 characters",
+            ) as string,
           ),
         username: z
           .string()
@@ -61,11 +61,11 @@ const AuthForm = () => {
             4,
             t(
               "auth.username.min",
-              "Your username must have at least 4 characters"
-            ) as string
+              "Your username must have at least 4 characters",
+            ) as string,
           ),
       }),
-    [t]
+    [t],
   );
 
   const validate = (values: FormState) => {

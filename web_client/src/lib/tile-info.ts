@@ -6,7 +6,7 @@ const prefix = "https://upload.wikimedia.org/wikipedia/commons/";
 // https://en.wikipedia.org/wiki/Mahjong_tiles#Contents
 export const getTileInfo = (
   tile: Tile,
-  i18n: ReturnType<typeof getI18n>
+  i18n: ReturnType<typeof getI18n>,
 ): [string, string] | null => {
   if ("Flower" in tile) {
     switch (tile.Flower.value) {

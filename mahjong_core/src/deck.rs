@@ -1,5 +1,4 @@
 use lazy_static::lazy_static;
-use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -8,7 +7,7 @@ use crate::{
     Hand, Hands, HandsMap, Season, SeasonTile, Suit, SuitTile, Table, Tile, TileId, Wind, WindTile,
 };
 
-pub type DeckContent = FxHashMap<TileId, Tile>;
+pub type DeckContent = Vec<Tile>;
 
 fn create_deck_content() -> DeckContent {
     let suits_set = vec![Suit::Bamboo, Suit::Dots, Suit::Characters];
@@ -71,21 +70,19 @@ fn create_deck_content() -> DeckContent {
         }
     }
 
-    let mut deck: DeckContent = FxHashMap::default();
+    let mut deck: DeckContent = vec![];
 
     deck_list.iter().enumerate().for_each(|(index, tile)| {
         let mut tile = tile.clone();
-        let id = i32::try_from(index).unwrap();
-        tile.set_id(id);
-        deck.insert(id, tile);
+        tile.set_id(index);
+        deck.push(tile);
     });
 
     deck
 }
 
 lazy_static! {
-    static ref DECK_CONTENT: DeckContent = create_deck_content();
-    pub static ref DEFAULT_DECK: Deck = Deck(DECK_CONTENT.clone());
+    pub static ref DEFAULT_DECK: Deck = Deck(create_deck_content());
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
@@ -94,7 +91,7 @@ pub struct Deck(pub DeckContent);
 
 impl Deck {
     pub fn find_tile_without_id(tile: Tile) -> Tile {
-        let all_tiles = DECK_CONTENT.values().cloned().collect::<Vec<Tile>>();
+        let all_tiles = DEFAULT_DECK.0.clone();
 
         all_tiles
             .iter()
@@ -105,7 +102,11 @@ impl Deck {
 
     pub fn create_table(&self, players: &Players) -> Table {
         let Self(deck_content) = self;
-        let draw_wall = DrawWall::new(deck_content.keys().cloned().collect::<Vec<TileId>>());
+        let mut ids: Vec<usize> = vec![];
+        for id in 0..deck_content.len() {
+            ids.push(id);
+        }
+        let draw_wall = DrawWall::new(ids);
 
         let hands_map = players
             .iter()
@@ -126,6 +127,6 @@ impl Deck {
     }
 
     pub fn get_sure(&self, id: TileId) -> &Tile {
-        self.0.get(&id).unwrap()
+        &self.0[id]
     }
 }

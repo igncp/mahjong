@@ -10,15 +10,12 @@
 - FE: Audio effects
 - FE: Perspective of tiles
 - FE: Display the last tile in board in different size
-- BE: can say mahjong tests
 - BE: leaderboard using redis
 - BE: promote anonymous account to real account
 - BE: decouple mahjong specific logic from server to a different package
-- BE: single script to setup everthing for development
 - CORE: Other rules from https://en.wikipedia.org/wiki/Mahjong
 - CORE: Replace bool returning functions with side effects
-- CORE: minimum points win support
-- CORE: dead wall functionality
+- CORE: Minimum points win support
 - CORE: Support declaring concealed melds
 - CORE: Support charleston in the drawing phase
 - CORE: Average rounds are too high in the simulation
@@ -31,11 +28,9 @@
 - Move other projects bash scripts to the main scripts dir
 - Convert DB operations into transactions
 - Change player names when they are AI
-- Form to create AI game vs real players game
-    - Link to invite players to game (and qr code)
 - Full AI game
 - Use the game version in more endpoints
-- Improve scoring logic (explicitly list each points)
+- Improve scoring logic (explicitly list points sources)
     - Add unit tests
 - Game hall state where it waits for other real players to join
 - Statistics for moves

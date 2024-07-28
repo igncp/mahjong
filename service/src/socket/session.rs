@@ -12,16 +12,19 @@ use tracing::debug;
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
+pub type RoomId = String;
+pub type SessionId = usize;
+
 #[derive(Debug)]
 pub struct MahjongWebsocketSession {
     pub addr: Addr<MahjongWebsocketServer>,
     pub hb: Instant,
-    pub id: usize,
-    pub room: String,
+    pub id: SessionId,
+    pub room: RoomId,
 }
 
 impl MahjongWebsocketSession {
-    pub fn get_room_id(game_id: &GameId, player_id: Option<&PlayerId>) -> String {
+    pub fn get_room_id(game_id: &GameId, player_id: Option<&PlayerId>) -> RoomId {
         if player_id.is_none() {
             return game_id.to_string();
         }

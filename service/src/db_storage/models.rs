@@ -131,11 +131,12 @@ pub struct DieselGameHand {
 #[diesel(treat_none_as_null = true)]
 #[diesel(table_name = game_settings)]
 pub struct DieselGameSettings {
-    pub ai_enabled: i32,
+    pub ai_enabled: bool,
     pub auto_sort_players: String,
     pub auto_stop_claim_meld: String,
     pub discard_wait_ms: Option<i32>,
-    pub fixed_settings: i32,
+    pub fixed_settings: bool,
     pub game_id: GameId,
     pub last_discard_time: i64,
+    pub dead_wall: bool,
 }

@@ -107,13 +107,14 @@ diesel::table! {
 
 diesel::table! {
     game_settings (game_id) {
-        ai_enabled -> Int4,
+        ai_enabled -> Bool,
         auto_sort_players -> Text,
         auto_stop_claim_meld -> Text,
         discard_wait_ms -> Nullable<Int4>,
-        fixed_settings -> Int4,
+        fixed_settings -> Bool,
         game_id -> Text,
         last_discard_time -> Int8,
+        dead_wall -> Bool,
     }
 }
 

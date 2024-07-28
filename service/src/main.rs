@@ -18,6 +18,7 @@ mod game_wrapper;
 mod games_loop;
 mod http_server;
 mod logs;
+mod service_error;
 mod socket;
 mod time;
 mod user_wrapper;

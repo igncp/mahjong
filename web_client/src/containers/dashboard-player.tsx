@@ -46,8 +46,12 @@ const DashboardUser = ({ userId }: TProps) => {
   const [editName, setEditName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPrevGameModalOpen, setIsPrevGameModalOpen] = useState(false);
+  const [isNewGameModalOpen, setIsNewGameModalOpen] = useState(false);
+  const [realPlayersNum, setRealPlayersNum] = useState(1);
   const [selectedGameId, setSelectGameId] = useState("");
+  const [useDeadWall, setUseDeadWall] = useState(false);
+  const [autoSortOwn, setAutoSortOwn] = useState(true);
 
   const router = useRouter();
 
@@ -108,7 +112,7 @@ const DashboardUser = ({ userId }: TProps) => {
 
   const onGameClick = (gameId: string) => {
     setSelectGameId(gameId);
-    setIsModalOpen(true);
+    setIsPrevGameModalOpen(true);
   };
 
   return (
@@ -199,7 +203,7 @@ const DashboardUser = ({ userId }: TProps) => {
                         ? username
                         : `${t(
                             "dashboard.authUsername",
-                            "Auth username"
+                            "Auth username",
                           )}: ${username}`,
                       isEmail ? `mailto:${username}` : null,
                     ];
@@ -241,29 +245,7 @@ const DashboardUser = ({ userId }: TProps) => {
         <Button
           data-name="create-game-button"
           onClick={() => {
-            const playerNums = [
-              t("dashboard.playerNum1", "1"),
-              t("dashboard.playerNum2", "2"),
-              t("dashboard.playerNum3", "3"),
-              t("dashboard.playerNum4", "4"),
-            ];
-
-            HttpClient.userCreateGame({
-              ai_player_names: Array.from({ length: 4 }).map((_, i) =>
-                t("dashboard.defaultPlayerName", "Player {{number}}", {
-                  number: playerNums[i],
-                })
-              ),
-              player_id: userId,
-            })
-              .pipe(first())
-              .subscribe({
-                next: (game) => {
-                  router.push(
-                    SiteUrls.playerGame(game.game_summary.id, userId)
-                  );
-                },
-              });
+            setIsNewGameModalOpen(true);
           }}
         >
           {t("dashboard.newGame")} <PlusCircleOutlined rev="" />
@@ -305,7 +287,7 @@ const DashboardUser = ({ userId }: TProps) => {
             ),
             responsive: ["xs"],
             title: `${t("dashboard.table.played")} / ${t(
-              "dashboard.table.created"
+              "dashboard.table.created",
             )}`,
           },
           {
@@ -342,19 +324,119 @@ const DashboardUser = ({ userId }: TProps) => {
           <Button
             key="no"
             onClick={() => {
-              setIsModalOpen(false);
+              setIsPrevGameModalOpen(false);
             }}
           >
             {t("dashboard.no", "No")}
           </Button>,
         ]}
         onCancel={() => {
-          setIsModalOpen(false);
+          setIsPrevGameModalOpen(false);
         }}
-        open={isModalOpen}
-        title={t("dashboard.openGame", "Open this game?") as string}
+        open={isPrevGameModalOpen}
+        title={t("dashboard.openGame") as string}
       >
         <p>{selectedGameId}</p>
+      </Modal>
+
+      <Modal
+        footer={[
+          <Button
+            key="yes"
+            onClick={() => {
+              const aiPlayersNum = 4 - realPlayersNum;
+
+              HttpClient.userCreateGame({
+                ai_player_names: Array.from({ length: aiPlayersNum })
+                  .map((_, i) =>
+                    t("dashboard.defaultPlayerName", "Player {{number}}", {
+                      number: realPlayersNum + i,
+                    }),
+                  )
+                  .slice(0, aiPlayersNum),
+                auto_sort_own: autoSortOwn,
+                dead_wall: useDeadWall,
+                player_id: userId,
+              })
+                .pipe(first())
+                .subscribe({
+                  next: (game) => {
+                    router.push(
+                      SiteUrls.playerGame(game.game_summary.id, userId),
+                    );
+                  },
+                });
+            }}
+            type="primary"
+          >
+            {t("dashboard.create", "Create")}
+          </Button>,
+          <Button
+            key="no"
+            onClick={() => {
+              setIsNewGameModalOpen(false);
+            }}
+          >
+            {t("dashboard.cancel", "Cancel")}
+          </Button>,
+        ]}
+        onCancel={() => {
+          setIsNewGameModalOpen(false);
+        }}
+        open={isNewGameModalOpen}
+        title={t("dashboard.newGame", "New Game") as string}
+      >
+        <div className="flex flex-col gap-[10px]">
+          <div className="flex flex-row gap-[10px]">
+            <p>{t("dashboard.playersNum", "Number of real players")}</p>
+            <select
+              onChange={(e) => setRealPlayersNum(Number(e.target.value))}
+              value={realPlayersNum}
+            >
+              {Array.from({ length: 4 }).map((_, i) => {
+                const num = i + 1;
+
+                return (
+                  <option key={num} value={num}>
+                    {num}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+          <div className="flex flex-row gap-[10px]">
+            <p>
+              <label htmlFor="use-dead-wall">
+                {t(
+                  "dashboard.useDeadWall",
+                  "Use the dead wall (14 unused tiles)",
+                )}
+              </label>
+            </p>
+            <input
+              checked={useDeadWall}
+              id="use-dead-wall"
+              onChange={(e) => setUseDeadWall(e.target.checked)}
+              type="checkbox"
+            />
+          </div>
+          <div className="flex flex-row gap-[10px]">
+            <p>
+              <label htmlFor="auto-sort-own">
+                {t(
+                  "dashboard.autoSortOwn",
+                  "Automatically sort own tiles after drawing a tile",
+                )}
+              </label>
+            </p>
+            <input
+              checked={autoSortOwn}
+              id="auto-sort-own"
+              onChange={(e) => setAutoSortOwn(e.target.checked)}
+              type="checkbox"
+            />
+          </div>
+        </div>
       </Modal>
     </PageContent>
   );

@@ -10,7 +10,7 @@ mod test {
 
     #[test]
     fn test_deck_total_count() {
-        let keys = DEFAULT_DECK.0.keys().len();
+        let keys = DEFAULT_DECK.0.len();
         assert_eq!(keys, 144);
     }
 

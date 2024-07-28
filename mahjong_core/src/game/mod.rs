@@ -16,7 +16,7 @@ use crate::{
     round::{Round, RoundTileClaimed},
     Hand, HandTile, TileId,
 };
-use crate::{Wind, WINDS_ROUND_ORDER};
+use crate::{Tile, Wind, WINDS_ROUND_ORDER};
 use rustc_hash::FxHashSet;
 use uuid::Uuid;
 
@@ -85,7 +85,13 @@ impl Game {
     }
 
     pub fn start(&mut self) {
-        self.phase = GamePhase::DecidingDealer;
+        if self.phase != GamePhase::Beginning {
+            return;
+        }
+
+        self.phase = GamePhase::WaitingPlayers;
+
+        self.complete_players().unwrap_or_default();
     }
 
     pub fn decide_dealer(&mut self) -> Result<(), DecideDealerError> {
@@ -132,7 +138,7 @@ impl Game {
                 }
 
                 let tile_id = tile_id.unwrap();
-                let is_bonus = DEFAULT_DECK.0.get(&tile_id).unwrap().is_bonus();
+                let is_bonus = DEFAULT_DECK.0[tile_id].is_bonus();
 
                 if is_bonus {
                     let bonus_tiles = self.table.bonus_tiles.get_or_create(player_id);
@@ -301,8 +307,8 @@ impl Game {
         melds
     }
 
-    pub fn get_current_player(&self) -> PlayerId {
-        self.players.get(self.round.player_index).unwrap().clone()
+    pub fn get_current_player(&self) -> Option<PlayerId> {
+        self.players.get(self.round.player_index).cloned()
     }
 
     pub fn draw_tile_from_wall(&mut self) -> DrawTileResult {
@@ -323,13 +329,13 @@ impl Game {
 
         let tile_id = tile_id.unwrap();
 
-        let tile = DEFAULT_DECK.0.get(&tile_id).unwrap();
+        let tile = &DEFAULT_DECK.0[tile_id];
 
         if tile.is_bonus() {
             let bonus_tiles = self
                 .table
                 .bonus_tiles
-                .get_or_create(&self.get_current_player());
+                .get_or_create(&self.get_current_player().unwrap());
 
             bonus_tiles.push(tile_id);
 
@@ -338,7 +344,7 @@ impl Game {
 
         let wall_tile_drawn = Some(tile_id);
         self.round.wall_tile_drawn = wall_tile_drawn;
-        let player_id = self.get_current_player();
+        let player_id = self.get_current_player().unwrap();
 
         let hand = self.table.hands.0.get_mut(&player_id).unwrap();
         hand.push(HandTile::from_id(tile_id));
@@ -433,11 +439,12 @@ impl Game {
             self.get_board_tile_player_diff(None, Some(&sub_hand), player_id);
 
         let opts_claimed_tile = get_tile_claimed_id_for_user(player_id, &self.round.tile_claimed);
+        let tiles_full: Vec<&Tile> = tiles.iter().map(|t| &DEFAULT_DECK.0[*t]).collect();
 
         let opts = SetCheckOpts {
             board_tile_player_diff,
             claimed_tile: opts_claimed_tile,
-            sub_hand: &tiles.to_vec(),
+            sub_hand: &tiles_full,
         };
 
         if get_is_pung(&opts) || get_is_chow(&opts) || get_is_kong(&opts) {
@@ -564,9 +571,37 @@ impl Game {
         self.version = Uuid::new_v4().to_string();
     }
 
+    pub fn update_id(&mut self, id: Option<&str>) {
+        self.id = id.map_or_else(
+            || Uuid::new_v4().to_string(),
+            |inner_id| inner_id.to_string(),
+        );
+    }
+
     pub fn get_player_wind(&self) -> Wind {
-        let current_player = self.get_current_player();
+        let current_player = self.get_current_player().unwrap();
 
         self.round.get_player_wind(&self.players.0, &current_player)
+    }
+
+    pub fn complete_players(&mut self) -> Result<(), &'static str> {
+        if self.phase != GamePhase::WaitingPlayers {
+            return Err("Game is not waiting for players");
+        }
+
+        let players_num = Self::get_players_num(&self.style);
+
+        if self.players.len() != players_num {
+            return Err("Not enough players");
+        }
+
+        for player_id in self.players.0.clone() {
+            self.table.hands.insert(player_id.clone(), Hand::default());
+            self.score.insert(player_id, 0);
+        }
+
+        self.phase = GamePhase::DecidingDealer;
+
+        Ok(())
     }
 }

@@ -6,6 +6,8 @@ set -e
 . ./src/docker.sh
 . ./src/gh.sh
 . ./src/install.sh
+. ./src/profile.sh
+. ./src/service_watch.sh
 . ./src/tests_summaries_fix.sh
 . ./src/wasm.sh
 
@@ -27,6 +29,7 @@ Run various scripts for the Mahjong project
   - gh_deploy: Triggers a manual deployment in GitHub Actions
   - list: List root files to be used in a pipe
   - pack_wasm: Pack the wasm files
+  - profile_instruments: Create a trace file to be inspected by Instruments
   - tests_summaries_fix: Convert the tests summaries to chinese chars"
 
 # This is specially convenient for maintaining the clippy rules, which need to
@@ -71,10 +74,16 @@ main() {
     gh_checks
     ;;
   dev_install | install_dev)
-    run_setup_dev_install
+    run_setup_dev_install "$2"
     ;;
   tests_summaries_fix)
     tests_summaries_fix
+    ;;
+  profile_instruments)
+    profile_instruments
+    ;;
+  service_watch)
+    service_watch
     ;;
   *)
     echo "$USAGE"

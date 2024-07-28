@@ -1,5 +1,5 @@
 use crate::{
-    deck::DEFAULT_DECK, round::TileClaimed, HandTile, PlayerId, SetId, SuitTile, Tile, TileId,
+    deck::DEFAULT_DECK, round::TileClaimed, HandTile, PlayerId, SetId, Suit, SuitTile, Tile, TileId,
 };
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -10,7 +10,7 @@ pub type PlayerDiff = Option<i32>;
 pub struct SetCheckOpts<'a> {
     pub board_tile_player_diff: PlayerDiff,
     pub claimed_tile: Option<TileId>,
-    pub sub_hand: &'a Vec<TileId>,
+    pub sub_hand: &'a [&'a Tile],
 }
 
 pub fn get_is_pung(opts: &SetCheckOpts) -> bool {
@@ -18,34 +18,30 @@ pub fn get_is_pung(opts: &SetCheckOpts) -> bool {
         return false;
     }
 
-    let mut last_tile_id = opts.sub_hand[0];
+    let mut last_tile = opts.sub_hand[0];
+    if last_tile.is_bonus() {
+        return false;
+    }
 
     for tile_index in 1..3 {
-        let tile_id = opts.sub_hand[tile_index];
-        let last_tile = DEFAULT_DECK.0.get(&last_tile_id);
-        let tile = DEFAULT_DECK.0.get(&tile_id);
-
-        if tile.is_none() || last_tile.is_none() {
-            return false;
-        }
-
-        let tile = tile.unwrap();
-
-        if tile.is_bonus() {
-            return false;
-        }
-
-        let last_tile = last_tile.unwrap();
+        let tile = opts.sub_hand[tile_index];
 
         if !tile.is_same_content(last_tile) {
             return false;
         }
 
-        last_tile_id = tile.get_id();
+        last_tile = tile;
     }
 
     true
 }
+
+// This approach is used for performance
+const DUMMY_SUIT: SuitTile = SuitTile {
+    id: 0,
+    value: 0,
+    suit: crate::Suit::Dots,
+};
 
 pub fn get_is_chow(opts: &SetCheckOpts) -> bool {
     if opts.sub_hand.len() != 3 {
@@ -55,7 +51,8 @@ pub fn get_is_chow(opts: &SetCheckOpts) -> bool {
     if let Some(board_tile_player_diff) = opts.board_tile_player_diff {
         if let Some(claimed_tile) = opts.claimed_tile {
             if board_tile_player_diff != 1 {
-                let has_same_claimed_tile = opts.sub_hand.iter().any(|t| t == &claimed_tile);
+                let has_same_claimed_tile =
+                    opts.sub_hand.iter().any(|t| t.get_id() == claimed_tile);
 
                 if has_same_claimed_tile {
                     return false;
@@ -64,20 +61,20 @@ pub fn get_is_chow(opts: &SetCheckOpts) -> bool {
         }
     }
 
-    let mut suit_tiles: Vec<SuitTile> = vec![];
+    let mut suit_tiles: [&SuitTile; 3] = [&DUMMY_SUIT, &DUMMY_SUIT, &DUMMY_SUIT];
+    let mut suit: Option<Suit> = None;
 
-    for tile_id in opts.sub_hand {
-        let tile = DEFAULT_DECK.0.get(tile_id);
-
-        if tile.is_none() {
-            return false;
-        }
-
-        let tile = tile.unwrap();
-
+    for (idx, tile) in opts.sub_hand.iter().enumerate() {
         match tile {
             Tile::Suit(suit_tile) => {
-                suit_tiles.push(suit_tile.clone());
+                if suit.is_some() {
+                    if Some(suit_tile.suit) != suit {
+                        return false;
+                    }
+                } else {
+                    suit = Some(suit_tile.suit);
+                }
+                suit_tiles[idx] = suit_tile
             }
             _ => {
                 return false;
@@ -87,31 +84,14 @@ pub fn get_is_chow(opts: &SetCheckOpts) -> bool {
 
     suit_tiles.sort_by(|a, b| a.value.cmp(&b.value));
 
-    let mut last_tile_id = suit_tiles[0].id;
+    let mut last_tile = suit_tiles[0];
 
-    for tile_index in 1..3 {
-        let last_tile = DEFAULT_DECK.0.get(&last_tile_id);
-        let tile = suit_tiles.get(tile_index);
-
-        if tile.is_none() || last_tile.is_none() {
+    for tile in suit_tiles.iter().skip(1).take(2) {
+        if last_tile.value + 1 != tile.value {
             return false;
         }
 
-        let tile = tile.unwrap();
-        let last_tile = last_tile.unwrap();
-
-        let last_tile = match last_tile {
-            Tile::Suit(suit_tile) => suit_tile,
-            _ => {
-                return false;
-            }
-        };
-
-        if last_tile.suit != tile.suit || last_tile.value + 1 != tile.value {
-            return false;
-        }
-
-        last_tile_id = tile.id;
+        last_tile = tile;
     }
 
     true
@@ -122,25 +102,19 @@ pub fn get_is_kong(opts: &SetCheckOpts) -> bool {
         return false;
     }
 
-    let mut last_tile_id = opts.sub_hand[0];
+    let mut last_tile = opts.sub_hand[0];
+    if last_tile.is_bonus() {
+        return false;
+    }
 
     for tile_index in 1..4 {
-        let tile_id = opts.sub_hand[tile_index];
-        let last_tile = DEFAULT_DECK.0.get(&last_tile_id);
-        let tile = DEFAULT_DECK.0.get(&tile_id);
+        let tile = opts.sub_hand[tile_index];
 
-        if tile.is_none() || last_tile.is_none() {
+        if !tile.is_same_content(last_tile) {
             return false;
         }
 
-        let tile = tile.unwrap();
-        let last_tile = last_tile.unwrap();
-
-        if tile.is_bonus() || !tile.is_same_content(last_tile) {
-            return false;
-        }
-
-        last_tile_id = tile_id;
+        last_tile = tile;
     }
 
     true
@@ -209,8 +183,8 @@ pub struct PossibleMeld {
 impl PossibleMeld {
     pub fn sort_tiles(&mut self) {
         self.tiles.sort_by(|a, b| {
-            let tile_a = &DEFAULT_DECK.0[a];
-            let tile_b = &DEFAULT_DECK.0[b];
+            let tile_a = &DEFAULT_DECK.0[*a];
+            let tile_b = &DEFAULT_DECK.0[*b];
 
             tile_a.cmp_custom(tile_b)
         });

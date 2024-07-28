@@ -113,7 +113,7 @@ impl Game {
         let mut seasons: FxHashSet<Season> = FxHashSet::default();
 
         for tile_id in winner_bonus {
-            let tile = DEFAULT_DECK.0.get(tile_id).unwrap();
+            let tile = &DEFAULT_DECK.0[*tile_id];
             match tile {
                 Tile::Flower(flower) => {
                     flowers.insert(flower.value.clone());

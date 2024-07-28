@@ -1,4 +1,7 @@
-use crate::http_server::DataStorage;
+use crate::{
+    http_server::DataStorage,
+    service_error::{ResponseCommon, ServiceError},
+};
 use actix_web::HttpResponse;
 use service_contracts::{
     AuthInfoSummary, DashboardGame, DashboardPlayer, ServicePlayer, UserGetDashboardResponse,
@@ -14,17 +17,17 @@ impl<'a> UserWrapper<'a> {
     pub async fn from_storage(
         storage: &'a DataStorage,
         player_id: &String,
-    ) -> Result<UserWrapper<'a>, HttpResponse> {
+    ) -> Result<UserWrapper<'a>, ServiceError> {
         let user = storage.get_player(&player_id.to_string()).await;
 
         if user.is_err() {
-            return Err(HttpResponse::InternalServerError().body("Error loading player"));
+            return Err(ServiceError::Custom("Error loading the user"));
         }
 
         let user_content = user.unwrap();
 
         if user_content.is_none() {
-            return Err(HttpResponse::BadRequest().body("No user found"));
+            return Err(ServiceError::Custom("User not found"));
         }
 
         let player = user_content.unwrap();
@@ -47,13 +50,13 @@ impl<'a> UserWrapper<'a> {
         Some(info)
     }
 
-    pub async fn get_info(&self) -> HttpResponse {
+    pub async fn get_info(&self) -> ResponseCommon {
         let info = self.get_info_data().await;
 
-        HttpResponse::Ok().json(info)
+        Ok(HttpResponse::Ok().json(info))
     }
 
-    pub async fn get_dashboard(&self, auth_info_summary: &AuthInfoSummary) -> HttpResponse {
+    pub async fn get_dashboard(&self, auth_info_summary: &AuthInfoSummary) -> ResponseCommon {
         let player = DashboardPlayer {
             created_at: self.player.created_at.clone(),
             id: self.player.id.clone(),
@@ -68,7 +71,7 @@ impl<'a> UserWrapper<'a> {
             .await;
 
         if games.is_err() {
-            return HttpResponse::InternalServerError().body("Error loading player games");
+            return Err(ServiceError::Custom("Error loading player games").into());
         }
 
         let games = games.unwrap();
@@ -89,18 +92,17 @@ impl<'a> UserWrapper<'a> {
             player_total_score: info.unwrap().total_score,
         };
 
-        HttpResponse::Ok().json(dashboard)
+        Ok(HttpResponse::Ok().json(dashboard))
     }
 
-    pub async fn update_info(&mut self, new_data: &UserPatchInfoRequest) -> HttpResponse {
+    pub async fn update_info(&mut self, new_data: &UserPatchInfoRequest) -> ResponseCommon {
         self.player.name.clone_from(&new_data.name);
 
-        let save_result = self.storage.save_player(&self.player).await;
         let info = self.get_info_data().await;
 
-        match save_result {
-            Ok(_) => HttpResponse::Ok().json(info),
-            Err(_) => HttpResponse::InternalServerError().body("Error saving player"),
-        }
+        self.storage.save_player(&self.player).await.map_or(
+            Err(ServiceError::Custom("Error saving player").into()),
+            |_| Ok(HttpResponse::Ok().json(info)),
+        )
     }
 }

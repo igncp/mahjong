@@ -330,7 +330,7 @@ impl DieselAuthInfoGithub {
 impl DieselPlayer {
     pub fn into_raw(self) -> ServicePlayer {
         ServicePlayer {
-            created_at: self.created_at.timestamp_millis().to_string(),
+            created_at: self.created_at.and_utc().timestamp_millis().to_string(),
             id: self.id,
             is_ai: self.is_ai == 1,
             name: self.name,
@@ -339,10 +339,11 @@ impl DieselPlayer {
 
     pub fn from_raw(raw: &ServicePlayer) -> Self {
         Self {
-            created_at: chrono::NaiveDateTime::from_timestamp_millis(
+            created_at: chrono::DateTime::from_timestamp_millis(
                 raw.created_at.parse::<i64>().unwrap(),
             )
-            .unwrap(),
+            .unwrap()
+            .naive_utc(),
             id: raw.id.clone(),
             is_ai: if raw.is_ai { 1 } else { 0 },
             name: raw.name.clone(),
@@ -524,9 +525,9 @@ impl DieselGame {
         }
         .into_iter()
         .map(|game| ServicePlayerGame {
-            created_at: game.created_at.timestamp_millis().to_string(),
+            created_at: game.created_at.and_utc().timestamp_millis().to_string(),
             id: game.id,
-            updated_at: game.updated_at.timestamp_millis().to_string(),
+            updated_at: game.updated_at.and_utc().timestamp_millis().to_string(),
         })
         .collect()
     }
@@ -559,11 +560,11 @@ impl DieselGame {
             phase: serde_json::to_string(&raw.phase).unwrap(),
             round_claimed_by: raw.round.tile_claimed.clone().and_then(|t| t.by),
             round_claimed_from: raw.round.tile_claimed.clone().map(|t| t.from),
-            round_claimed_id: raw.round.tile_claimed.clone().map(|t| t.id),
+            round_claimed_id: raw.round.tile_claimed.clone().map(|t| t.id as i32),
             round_dealer_index: raw.round.dealer_player_index as i32,
             round_index: raw.round.round_index as i32,
             round_player_index: raw.round.player_index as i32,
-            round_wall_tile_drawn: raw.round.wall_tile_drawn,
+            round_wall_tile_drawn: raw.round.wall_tile_drawn.map(|t| t as i32),
             round_wind: serde_json::to_string(&raw.round.wind).unwrap(),
             updated_at: extra.updated_at,
             version: raw.version.clone(),
@@ -638,9 +639,9 @@ impl DieselGamePlayer {
         }
         .into_iter()
         .map(|game| ServicePlayerGame {
-            created_at: game.created_at.timestamp_millis().to_string(),
+            created_at: game.created_at.and_utc().timestamp_millis().to_string(),
             id: game.id,
-            updated_at: game.updated_at.timestamp_millis().to_string(),
+            updated_at: game.updated_at.and_utc().timestamp_millis().to_string(),
         })
         .collect::<Vec<_>>()
     }
@@ -781,7 +782,7 @@ impl DieselGameBoard {
             .enumerate()
             .map(|(tile_index, tile_id)| Self {
                 game_id: service_game.game.id.clone(),
-                tile_id: *tile_id,
+                tile_id: *tile_id as i32,
                 tile_index: tile_index as i32,
             })
             .collect::<Vec<Self>>();
@@ -852,7 +853,7 @@ impl DieselGameDrawWall {
             .enumerate()
             .map(|(tile_index, draw_wall_tile)| Self {
                 game_id: service_game.game.id.clone(),
-                tile_id: draw_wall_tile.0,
+                tile_id: draw_wall_tile.0 as i32,
                 tile_index: tile_index as i32,
                 place: draw_wall_tile.1.to_string(),
             })
@@ -886,7 +887,7 @@ impl DieselGameDrawWall {
         .into_iter()
         .map(|game_draw_wall| {
             (
-                game_draw_wall.tile_id,
+                game_draw_wall.tile_id as usize,
                 DrawWallPlace::from_str(&game_draw_wall.place).unwrap_or_else(|_| {
                     panic!("Unknown draw wall place: {}", game_draw_wall.place)
                 }),
@@ -940,7 +941,7 @@ impl DieselGameHand {
                         game_id: service_game.game.id.clone(),
                         player_id: player_id.clone(),
                         set_id,
-                        tile_id,
+                        tile_id: tile_id as i32,
                         tile_index: tile_index as i32,
                     };
 
@@ -964,7 +965,7 @@ impl DieselGameHand {
                             game_id: service_game.game.id.clone(),
                             player_id: player_id.clone(),
                             set_id: None,
-                            tile_id: *tile_id,
+                            tile_id: *tile_id as i32,
                             tile_index: tile_index as i32,
                         };
 
@@ -1058,20 +1059,13 @@ impl DieselGameSettings {
 
         let settings = Self {
             last_discard_time: service_game.settings.last_discard_time as i64,
-            ai_enabled: if service_game.settings.ai_enabled {
-                1
-            } else {
-                0
-            },
+            ai_enabled: service_game.settings.ai_enabled,
             discard_wait_ms: service_game.settings.discard_wait_ms,
             game_id: service_game.game.id.clone(),
-            fixed_settings: if service_game.settings.fixed_settings {
-                1
-            } else {
-                0
-            },
+            fixed_settings: service_game.settings.fixed_settings,
             auto_sort_players,
             auto_stop_claim_meld,
+            dead_wall: service_game.settings.dead_wall,
         };
 
         loop {
@@ -1104,9 +1098,9 @@ impl DieselGameSettings {
         }
         .first()
         .map(|game_settings| GameSettings {
-            ai_enabled: game_settings.ai_enabled == 1,
+            ai_enabled: game_settings.ai_enabled,
             discard_wait_ms: game_settings.discard_wait_ms,
-            fixed_settings: game_settings.fixed_settings == 1,
+            fixed_settings: game_settings.fixed_settings,
             last_discard_time: game_settings.last_discard_time as i128,
             auto_stop_claim_meld: game_settings
                 .auto_stop_claim_meld
@@ -1118,6 +1112,7 @@ impl DieselGameSettings {
                 .split(',')
                 .map(|s| s.to_string())
                 .collect(),
+            dead_wall: game_settings.dead_wall,
         })
     }
 

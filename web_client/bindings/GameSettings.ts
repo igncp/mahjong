@@ -4,6 +4,7 @@ export type GameSettings = {
   ai_enabled: boolean;
   auto_sort_players: Array<string>;
   auto_stop_claim_meld: Array<string>;
+  dead_wall: boolean;
   discard_wait_ms: null | number;
   fixed_settings: boolean;
   last_discard_time: bigint;

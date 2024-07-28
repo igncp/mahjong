@@ -6,4 +6,5 @@ export type GamePhase =
   | "End"
   | "InitialDraw"
   | "InitialShuffle"
-  | "Playing";
+  | "Playing"
+  | "WaitingPlayers";

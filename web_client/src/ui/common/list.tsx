@@ -20,7 +20,7 @@ const List = <A,>(props: Props<A>) => {
     () => ({
       emptyText,
     }),
-    [emptyText]
+    [emptyText],
   );
 
   return <AntdList locale={locale} {...props} />;

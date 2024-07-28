@@ -32,9 +32,13 @@
     }
   },
   "code": "代碼庫",
+  "copied": "複製到剪貼板",
+  "copyClipboard": "複製到剪貼板",
   "dashboard": {
     "authUsername": "認證使用者名稱",
+    "autoSortOwn": "在繪製瓷磚後自動排序自己的瓷磚",
     "cancel": "取消",
+    "create": "創建",
     "defaultPlayerName": "玩家 {{number}}",
     "editName": "編輯名稱",
     "name": {
@@ -44,16 +48,14 @@
     "newGame": "創建一個新遊戲",
     "no": "不要",
     "openGame": "繼續這個遊戲嗎？",
-    "playerNum1": "一",
-    "playerNum2": "二",
-    "playerNum3": "三",
-    "playerNum4": "四",
+    "playersNum": "真實玩家數量",
     "save": "保存",
     "table": {
       "created": "創建於",
       "id": "標識符",
       "played": "上次玩"
     },
+    "useDeadWall": "使用死牆（14張未使用的瓷磚）",
     "userPoints_other": "{{count}}分",
     "yes": "繼續"
   },
@@ -69,11 +71,13 @@
       "desc": "棄牌後下一回合的格擋時間"
     },
     "board": "遊戲板",
+    "boardRemaining_other": "{{existing}}, {{count}} 剩餘",
     "bonusTiles_other": "獎勵牌: {{count}}",
     "breakMeld": "打破融合",
     "claiming": "如果領取麻將牌",
     "claimTile": "認領瓷磚",
     "continueAI": "繼續人工智能",
+    "copyLink": "複製此鏈接並與他們分享：",
     "createMeld": "創造融合",
     "currentDealer": "當前經銷商:",
     "currentTurn": "當前回合",
@@ -100,6 +104,7 @@
     "points_other": "{{count}}分",
     "possibleMeld": "可能的融合",
     "sayMahjong": "說麻將",
+    "scanQR": "或告訴他們掃描此QR代碼",
     "sortHand": "排序手牌",
     "visibleMeld": "{{player}}的牌融合",
     "wait": {
@@ -109,6 +114,7 @@
       "block": "阻塞時間",
       "none": "沒有任何"
     },
+    "waitingPlayers": "等待其他玩家加入...",
     "wind": {
       "east": "東",
       "north": "北",
@@ -119,6 +125,11 @@
   "header": {
     "logout": "登出",
     "title": "麻將"
+  },
+  "join": {
+    "errorJoiningGame": "加入遊戲時出錯",
+    "joinGame": "你想加入這個遊戲嗎？",
+    "loginToJoin": "您需要登錄才能加入遊戲。"
   },
   "list": {
     "empty": "沒有數據"

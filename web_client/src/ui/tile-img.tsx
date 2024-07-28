@@ -44,7 +44,7 @@ const TileImg = ({
       item: draggableItem,
       type: draggableType || "default",
     }),
-    [draggableType, draggableItem]
+    [draggableType, draggableItem],
   );
 
   const { language } = i18n;
@@ -72,9 +72,8 @@ const TileImg = ({
       ref={dropRef as unknown as LegacyRef<HTMLSpanElement>}
     >
       <span
+        className="inline h-[1px]"
         style={{
-          display: "inline-block",
-          height: "1px",
           transition: "width 0.25s",
           width: `${paddingLeft || 0}px`,
         }}

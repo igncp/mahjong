@@ -40,7 +40,7 @@
           )
           ++ (
             if is-docker-ci == false && is-checks-ci == false
-            then [libargon2 gh]
+            then [libargon2 gh entr]
             else []
           )
           ++ rust.extra-shell-packages;

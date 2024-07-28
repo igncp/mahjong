@@ -8,6 +8,7 @@ run_clippy() {
 
 run_fix() {
   cd web_client
+  sed -i 's|key: |key in |' bindings/DrawWall.ts
   bun run lint:fix
 }
 
@@ -26,8 +27,7 @@ run_check() {
 
   (cd web_client &&
     bun install &&
-    bash scripts/format_bindings.sh &&
-    bun run lint &&
+    run_fix &&
     bun run test &&
     bun run build)
 

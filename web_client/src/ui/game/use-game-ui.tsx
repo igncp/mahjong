@@ -37,7 +37,7 @@ export const useGameUI = ({
     : null;
 
   const handMelds = (serviceGameSummary?.game_summary.hand?.list || []).filter(
-    (h) => !!h.set_id
+    (h) => !!h.set_id,
   );
 
   const [{ canDropInBoard }, boardDropRef] = useDrop(
@@ -53,7 +53,7 @@ export const useGameUI = ({
         }
       },
     },
-    [canDiscardTile]
+    [canDiscardTile],
   );
 
   const handDrops = Array.from({ length: 14 }).map((_, index) =>
@@ -79,8 +79,8 @@ export const useGameUI = ({
           serviceGameM.sortHands(handIds);
         },
       },
-      [serviceGameM]
-    )
+      [serviceGameM],
+    ),
   );
 
   const handHash = handWithoutMelds?.list.map((h) => h.id).join(",");
@@ -91,7 +91,7 @@ export const useGameUI = ({
         tileId: handTile.id,
       })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [handHash]
+    [handHash],
   );
 
   const isDragging$ = useMemo(() => new Subject<boolean>(), []);
@@ -100,16 +100,16 @@ export const useGameUI = ({
     (isDragging: boolean) => {
       isDragging$.next(isDragging);
     },
-    [isDragging$]
+    [isDragging$],
   );
 
   const handTilesMemo = useMemo(
     () =>
       handWithoutMelds?.list.map((handTile) =>
-        serviceGameM.getTile(handTile.id)
+        serviceGameM.getTile(handTile.id),
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [handHash]
+    [handHash],
   );
 
   const handClickProps = useMemo(
@@ -126,13 +126,13 @@ export const useGameUI = ({
         return handler;
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [handHash]
+    [handHash],
   );
 
   const board = serviceGameSummary?.game_summary.board;
 
   const visibleMelds = Object.values(
-    serviceGameSummary?.game_summary.other_hands || {}
+    serviceGameSummary?.game_summary.other_hands || {},
   )
     .map((otherHand) => otherHand.visible)
     .flat();
@@ -173,10 +173,10 @@ export const useGameUI = ({
               })}
             </>
           );
-        }
+        },
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [handHash, board, t, visibleMelds, handMelds]
+    [handHash, board, t, visibleMelds, handMelds],
   );
 
   const handTilesProps = handWithoutMelds?.list.map(
@@ -189,7 +189,7 @@ export const useGameUI = ({
       onIsDraggingChange,
       tile: handTilesMemo?.[handTileIndex],
       tooltipFormatter: tooltipFormatters?.[handTileIndex],
-    })
+    }),
   );
 
   return {

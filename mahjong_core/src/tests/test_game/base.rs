@@ -9,6 +9,7 @@ mod test {
     #[test]
     fn test_draw_tile_from_wall_moves_tile() {
         let mut game = Game::new(None);
+        game.start_with_players();
         game.table.draw_wall.position_tiles(None);
         let player_wind = game.get_player_wind();
         game.table
@@ -51,6 +52,7 @@ mod test {
     #[test]
     fn test_discard_tile_to_board() {
         let mut game = Game::new(None);
+        game.start_with_players();
         game.table.board = Board::from_summary("一筒,二筒,三筒");
         game.table.hands.update_players_hands(&[
             "一萬,二萬,三萬,四萬,五萬,六萬,七萬,八萬,九萬,一索,二索,三索,四索,五索",
@@ -87,8 +89,9 @@ mod test {
     #[test]
     fn test_get_current_player() {
         let mut game = Game::new(None);
+        game.start_with_players();
         game.round.player_index = 2;
-        let player = game.get_current_player();
+        let player = game.get_current_player().unwrap();
         assert_eq!(player, game.players.0[2]);
     }
 
@@ -96,6 +99,7 @@ mod test {
     fn test_create_default_game() {
         let mut game = Game::new(None);
 
+        game.start_with_players();
         game.table.draw_wall.position_tiles(None);
 
         assert_eq!(game.players.len(), 4);

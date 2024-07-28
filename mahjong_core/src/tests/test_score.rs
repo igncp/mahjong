@@ -4,6 +4,7 @@ mod test {
 
     fn test_contains(hand: &str, bonus_tiles: &str, expected: ScoringRule) {
         let mut game = Game::new(None);
+        game.start_with_players();
 
         game.table.hands.update_players_hands(&[hand, "", "", ""]);
         game.table.bonus_tiles.set_from_summary("0", bonus_tiles);
@@ -15,6 +16,7 @@ mod test {
 
     fn test_not_contains(hand: &str, expected: ScoringRule) {
         let mut game = Game::new(None);
+        game.start_with_players();
 
         game.table.hands.update_players_hands(&[hand, "", "", ""]);
 
