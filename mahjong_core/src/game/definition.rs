@@ -8,7 +8,7 @@ use ts_rs::TS;
 use super::Players;
 
 derive_game_common! {
-#[derive(PartialEq, TS)]
+#[derive(PartialEq, Eq, TS, Copy)]
 pub enum GamePhase {
     Beginning,
     DecidingDealer,

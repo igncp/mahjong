@@ -28,6 +28,7 @@ impl<'a> AIWrapper<'a> {
 
         standard_ai.dealer_order_deterministic = Some(false);
         standard_ai.with_dead_wall = service_game.settings.dead_wall;
+        standard_ai.shuffle_players = true;
 
         Self {
             standard_ai,
@@ -58,7 +59,7 @@ impl<'a> AIWrapper<'a> {
                 .contains(&current_player);
         }
 
-        let result = self.standard_ai.play_action();
+        let result = self.standard_ai.play_action(false);
 
         if result.changed && result.exit_location == PlayExitLocation::TileDiscarded {
             self.game_settings.last_discard_time = now_time;

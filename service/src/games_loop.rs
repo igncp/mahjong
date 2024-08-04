@@ -1,3 +1,4 @@
+#![allow(clippy::await_holding_lock)]
 use crate::common::Storage;
 use crate::game_wrapper::GameWrapper;
 use crate::http_server::GamesManager;

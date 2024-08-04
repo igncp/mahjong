@@ -16,6 +16,8 @@ handle games which handles most of the game mechanics.
     - Includes E2E tests
 1. A Rust cli for running simulations
 
+You can find the project's Rust documentation [here](https://mahjong-rust.com/doc/mahjong_core).
+
 ## Development
 
 The project main dependencies are Rust and Nodejs. There is a

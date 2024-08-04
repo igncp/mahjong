@@ -11,6 +11,7 @@ pub enum DiscardTileError {
 
 #[derive(Debug, PartialEq, Eq, Clone, EnumIter)]
 pub enum CreateMeldError {
+    EndRound,
     NotMeld,
     TileIsPartOfMeld,
 }
@@ -19,10 +20,12 @@ pub enum CreateMeldError {
 pub enum PassNullRoundError {
     HandCanDropTile,
     HandCanSayMahjong,
+    WallNotEmpty,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, EnumIter)]
 pub enum BreakMeldError {
+    MeldIsKong,
     MissingHand,
     TileIsExposed,
 }
@@ -33,11 +36,11 @@ pub enum DecideDealerError {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, EnumIter)]
-pub enum InitialDrawError {
+pub enum DrawError {
     NotEnoughTiles,
 }
 
-impl Default for InitialDrawError {
+impl Default for DrawError {
     fn default() -> Self {
         Self::NotEnoughTiles
     }

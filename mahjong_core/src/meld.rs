@@ -6,6 +6,52 @@ use ts_rs::TS;
 
 pub type PlayerDiff = Option<i32>;
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[ts(export)]
+pub enum MeldType {
+    Chow,
+    Kong,
+    Pair,
+    Pung,
+}
+
+impl MeldType {
+    pub fn from_tiles(tiles: &[TileId]) -> Option<Self> {
+        if tiles.len() < 2 || tiles.len() > 4 {
+            return None;
+        }
+
+        let tiles = tiles
+            .iter()
+            .map(|t| &DEFAULT_DECK.0[*t])
+            .collect::<Vec<&Tile>>();
+
+        let opts = SetCheckOpts {
+            board_tile_player_diff: None,
+            claimed_tile: None,
+            sub_hand: &tiles,
+        };
+
+        if get_is_pung(&opts) {
+            return Some(Self::Pung);
+        }
+
+        if get_is_chow(&opts) {
+            return Some(Self::Chow);
+        }
+
+        if get_is_kong(&opts) {
+            return Some(Self::Kong);
+        }
+
+        if get_is_pair(opts.sub_hand) {
+            return Some(Self::Pair);
+        }
+
+        None
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct SetCheckOpts<'a> {
     pub board_tile_player_diff: PlayerDiff,
@@ -171,11 +217,13 @@ pub fn get_is_pair(hand: &[&Tile]) -> bool {
     hand[0].is_same_content(hand[1])
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, TS)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, TS)]
 #[ts(export)]
 pub struct PossibleMeld {
     pub discard_tile: Option<TileId>,
+    pub is_concealed: bool,
     pub is_mahjong: bool,
+    pub is_upgrade: bool,
     pub player_id: PlayerId,
     pub tiles: Vec<TileId>,
 }

@@ -7,6 +7,6 @@ impl Game {
         self.players.push("1".to_string());
         self.players.push("2".to_string());
         self.players.push("3".to_string());
-        self.start();
+        self.start(false);
     }
 }

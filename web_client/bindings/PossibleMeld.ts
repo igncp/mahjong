@@ -2,7 +2,9 @@
 
 export type PossibleMeld = {
   discard_tile: null | number;
+  is_concealed: boolean;
   is_mahjong: boolean;
+  is_upgrade: boolean;
   player_id: string;
   tiles: Array<number>;
 };

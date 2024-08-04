@@ -2,7 +2,8 @@ use crate::{
     deck::DEFAULT_DECK,
     game::GameStyle,
     meld::{
-        get_is_chow, get_is_kong, get_is_pair, get_is_pung, PlayerDiff, PossibleMeld, SetCheckOpts,
+        get_is_chow, get_is_kong, get_is_pair, get_is_pung, MeldType, PlayerDiff, PossibleMeld,
+        SetCheckOpts,
     },
     PlayerId, Tile, TileId,
 };
@@ -17,19 +18,32 @@ pub type SetId = Option<SetIdContent>;
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct HandPossibleMeld {
     pub is_mahjong: bool,
+    pub is_concealed: bool,
+    pub is_upgrade: bool,
     pub tiles: Vec<TileId>,
 }
 
 impl From<PossibleMeld> for HandPossibleMeld {
     fn from(meld: PossibleMeld) -> Self {
         Self {
+            is_concealed: meld.is_concealed,
             is_mahjong: meld.is_mahjong,
+            is_upgrade: meld.is_upgrade,
             tiles: meld.tiles.clone(),
         }
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, TS)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash, TS)]
+#[ts(export)]
+pub struct KongTile {
+    pub concealed: bool,
+    pub id: TileId,
+    pub set_id: SetIdContent,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash, TS)]
+#[ts(export)]
 pub struct HandTile {
     pub concealed: bool,
     pub id: TileId,
@@ -53,17 +67,25 @@ impl HandTile {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
 pub struct Hand {
     pub list: Vec<HandTile>,
+    pub kong_tiles: FxHashSet<KongTile>,
     #[serde(skip)]
     pub style: Option<GameStyle>,
 }
 
-type MeldsCollection<'a> = FxHashMap<String, Vec<&'a HandTile>>;
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[ts(export)]
+pub struct HandMeld {
+    pub meld_type: MeldType,
+    pub tiles: Vec<TileId>,
+}
 
-pub struct GetHandMeldsReturn<'a> {
-    pub melds: MeldsCollection<'a>,
+#[derive(Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq, TS)]
+#[ts(export)]
+pub struct HandMelds {
+    pub melds: Vec<HandMeld>,
     pub tiles_without_meld: usize,
 }
 
@@ -99,11 +121,16 @@ pub enum CanSayMahjongError {
 
 impl Hand {
     pub fn new(list: Vec<HandTile>) -> Self {
-        Self { list, style: None }
+        Self {
+            list,
+            style: None,
+            kong_tiles: FxHashSet::default(),
+        }
     }
 
     pub fn from_ref_vec(tiles: &[&HandTile]) -> Self {
         Self {
+            kong_tiles: FxHashSet::default(),
             list: tiles.iter().cloned().cloned().collect(),
             style: None,
         }
@@ -112,6 +139,7 @@ impl Hand {
     pub fn from_ids(tiles: &[TileId]) -> Self {
         Self {
             list: tiles.iter().cloned().map(HandTile::from_id).collect(),
+            kong_tiles: FxHashSet::default(),
             style: None,
         }
     }
@@ -167,33 +195,31 @@ impl Hand {
         Ok(())
     }
 
-    pub fn get_melds(&self) -> GetHandMeldsReturn {
-        let mut melds: MeldsCollection = FxHashMap::default();
-        let mut tiles_without_meld = 0;
+    pub fn get_melds(&self) -> HandMelds {
+        let mut melds = HandMelds::default();
+        let sets_groups = self.get_sets_groups();
 
-        for hand_tile in &self.list {
-            if hand_tile.set_id.is_none() {
-                tiles_without_meld += 1;
-
+        for (set, tiles) in sets_groups.iter() {
+            if set.is_none() {
+                melds.tiles_without_meld = tiles.len();
                 continue;
             }
-            let set_id = hand_tile.set_id.clone().unwrap();
-            let list = melds.get(&set_id);
 
-            let mut list = match list {
-                Some(list) => list.clone(),
-                None => vec![],
-            };
+            let meld_type = MeldType::from_tiles(tiles);
 
-            list.push(hand_tile);
+            if meld_type.is_none() {
+                continue;
+            }
 
-            melds.insert(set_id, list);
+            let meld_type = meld_type.unwrap();
+
+            melds.melds.push(HandMeld {
+                meld_type,
+                tiles: tiles.clone(),
+            });
         }
 
-        GetHandMeldsReturn {
-            melds,
-            tiles_without_meld,
-        }
+        melds
     }
 
     pub fn can_say_mahjong(&self) -> Result<(), CanSayMahjongError> {
@@ -217,6 +243,38 @@ impl Hand {
         Ok(())
     }
 
+    fn get_pungs_tiles(&self) -> Vec<(Tile, SetId)> {
+        let sets_ids: FxHashSet<SetIdContent> =
+            self.list.iter().filter_map(|t| t.set_id.clone()).collect();
+        let mut pungs: Vec<(Tile, SetId)> = vec![];
+        let existing_kongs = self
+            .kong_tiles
+            .iter()
+            .map(|t| t.set_id.clone())
+            .collect::<FxHashSet<SetIdContent>>();
+
+        for set_id in sets_ids {
+            let tiles: Vec<&Tile> = self
+                .list
+                .iter()
+                .filter(|t| t.set_id == Some(set_id.clone()))
+                .map(|t| &DEFAULT_DECK.0[t.id])
+                .collect();
+
+            let is_pung = get_is_pung(&SetCheckOpts {
+                board_tile_player_diff: PlayerDiff::default(),
+                claimed_tile: None,
+                sub_hand: &tiles,
+            });
+
+            if is_pung && !existing_kongs.contains(&set_id) {
+                pungs.push((tiles[0].clone(), Some(set_id)));
+            }
+        }
+
+        pungs
+    }
+
     pub fn get_possible_melds(
         &self,
         board_tile_player_diff: PlayerDiff,
@@ -226,6 +284,7 @@ impl Hand {
         let hand_filtered: Vec<&HandTile> =
             self.list.iter().filter(|h| h.set_id.is_none()).collect();
         let mut melds: Vec<HandPossibleMeld> = vec![];
+        let existing_pungs = self.get_pungs_tiles();
 
         if check_for_mahjong {
             if self.can_say_mahjong().is_ok() {
@@ -236,6 +295,8 @@ impl Hand {
                     .map(|t| t.id)
                     .collect();
                 let meld = HandPossibleMeld {
+                    is_upgrade: false,
+                    is_concealed: false,
                     is_mahjong: true,
                     tiles,
                 };
@@ -274,8 +335,12 @@ impl Hand {
                     };
 
                     if get_is_pung(&opts) || get_is_chow(&opts) {
+                        let is_concealed = claimed_tile.is_none();
+
                         let meld = HandPossibleMeld {
+                            is_concealed,
                             is_mahjong: false,
+                            is_upgrade: false,
                             tiles: vec![first_tile, second_tile, third_tile],
                         };
                         melds.push(meld);
@@ -294,13 +359,38 @@ impl Hand {
                         opts.sub_hand = &sub_hand_inner;
 
                         if get_is_kong(&opts) {
+                            let is_concealed = claimed_tile.is_none();
+
                             let meld = HandPossibleMeld {
+                                is_concealed,
                                 is_mahjong: false,
+                                is_upgrade: false,
                                 tiles: vec![first_tile, second_tile, third_tile, forth_tile.id],
                             };
                             melds.push(meld);
                         }
                     }
+                }
+            }
+
+            for (concealed_pung_tile, set_id) in existing_pungs.iter() {
+                if first_tile_full.is_same_content(concealed_pung_tile) {
+                    let is_concealed = claimed_tile.is_none();
+                    let mut tiles: Vec<TileId> = self
+                        .list
+                        .iter()
+                        .filter(|t| t.set_id == *set_id)
+                        .map(|t| t.id)
+                        .collect();
+                    tiles.push(first_tile);
+
+                    let meld = HandPossibleMeld {
+                        is_mahjong: false,
+                        is_upgrade: true,
+                        is_concealed,
+                        tiles,
+                    };
+                    melds.push(meld);
                 }
             }
         }
@@ -312,21 +402,19 @@ impl Hand {
         self.list.iter().any(|t| t.id == *tile_id)
     }
 
-    pub fn get_sets_groups(&self) -> FxHashMap<SetId, Vec<&HandTile>> {
-        let mut sets: FxHashMap<SetId, Vec<&HandTile>> = FxHashMap::default();
+    pub fn get_sets_groups(&self) -> FxHashMap<SetId, Vec<TileId>> {
+        let mut sets: FxHashMap<SetId, Vec<TileId>> = FxHashMap::default();
 
         for tile in &self.list {
             let set_id = tile.set_id.clone();
-            let list = sets.get(&set_id);
 
-            let mut list = match list {
-                Some(list) => list.clone(),
-                None => vec![],
-            };
+            sets.entry(set_id.clone()).or_default().push(tile.id);
+        }
 
-            list.push(tile);
-
-            sets.insert(set_id, list);
+        for kong_tile in &self.kong_tiles {
+            sets.entry(Some(kong_tile.set_id.clone()))
+                .or_default()
+                .push(kong_tile.id);
         }
 
         sets

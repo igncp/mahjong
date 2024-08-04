@@ -2,7 +2,7 @@
 mod test {
     use crate::{
         ai::{PlayExitLocation, StandardAI},
-        game::InitialDrawError,
+        game::DrawError,
         Game,
     };
     use pretty_assertions::assert_eq;
@@ -22,6 +22,7 @@ mod test {
                     "- P2: 一萬,一萬,一萬,三萬,五萬,七萬,九萬,一筒,三筒,五筒,七筒,九筒,一索,三索
                      Turn: P2, Phase: Playing"
                 }
+                PlayExitLocation::NewRoundFromMeld => "",
                 PlayExitLocation::NoAutoDrawTile => "",
                 PlayExitLocation::AutoStoppedDrawNormal => "",
                 PlayExitLocation::NoAction => "",
@@ -84,7 +85,7 @@ mod test {
                 }
                 PlayExitLocation::InitialShuffle => "Phase: Initial Shuffle",
                 PlayExitLocation::InitialDrawError(e) => match e {
-                    InitialDrawError::NotEnoughTiles => "Phase: Initial Draw",
+                    DrawError::NotEnoughTiles => "Phase: Initial Draw",
                 },
                 PlayExitLocation::WaitingDealerOrder => "Phase: Deciding Dealer",
                 PlayExitLocation::CompletedPlayers => "Phase: Waiting Players",
@@ -110,8 +111,7 @@ mod test {
 
             game_ai.can_draw_round = true;
 
-            println!("game_ai {}", game_ai.game.get_summary());
-            let actual = game_ai.play_action();
+            let actual = game_ai.play_action(false);
 
             assert_eq!(
                 actual.exit_location, exit_location,

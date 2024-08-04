@@ -47,6 +47,21 @@ $top-offset: 60px;
   position: relative;
 }
 
+.userContentWrap {
+  width: 20px;
+  overflow: visible;
+  position: absolute;
+}
+
+.userContent {
+  display: flex;
+  gap: 5px;
+  height: max-content;
+  justify-content: flex-start;
+  overflow: visible;
+  width: max-content;
+}
+
 .userWrapper {
   position: absolute;
   display: flex;
@@ -58,25 +73,27 @@ $top-offset: 60px;
     bottom: 0;
     transform: translateY($top-offset - 40px);
     align-items: center;
+    .userContent {
+      flex-direction: column;
+    }
   }
 
   &.userLeft {
     left: $user-gap;
+    .tilesColumn {
+      transform: translateX(-10px);
+    }
   }
 
   &.userRight {
-    right: $user-gap;
+    right: $user-gap + 40px;
+    .tilesColumn {
+      transform: translateX(-20px);
+    }
   }
 
   &.userBottom {
-    bottom: $user-gap;
-
-    .userIcons {
-      position: absolute;
-      right: -5px;
-      bottom: 0;
-      transform: translateX(100%);
-    }
+    bottom: $user-gap + 30px;
   }
 
   &.userTop {
@@ -88,6 +105,9 @@ $top-offset: 60px;
     right: 0;
     left: 0;
     justify-content: center;
+    .userContent {
+      flex-direction: row;
+    }
   }
 
   &.userActive {

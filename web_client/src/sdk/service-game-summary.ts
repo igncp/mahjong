@@ -6,14 +6,20 @@ import type { ServiceGameSummary } from "bindings/ServiceGameSummary";
 import type { Tile } from "bindings/Tile";
 import { Subject } from "rxjs";
 
+import {
+  formatTile,
+  getGamePlayingExtras,
+  isChow,
+  isKong,
+  isPung,
+} from "./pkg-wrapper";
+
 import type { TileId } from "./core";
 import { HttpClient } from "./http-client";
 
-export type ModelState<A> = [A, (v: A) => void];
+export type ModelState<A> = [A | null, (v: A) => void];
 
 let deck: Deck;
-let format_tile: (tile: Tile) => string;
-let get_possible_melds_summary: (game: ServiceGameSummary) => PossibleMeld[];
 
 export const setDeck = (newDeck: Deck) => {
   deck = newDeck;
@@ -21,26 +27,16 @@ export const setDeck = (newDeck: Deck) => {
 
 export const getDeck = () => deck;
 
-export const setFormatTile = (newFormatTile: typeof format_tile) => {
-  format_tile = newFormatTile;
-};
-
 export const getTile = (tileId: TileId) => deck[tileId] as Tile;
-
-export const setGetPossibleMeldsSummary = (
-  newGetPossibleMeldsSummary: typeof get_possible_melds_summary,
-) => {
-  get_possible_melds_summary = newGetPossibleMeldsSummary;
-};
 
 export enum ModelServiceGameSummaryError {
   INVALID_SAY_MAHJONG = "INVALID_SAY_MAHJONG",
 }
 
 export class ModelServiceGameSummary {
-  public errorEmitter$ = new Subject<ModelServiceGameSummaryError>();
+  errorEmitter$ = new Subject<ModelServiceGameSummaryError>();
 
-  public gameState!: ModelState<ServiceGameSummary>;
+  gameState!: ModelState<ServiceGameSummary>;
   private handleError = (error?: ModelServiceGameSummaryError) => {
     if (error) {
       this.errorEmitter$.next(error);
@@ -48,19 +44,21 @@ export class ModelServiceGameSummary {
 
     this.loadingState[1](false);
   };
-  public isLoading = false;
+  isLoading = false;
 
-  public loadingState!: ModelState<boolean>;
+  loadingState!: ModelState<boolean>;
 
   breakMeld(setId: string) {
-    if (this.loadingState[0]) {
+    const [gameState] = this.gameState;
+
+    if (this.loadingState[0] || !gameState) {
       return;
     }
 
     this.loadingState[1](true);
 
-    HttpClient.userBreakMeld(this.gameState[0].game_summary.id, {
-      player_id: this.gameState[0].game_summary.player_id,
+    HttpClient.userBreakMeld(gameState.game_summary.id, {
+      player_id: gameState.game_summary.player_id,
       set_id: setId,
     }).subscribe({
       error: () => {
@@ -74,14 +72,16 @@ export class ModelServiceGameSummary {
   }
 
   claimTile() {
-    if (this.loadingState[0]) {
+    const [gameState] = this.gameState;
+
+    if (this.loadingState[0] || !gameState) {
       return;
     }
 
     this.loadingState[1](true);
 
-    HttpClient.userClaimTile(this.gameState[0].game_summary.id, {
-      player_id: this.gameState[0].game_summary.player_id,
+    HttpClient.userClaimTile(gameState.game_summary.id, {
+      player_id: gameState.game_summary.player_id,
     }).subscribe({
       error: () => {
         this.handleError();
@@ -93,16 +93,20 @@ export class ModelServiceGameSummary {
     });
   }
 
-  createMeld(tiles: TileId[]) {
-    if (this.loadingState[0]) {
+  createMeld(meld: PossibleMeld) {
+    const [gameState] = this.gameState;
+
+    if (this.loadingState[0] || !gameState) {
       return;
     }
 
     this.loadingState[1](true);
 
-    HttpClient.userCreateMeld(this.gameState[0].game_summary.id, {
-      player_id: this.gameState[0].game_summary.player_id,
-      tiles,
+    HttpClient.userCreateMeld(gameState.game_summary.id, {
+      is_concealed: meld.is_concealed,
+      is_upgrade: meld.is_upgrade,
+      player_id: gameState.game_summary.player_id,
+      tiles: meld.tiles,
     }).subscribe({
       error: () => {
         this.handleError();
@@ -115,13 +119,15 @@ export class ModelServiceGameSummary {
   }
 
   discardTile(tileId: TileId) {
-    if (this.loadingState[0]) {
+    const [gameState] = this.gameState;
+
+    if (this.loadingState[0] || !gameState) {
       return;
     }
 
     this.loadingState[1](true);
 
-    HttpClient.userDiscardTile(this.gameState[0].game_summary.id, {
+    HttpClient.userDiscardTile(gameState.game_summary.id, {
       tile_id: tileId,
     }).subscribe({
       error: () => {
@@ -134,36 +140,46 @@ export class ModelServiceGameSummary {
     });
   }
 
+  getGamePlayingExtras() {
+    const [gameState] = this.gameState;
+
+    if (!gameState) return null;
+
+    return getGamePlayingExtras(gameState);
+  }
+
+  getIsChow(tiles: TileId[]) {
+    return isChow(tiles);
+  }
+
+  getIsKong(tiles: TileId[]) {
+    return isKong(tiles);
+  }
+
+  getIsPung(tiles: TileId[]) {
+    return isPung(tiles);
+  }
+
   getPlayerHandWithoutMelds(): Hand | null {
-    const { hand } = this.gameState[0].game_summary;
+    const [gameState] = this.gameState;
+
+    if (!gameState) return null;
+
+    const { hand } = gameState.game_summary;
 
     if (!hand?.list) return null;
 
     return { ...hand, list: hand.list.filter((tile) => !tile.set_id) };
   }
 
-  getPlayingPlayer() {
-    return this.gameState[0].players[this.gameState[0].game_summary.player_id];
-  }
-
   getPlayingPlayerIndex() {
-    return this.gameState[0].game_summary.players.findIndex(
-      (player) => player === this.gameState[0].game_summary.player_id,
+    const [gameState] = this.gameState;
+
+    if (!gameState) return null;
+
+    return gameState.game_summary.players.findIndex(
+      (player) => player === gameState.game_summary.player_id,
     );
-  }
-
-  getPossibleMelds(): PossibleMeld[] {
-    try {
-      if (this.gameState[0].game_summary.phase !== "Playing") return [];
-
-      const possibleMelds = get_possible_melds_summary(this.gameState[0]);
-
-      return possibleMelds;
-    } catch (error) {
-      console.error("debug: service-game-summary.ts: error", error);
-    }
-
-    return [];
   }
 
   getShareLink(gameId: string) {
@@ -177,7 +193,7 @@ export class ModelServiceGameSummary {
   getTileString(tileId: TileId) {
     try {
       const tile = this.getTile(tileId);
-      const tileString = format_tile(tile);
+      const tileString = formatTile(tile);
 
       return `[${tileString}]`;
     } catch (err) {
@@ -187,18 +203,17 @@ export class ModelServiceGameSummary {
     return "";
   }
 
-  getTurnPlayer() {
-    const playerId =
-      this.gameState[0].game_summary.players[
-        this.gameState[0].game_summary.round.player_index
-      ];
-
-    return this.gameState[0].players[playerId];
-  }
-
   passRound() {
-    HttpClient.userPassRound(this.gameState[0].game_summary.id, {
-      player_id: this.gameState[0].game_summary.player_id,
+    const [gameState] = this.gameState;
+
+    if (this.loadingState[0] || !gameState) {
+      return;
+    }
+
+    this.loadingState[1](true);
+
+    HttpClient.userPassRound(gameState.game_summary.id, {
+      player_id: gameState.game_summary.player_id,
     }).subscribe({
       error: () => {
         this.handleError();
@@ -211,14 +226,16 @@ export class ModelServiceGameSummary {
   }
 
   sayMahjong() {
-    if (this.loadingState[0]) {
+    const [gameState] = this.gameState;
+
+    if (this.loadingState[0] || !gameState) {
       return;
     }
 
     this.loadingState[1](true);
 
-    HttpClient.userSayMahjong(this.gameState[0].game_summary.id, {
-      player_id: this.gameState[0].game_summary.player_id,
+    HttpClient.userSayMahjong(gameState.game_summary.id, {
+      player_id: gameState.game_summary.player_id,
     }).subscribe({
       error: (error) => {
         console.error("debug: service-game-summary.ts: error", error);
@@ -232,21 +249,27 @@ export class ModelServiceGameSummary {
   }
 
   setGameSettings(gameSettings: GameSettingsSummary) {
-    if (this.loadingState[0]) {
+    const [gameState] = this.gameState;
+
+    if (this.loadingState[0] || !gameState) {
       return;
     }
 
     this.loadingState[1](true);
 
-    HttpClient.userSetGameSettings(this.gameState[0].game_summary.id, {
-      player_id: this.gameState[0].game_summary.player_id,
+    HttpClient.userSetGameSettings(gameState.game_summary.id, {
+      player_id: gameState.game_summary.player_id,
       settings: gameSettings,
     }).subscribe({
       next: () => {
         this.loadingState[1](false);
 
+        const [gameState2] = this.gameState;
+
+        if (!gameState2) return;
+
         this.gameState[1]({
-          ...this.gameState[0],
+          ...gameState2,
           settings: gameSettings,
         });
       },
@@ -254,15 +277,17 @@ export class ModelServiceGameSummary {
   }
 
   sortHands(tiles?: TileId[]) {
-    if (this.loadingState[0]) {
+    const [gameState] = this.gameState;
+
+    if (this.loadingState[0] || !gameState) {
       return;
     }
 
     this.loadingState[1](true);
 
-    HttpClient.userSortHand(this.gameState[0].game_summary.id, {
-      game_version: this.gameState[0].game_summary.version,
-      player_id: this.gameState[0].game_summary.player_id,
+    HttpClient.userSortHand(gameState.game_summary.id, {
+      game_version: gameState.game_summary.version,
+      player_id: gameState.game_summary.player_id,
       tiles: tiles || null,
     }).subscribe({
       error: () => {
@@ -281,7 +306,7 @@ export class ModelServiceGameSummary {
         tileIdToIndex.set(tileId, index);
       });
 
-      const prevHand = this.gameState[0].game_summary.hand;
+      const prevHand = gameState.game_summary.hand;
 
       if (!prevHand) return;
 
@@ -299,16 +324,16 @@ export class ModelServiceGameSummary {
       });
 
       this.gameState[1]({
-        ...this.gameState[0],
+        ...gameState,
         game_summary: {
-          ...this.gameState[0].game_summary,
+          ...gameState.game_summary,
           hand: newHand,
         },
       });
     }
   }
 
-  public updateStates(
+  updateStates(
     gameState: ModelState<ServiceGameSummary>,
     loadingState: ModelState<boolean>,
   ) {

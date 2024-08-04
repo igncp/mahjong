@@ -4,10 +4,9 @@ use auth::AuthHandler;
 use db_storage::DBStorage;
 use dotenv::dotenv;
 use http_server::MahjongServer;
+use logs::setup_logs;
 use std::process;
 use tracing::{error, info};
-
-use crate::logs::setup_logs;
 
 mod ai_wrapper;
 mod auth;

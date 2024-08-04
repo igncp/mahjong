@@ -1,13 +1,17 @@
 import {
-  CaretRightFilled,
+  InfoCircleOutlined,
   QuestionCircleOutlined,
   SettingFilled,
   ThunderboltOutlined,
 } from "@ant-design/icons";
 import type { ServiceGameSummary } from "bindings/ServiceGameSummary";
-import { memo, useState } from "react";
+import type { Wind } from "bindings/Wind";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import type { PlayingExtrasParsed } from "src/sdk/pkg-wrapper";
+
+import type { TileId } from "src/sdk/core";
 import type { ModelServiceGameSummary } from "src/sdk/service-game-summary";
 import Modal from "src/ui/common/modal";
 import Text from "src/ui/common/text";
@@ -33,23 +37,30 @@ interface IProps {
   activePlayer: BoardPlayer["id"] | undefined;
   canDropInBoard: boolean;
   dealerPlayer: BoardPlayer["id"] | undefined;
+  getMeldType: (tiles: TileId[]) => string;
   isMobile: boolean;
   players: [BoardPlayer, BoardPlayer, BoardPlayer, BoardPlayer];
+  playersVisibleMelds: PlayingExtrasParsed["players_visible_melds"] | undefined;
+  playersWinds: PlayingExtrasParsed["players_winds"] | undefined;
   serviceGameM: ModelServiceGameSummary;
   serviceGameSummary: ServiceGameSummary;
+  windToText: Record<Wind, string>;
 }
 
 const DealerIcon = ThunderboltOutlined;
-const MeldIcon = CaretRightFilled;
 
 const GameBoard = ({
   activePlayer,
   canDropInBoard,
   dealerPlayer,
+  getMeldType,
   isMobile,
   players,
+  playersVisibleMelds,
+  playersWinds,
   serviceGameM,
   serviceGameSummary,
+  windToText,
 }: IProps) => {
   const [displayHelpModal, setDisplayHelpModal] = useState(false);
   const [displaySettingsModal, setDisplaySettingsModal] = useState(false);
@@ -113,27 +124,53 @@ const GameBoard = ({
             styles.userRight,
           ][idx];
 
-          const isCurrentPlayer =
-            player.id === serviceGameSummary.game_summary.player_id;
+          const playerWind = playersWinds?.get(player.id);
 
-          const playerVisibleMelds = serviceGameSummary.game_summary.hand?.list
-            ? new Set(
-                isCurrentPlayer
-                  ? serviceGameSummary.game_summary.hand.list
-                      .filter((h) => !h.concealed)
-                      .map((h) => h.set_id)
-                      .filter(Boolean)
-                  : serviceGameSummary.game_summary.other_hands[
-                      player.id
-                    ]?.visible.list
-                      .map((handTile) => handTile.set_id)
-                      .filter(Boolean),
-              ).size
-            : 0;
+          const visibleMelds = playersVisibleMelds?.get(player.id);
 
-          const tooltip = (
+          const tilesColumn = (visibleMelds || []).map((visibleMeld) => {
+            const { set_id: setId, tiles } = visibleMeld;
+            const meldType = getMeldType(tiles);
+
+            const tooltipTitle = (
+              <span>
+                <b>
+                  {t("game.visibleMeld", {
+                    player: player.name,
+                  })}
+                </b>
+                <br />
+                {meldType}
+              </span>
+            );
+
+            return (
+              <div
+                className="flex flex-row items-center justify-center gap-[1px]"
+                key={setId}
+              >
+                {tiles.map((tileId) => {
+                  const tile = serviceGameM.getTile(tileId);
+
+                  return (
+                    <span key={tileId}>
+                      <TileImg size={15} tile={tile} />
+                    </span>
+                  );
+                })}
+                <Tooltip title={tooltipTitle}>
+                  <InfoCircleOutlined size={4} />
+                </Tooltip>
+              </div>
+            );
+          });
+
+          const avatarTooltip = (
             <>
-              <span>{player.name}</span>
+              <span>
+                {player.name}
+                {playerWind ? ` | ${windToText[playerWind]}` : ""}
+              </span>
               <br />
               <span>
                 {t("game.points", {
@@ -158,34 +195,25 @@ const GameBoard = ({
                 .join(" ")}
               key={player.id}
             >
-              <Tooltip title={tooltip}>
-                <span className={styles.userItem}>
-                  <UserAvatar />
-                  <span className={styles.userIcons}>
+              <span className={styles.userContentWrap}>
+                <div className={styles.userContent}>
+                  <Tooltip title={avatarTooltip}>
+                    <div className={styles.userItem}>
+                      <UserAvatar />
+                    </div>
+                  </Tooltip>
+                  <div className={styles.userIcons}>
                     {dealerPlayer === player.id && (
-                      <span
-                        className={[styles.dealerIcon, styles.boardIcon].join(
-                          " ",
-                        )}
-                      >
+                      <div className={[styles.dealerIcon].join(" ")}>
                         <DealerIcon rev="" />
-                      </span>
+                      </div>
                     )}
-                    {Array.from({ length: playerVisibleMelds }).map(
-                      (_, index) => (
-                        <span
-                          className={[styles.meldIcon, styles.boardIcon].join(
-                            " ",
-                          )}
-                          key={index}
-                        >
-                          <MeldIcon rev="" />
-                        </span>
-                      ),
-                    )}
-                  </span>
-                </span>
-              </Tooltip>
+                  </div>
+                  {!!visibleMelds?.length && (
+                    <div className={styles.tilesColumn}>{tilesColumn}</div>
+                  )}
+                </div>
+              </span>
             </span>
           );
         })}
@@ -227,12 +255,6 @@ const GameBoard = ({
               </span>{" "}
               {t("board.help.dealer")}
             </li>
-            <li>
-              <span className={[styles.meldIcon, styles.helpIcon].join(" ")}>
-                <MeldIcon rev="" />
-              </span>{" "}
-              {t("board.help.meld", "Visible meld")}
-            </li>
           </ul>
         </Modal>
         <Modal
@@ -250,4 +272,4 @@ const GameBoard = ({
   );
 };
 
-export default memo(GameBoard);
+export default GameBoard;

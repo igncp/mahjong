@@ -144,6 +144,19 @@ impl ServiceGameSummary {
             settings: GameSettingsSummary::from_game_settings(&game.settings, player_id),
         })
     }
+
+    pub fn get_turn_player(&self) -> Option<ServicePlayerSummary> {
+        let player_id = self.game_summary.players.0[self.game_summary.round.player_index].clone();
+
+        self.players.get(&player_id).cloned()
+    }
+
+    pub fn get_dealer_player(&self) -> Option<ServicePlayerSummary> {
+        let player_id =
+            self.game_summary.players.0[self.game_summary.round.dealer_player_index].clone();
+
+        self.players.get(&player_id).cloned()
+    }
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -182,6 +195,8 @@ pub type AdminPostDrawTileResponse = Hand;
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct AdminPostCreateMeldRequest {
+    pub is_concealed: bool,
+    pub is_upgrade: bool,
     pub player_id: String,
     pub tiles: FxHashSet<TileId>,
 }
@@ -287,6 +302,8 @@ pub struct UserPostSortHandResponse(pub ServiceGameSummary);
 pub struct UserPostCreateMeldRequest {
     pub player_id: PlayerId,
     pub tiles: FxHashSet<TileId>,
+    pub is_upgrade: bool,
+    pub is_concealed: bool,
 }
 #[derive(Deserialize, Serialize, TS)]
 #[ts(export)]

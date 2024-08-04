@@ -3,7 +3,7 @@ import { Fragment, useEffect, useState } from "react";
 
 import { ModelServiceGame } from "src/lib/models/service-game";
 import { SiteUrls } from "src/lib/site/urls";
-import type { SetId, TAdminGetGameResponse } from "src/sdk/core";
+import type { SetIdContent, TAdminGetGameResponse } from "src/sdk/core";
 import { HttpClient } from "src/sdk/http-client";
 import Button from "src/ui/common/button";
 import CopyToClipboard from "src/ui/common/copy-to-clipboard";
@@ -125,7 +125,7 @@ const Game = ({ gameId }: IProps) => {
           }
 
           return acc;
-        }, new Set<SetId>());
+        }, new Set<SetIdContent>());
 
         return (
           <Fragment key={playerId}>

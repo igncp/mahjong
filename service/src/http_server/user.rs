@@ -1,3 +1,4 @@
+#![allow(clippy::await_holding_lock)]
 use crate::auth::{AuthHandler, UnauthorizedError, UserRole};
 use crate::game_wrapper::{CreateGameOpts, GameWrapper};
 use crate::http_server::base::{get_lock, DataSocketServer, DataStorage, GamesManagerData};

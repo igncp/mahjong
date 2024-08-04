@@ -27,8 +27,7 @@
   "board": {
     "help": {
       "dealer": "莊家玩家",
-      "intro": "突出顯示的用戶是當前回合中應該玩的用戶",
-      "meld": "可見麻將牌"
+      "intro": "突出顯示的用戶是當前回合中應該玩的用戶"
     }
   },
   "code": "代碼庫",
@@ -91,8 +90,11 @@
     "hand": "你的手牌",
     "itsYou": "是你",
     "meld": {
+      "chow": "Chow",
       "concealed": "隱",
+      "kong": "Kong",
       "open": "可見的",
+      "pung": "Pung",
       "title": "牌組合"
     },
     "option": {
@@ -106,7 +108,8 @@
     "sayMahjong": "說麻將",
     "scanQR": "或告訴他們掃描此QR代碼",
     "sortHand": "排序手牌",
-    "visibleMeld": "{{player}}的牌融合",
+    "upgradeMeld": "升級融合",
+    "visibleMeld": "可見的融合",
     "wait": {
       "10sec": "10秒",
       "1min": "1分鐘",

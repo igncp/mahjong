@@ -27,8 +27,7 @@
   "board": {
     "help": {
       "dealer": "Dealer player",
-      "intro": "The highlighted user is the one who should play in the current turn",
-      "meld": "Visible meld"
+      "intro": "The highlighted user is the one who should play in the current turn"
     }
   },
   "code": "Code",
@@ -94,8 +93,11 @@
     "hand": "Your hand",
     "itsYou": "it's you",
     "meld": {
+      "chow": "Chow",
       "concealed": "concealed",
+      "kong": "Kong",
       "open": "open",
+      "pung": "Pung",
       "title": "Meld"
     },
     "option": {
@@ -110,7 +112,8 @@
     "sayMahjong": "Say Mahjong",
     "scanQR": "Or tell them to scan this QR code:",
     "sortHand": "Sort hand",
-    "visibleMeld": "Meld of {{player}}",
+    "upgradeMeld": "Upgrade Meld",
+    "visibleMeld": "Exposed Meld",
     "wait": {
       "10sec": "10 seconds",
       "1min": "1 minute",

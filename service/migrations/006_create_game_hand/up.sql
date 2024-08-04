@@ -5,5 +5,6 @@ CREATE TABLE IF NOT EXISTS game_hand (
     set_id TEXT NULL,
     tile_id INT NOT NULL,
     tile_index INT NOT NULL,
+    is_kong BOOLEAN NOT NULL,
     PRIMARY KEY (game_id, tile_id)
 );

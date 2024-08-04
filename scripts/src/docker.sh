@@ -4,9 +4,11 @@ DOCKER_IMAGE_TAG=$(uname -m)
 
 run_docker() (
   web() {
+    cargo doc --release --no-deps
     run_pack_wasm
 
     (cd web_client && bun install && bun run build)
+    mv target/doc web_client/out/doc
   }
 
   docker_service() {

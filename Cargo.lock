@@ -1315,6 +1315,7 @@ dependencies = [
  "crossterm 0.26.1",
  "futures-util",
  "mahjong_core",
+ "mahjong_service",
  "num",
  "rand",
  "reqwest",
@@ -2760,9 +2761,12 @@ name = "web_lib"
 version = "0.1.0"
 dependencies = [
  "mahjong_core",
+ "rustc-hash",
+ "serde",
  "serde-wasm-bindgen",
  "serde_json",
  "service_contracts",
+ "ts-rs",
  "wasm-bindgen",
  "web-sys",
 ]

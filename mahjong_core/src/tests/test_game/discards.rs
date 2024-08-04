@@ -21,7 +21,7 @@ Board: 一筒,二筒,三筒
         assert_eq!(
             game.get_summary(),
             r#"
-- P1: 一索,一萬,七萬,三索,三萬,九萬,二索,五索,五萬,八萬,六萬,四索,四萬
+- P1: 一萬,三萬,四萬,五萬,六萬,七萬,八萬,九萬,一索,二索,三索,四索,五索
 - P2: 八筒
 - P3: 九筒
 Board: 二萬,三筒...
@@ -38,14 +38,14 @@ Consecutive: 0, Discarded: 二萬
         for error in DiscardTileError::iter() {
             let (summary, tile_summary) = match error {
                 DiscardTileError::TileIsPartOfMeld => (
-                    "- P1: 一萬,三萬,四萬,五萬,六萬,七萬,八萬,九萬,一索,二索,三索 二萬,二萬,二萬
+                    "- P1: 一萬,三萬,四萬,五萬,六萬,七萬,八萬,九萬,一索,二索,三索 一筒,二筒,三筒
                      Turn: P1",
-                    "二萬",
+                    "二筒",
                 ),
                 DiscardTileError::TileIsExposed => (
-                    "- P1: 一萬,三萬,四萬,五萬,六萬,七萬,八萬,九萬,一索,二索,三索 *二萬,二萬,二萬
+                    "- P1: 一萬,三萬,四萬,五萬,六萬,七萬,八萬,九萬,一索,二索,三索 *一筒,二筒,三筒
                      Turn: P1",
-                    "二萬",
+                    "二筒",
                 ),
                 DiscardTileError::PlayerHasNoTile => (
                     "- P1: 一萬,三萬,四萬,五萬,六萬,七萬,八萬,九萬,一索,二索,三索,三索,三索,三索

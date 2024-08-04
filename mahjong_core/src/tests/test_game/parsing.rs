@@ -141,10 +141,12 @@ mod test {
     },
     "hands": {
       "3": {
-        "list": []
+        "list": [],
+        "kong_tiles": []
       },
       "2": {
-        "list": []
+        "list": [],
+        "kong_tiles": []
       },
       "0": {
         "list": [
@@ -153,10 +155,12 @@ mod test {
             "id": 17,
             "set_id": null
           }
-        ]
+        ],
+        "kong_tiles": []
       },
       "1": {
-        "list": []
+        "list": [],
+        "kong_tiles": []
       }
     },
     "bonus_tiles": {

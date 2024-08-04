@@ -1,7 +1,6 @@
-import type { PossibleMeld } from "bindings/PossibleMeld";
 import type { ServiceGame } from "bindings/ServiceGame";
 
-import { format_tile, get_possible_melds } from "pkg";
+import { formatTile, getPossibleMelds } from "src/sdk/pkg-wrapper";
 
 import type { PlayerId, TileId } from "src/sdk/core";
 import { getDeck } from "src/sdk/service-game-summary";
@@ -19,15 +18,13 @@ export class ModelServiceGame {
     return this.data.game.score[playerId];
   }
 
-  getPossibleMelds(): PossibleMeld[] {
-    const possibleMelds = get_possible_melds(JSON.stringify(this.data));
-
-    return possibleMelds;
+  getPossibleMelds() {
+    return getPossibleMelds(this.data);
   }
 
   getTileString(tileId: TileId) {
     const tile = getDeck()[tileId];
-    const tileString = format_tile(tile);
+    const tileString = formatTile(tile);
 
     return `[${tileString}]`;
   }

@@ -10,6 +10,7 @@
 - FE: Audio effects
 - FE: Perspective of tiles
 - FE: Display the last tile in board in different size
+- FE: Display other player melds, and bonus tiles, in small size and on hover
 - BE: leaderboard using redis
 - BE: promote anonymous account to real account
 - BE: decouple mahjong specific logic from server to a different package
@@ -20,19 +21,19 @@
 - CORE: Support charleston in the drawing phase
 - CORE: Average rounds are too high in the simulation
 - CORE: Support the deciding of the dealer with dice
-- CORE: Bonus tiles directions
 - CORE: Support three players: high effort
 - FS: Refactor logic to support multiple types of games (e.g. listed in wikipedia)
     - Move most business logic to the core (rust/ts)
 - FS: Support rhythym of play setting
+- FS: Move more logic from web to the web_lib
+- FS: Random starting position
 - Move other projects bash scripts to the main scripts dir
-- Convert DB operations into transactions
+- Convert DB operations into transactions (there is an example)
 - Change player names when they are AI
 - Full AI game
 - Use the game version in more endpoints
 - Improve scoring logic (explicitly list points sources)
     - Add unit tests
-- Game hall state where it waits for other real players to join
 - Statistics for moves
 - Impersonate player from admin view
 - Record of games for each player

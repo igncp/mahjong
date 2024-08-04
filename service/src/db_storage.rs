@@ -269,7 +269,7 @@ impl DBStorage {
     pub fn new_dyn() -> Box<dyn Storage> {
         let db_path = std::env::var(ENV_PG_URL)
             .unwrap_or("postgres://postgres:postgres@localhost/mahjong".to_string());
-        let redis_path = std::env::var(ENV_REDIS_URL).unwrap();
+        let redis_path = std::env::var(ENV_REDIS_URL).unwrap_or("redis://localhost".to_string());
 
         debug!("DBStorage: {} {}", db_path, redis_path);
 

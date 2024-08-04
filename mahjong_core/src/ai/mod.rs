@@ -1,4 +1,4 @@
-use crate::game::{DrawTileResult, InitialDrawError};
+use crate::game::{DrawError, DrawTileResult};
 use crate::meld::PossibleMeld;
 use crate::{Game, GamePhase, PlayerId, TileId, Wind, WINDS_ROUND_ORDER};
 use rand::seq::SliceRandom;
@@ -17,6 +17,7 @@ pub struct StandardAI<'a> {
     pub dealer_order_deterministic: Option<bool>,
     pub draw_tile_for_real_player: bool,
     pub game: &'a mut Game,
+    pub shuffle_players: bool,
     pub sort_on_draw: bool,
     pub sort_on_initial_draw: bool,
     pub with_dead_wall: bool,
@@ -34,9 +35,10 @@ pub enum PlayExitLocation {
     CouldNotClaimTile,
     DecidedDealer,
     InitialDraw,
-    InitialDrawError(InitialDrawError),
+    InitialDrawError(DrawError),
     InitialShuffle,
     MeldCreated,
+    NewRoundFromMeld,
     NoAction,
     NoAutoDrawTile,
     RoundPassed,
@@ -49,10 +51,15 @@ pub enum PlayExitLocation {
     WaitingPlayers,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+// This is used for debugging unexpected "NoAction" results
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Metadata {}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct PlayActionResult {
     pub changed: bool,
     pub exit_location: PlayExitLocation,
+    pub metadata: Option<Metadata>,
 }
 
 pub fn sort_by_is_mahjong(a: &PossibleMeld, b: &PossibleMeld) -> std::cmp::Ordering {
@@ -79,23 +86,32 @@ impl<'a> StandardAI<'a> {
             dealer_order_deterministic: None,
             draw_tile_for_real_player: true,
             game,
+            shuffle_players: false,
             sort_on_draw: false,
             sort_on_initial_draw: false,
             with_dead_wall: false,
         }
     }
 
-    pub fn play_action(&mut self) -> PlayActionResult {
+    pub fn play_action(&mut self, with_metadata: bool) -> PlayActionResult {
+        let mut metadata: Option<Metadata> = None;
+
+        if with_metadata {
+            metadata = Some(Metadata {});
+        }
+
         match self.game.phase {
             GamePhase::WaitingPlayers => {
-                return match self.game.complete_players() {
+                return match self.game.complete_players(self.shuffle_players) {
                     Ok(_) => PlayActionResult {
                         changed: true,
                         exit_location: PlayExitLocation::CompletedPlayers,
+                        metadata,
                     },
                     Err(_) => PlayActionResult {
                         changed: false,
                         exit_location: PlayExitLocation::WaitingPlayers,
+                        metadata,
                     },
                 };
             }
@@ -105,6 +121,7 @@ impl<'a> StandardAI<'a> {
                 return PlayActionResult {
                     changed: true,
                     exit_location: PlayExitLocation::InitialShuffle,
+                    metadata,
                 };
             }
             GamePhase::DecidingDealer => {
@@ -123,6 +140,7 @@ impl<'a> StandardAI<'a> {
                         .unwrap();
                 } else if self.game.round.initial_winds.is_none() {
                     return PlayActionResult {
+                        metadata,
                         changed: false,
                         exit_location: PlayExitLocation::WaitingDealerOrder,
                     };
@@ -132,14 +150,16 @@ impl<'a> StandardAI<'a> {
 
                 return PlayActionResult {
                     changed: true,
+                    metadata,
                     exit_location: PlayExitLocation::DecidedDealer,
                 };
             }
             GamePhase::Beginning => {
-                self.game.start();
+                self.game.start(self.shuffle_players);
 
                 return PlayActionResult {
                     changed: true,
+                    metadata,
                     exit_location: PlayExitLocation::StartGame,
                 };
             }
@@ -154,10 +174,12 @@ impl<'a> StandardAI<'a> {
                     return PlayActionResult {
                         changed: true,
                         exit_location: PlayExitLocation::InitialDraw,
+                        metadata,
                     };
                 }
                 Err(e) => {
                     return PlayActionResult {
+                        metadata,
                         changed: false,
                         exit_location: PlayExitLocation::InitialDrawError(e),
                     };
@@ -167,6 +189,7 @@ impl<'a> StandardAI<'a> {
                 return PlayActionResult {
                     changed: false,
                     exit_location: PlayExitLocation::AlreadyEnd,
+                    metadata,
                 };
             }
             GamePhase::Playing => {}
@@ -189,6 +212,7 @@ impl<'a> StandardAI<'a> {
                         return PlayActionResult {
                             changed: true,
                             exit_location: PlayExitLocation::SuccessMahjong,
+                            metadata,
                         };
                     }
                 }
@@ -210,12 +234,14 @@ impl<'a> StandardAI<'a> {
                                 return PlayActionResult {
                                     changed: true,
                                     exit_location: PlayExitLocation::ClaimedTile,
+                                    metadata,
                                 };
                             } else {
                                 // Unexpected state
                                 return PlayActionResult {
                                     changed: false,
                                     exit_location: PlayExitLocation::CouldNotClaimTile,
+                                    metadata,
                                 };
                             }
                         }
@@ -226,12 +252,28 @@ impl<'a> StandardAI<'a> {
                     continue;
                 }
 
-                let meld_created = self.game.create_meld(&meld.player_id, &meld.tiles);
+                let phase_before = self.game.phase;
+
+                let meld_created = self.game.create_meld(
+                    &meld.player_id,
+                    &meld.tiles,
+                    meld.is_upgrade,
+                    meld.is_concealed,
+                );
+
+                if phase_before == GamePhase::Playing && self.game.phase != GamePhase::Playing {
+                    return PlayActionResult {
+                        changed: true,
+                        exit_location: PlayExitLocation::NewRoundFromMeld,
+                        metadata,
+                    };
+                }
 
                 if meld_created.is_ok() {
                     return PlayActionResult {
                         changed: true,
                         exit_location: PlayExitLocation::MeldCreated,
+                        metadata,
                     };
                 }
             }
@@ -256,6 +298,7 @@ impl<'a> StandardAI<'a> {
                         return PlayActionResult {
                             changed: true,
                             exit_location: PlayExitLocation::AIPlayerTileDrawn,
+                            metadata,
                         };
                     }
                     DrawTileResult::AlreadyDrawn | DrawTileResult::WallExhausted => {}
@@ -272,8 +315,18 @@ impl<'a> StandardAI<'a> {
                     .collect::<Vec<TileId>>();
 
                 if !tiles_without_meld.is_empty() {
-                    tiles_without_meld.shuffle(&mut thread_rng());
-                    let tile_to_discard = tiles_without_meld[0];
+                    let tile_to_discard = 'a: {
+                        if let Some(tile_claimed) = self.game.round.tile_claimed.clone() {
+                            for tile in tiles_without_meld.iter() {
+                                if tile_claimed.id == *tile {
+                                    break 'a tile_claimed.id;
+                                }
+                            }
+                        }
+
+                        tiles_without_meld.shuffle(&mut thread_rng());
+                        tiles_without_meld[0]
+                    };
 
                     let discarded = self.game.discard_tile_to_board(&tile_to_discard);
 
@@ -281,6 +334,7 @@ impl<'a> StandardAI<'a> {
                         return PlayActionResult {
                             changed: true,
                             exit_location: PlayExitLocation::TileDiscarded,
+                            metadata,
                         };
                     }
                 }
@@ -310,6 +364,7 @@ impl<'a> StandardAI<'a> {
                             return PlayActionResult {
                                 changed: false,
                                 exit_location: PlayExitLocation::AutoStoppedDrawMahjong,
+                                metadata,
                             };
                         }
 
@@ -323,6 +378,7 @@ impl<'a> StandardAI<'a> {
                             return PlayActionResult {
                                 changed: false,
                                 exit_location: PlayExitLocation::AutoStoppedDrawNormal,
+                                metadata,
                             };
                         }
                     }
@@ -333,6 +389,7 @@ impl<'a> StandardAI<'a> {
                     return PlayActionResult {
                         changed: true,
                         exit_location: PlayExitLocation::AIPlayerTurnPassed,
+                        metadata,
                     };
                 }
             };
@@ -344,6 +401,7 @@ impl<'a> StandardAI<'a> {
                     return PlayActionResult {
                         changed: false,
                         exit_location: PlayExitLocation::NoAutoDrawTile,
+                        metadata,
                     };
                 }
 
@@ -360,6 +418,7 @@ impl<'a> StandardAI<'a> {
                         return PlayActionResult {
                             changed: true,
                             exit_location: PlayExitLocation::TileDrawn,
+                            metadata,
                         };
                     }
                     DrawTileResult::AlreadyDrawn | DrawTileResult::WallExhausted => {}
@@ -373,6 +432,7 @@ impl<'a> StandardAI<'a> {
                         return PlayActionResult {
                             changed: true,
                             exit_location: PlayExitLocation::TurnPassed,
+                            metadata,
                         };
                     }
                 }
@@ -386,6 +446,7 @@ impl<'a> StandardAI<'a> {
                 return PlayActionResult {
                     changed: true,
                     exit_location: PlayExitLocation::RoundPassed,
+                    metadata,
                 };
             }
         }
@@ -393,6 +454,7 @@ impl<'a> StandardAI<'a> {
         PlayActionResult {
             changed: false,
             exit_location: PlayExitLocation::NoAction,
+            metadata,
         }
     }
 

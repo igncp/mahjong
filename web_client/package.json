@@ -21,6 +21,7 @@
     "@playwright/test": "^1.45.1",
     "@types/qs": "^6.9.15",
     "antd": "^5.19.1",
+    "caniuse-lite": "^1.0.30001646",
     "dayjs": "^1.11.11",
     "dotenv": "^16.4.5",
     "eslint-plugin-perfectionist": "^2.11.0",

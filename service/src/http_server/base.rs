@@ -1,3 +1,4 @@
+#![allow(clippy::await_holding_lock)]
 use crate::common::Storage;
 use crate::socket::MahjongWebsocketServer;
 use actix::prelude::*;

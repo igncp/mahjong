@@ -11,6 +11,11 @@ mod test {
     fn test_break_meld() {
         for error in BreakMeldError::iter() {
             let (summary, player_id) = match error {
+                BreakMeldError::MeldIsKong => (
+                    "- P1: 一萬,三萬 四萬,五萬,六萬 七萬,八萬,九萬 一索,二索,三索 二萬,二萬,二萬,二萬
+                     Turn: P1",
+                    "0",
+                ),
                 BreakMeldError::MissingHand => (
                     "- P1: 一萬,三萬 四萬,五萬,六萬 七萬,八萬,九萬 一索,二索,三索 二萬,二萬,二萬
                      Turn: P1",
@@ -47,6 +52,7 @@ mod test {
     fn test_create_meld() {
         for error in CreateMeldError::iter() {
             let (summary, tiles_summary) = match error {
+                CreateMeldError::EndRound => ("", ""),
                 CreateMeldError::NotMeld => (
                     "- P1: 一萬,三萬,四萬,五萬,六萬,七萬,八萬,九萬,一索,二索,三索,二萬,二萬,二萬
                      Turn: P1",
@@ -59,10 +65,14 @@ mod test {
                 ),
             };
 
+            if summary.is_empty() {
+                continue;
+            }
+
             let mut game = Game::from_summary(summary);
             let tiles = Tile::ids_from_summary(tiles_summary);
 
-            let result = game.create_meld(&"0".to_string(), &tiles);
+            let result = game.create_meld(&"0".to_string(), &tiles, false, false);
 
             assert_eq!(result, Err(error.clone()), "Test case: {:?}", error);
         }
@@ -72,8 +82,12 @@ mod test {
             Turn: P1",
         );
 
-        let result =
-            game_correct.create_meld(&"0".to_string(), &Tile::ids_from_summary("一索,二索,三索"));
+        let result = game_correct.create_meld(
+            &"0".to_string(),
+            &Tile::ids_from_summary("一索,二索,三索"),
+            false,
+            false,
+        );
 
         assert_eq!(result, Ok(()), "Test case correct");
     }

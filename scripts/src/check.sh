@@ -19,6 +19,8 @@ run_check() {
 
   run_clippy
 
+  cargo doc --release --no-deps
+
   (cd service && sqlfluff lint --dialect postgres migrations/**/*.sql)
 
   run_pack_wasm
@@ -32,4 +34,24 @@ run_check() {
     bun run build)
 
   echo "All checks passed"
+}
+
+count_lines() {
+  scc \
+    service/src \
+    service/migrations \
+    service_contracts/src \
+    cli/src \
+    web_client/src \
+    web_lib/src \
+    scripts/src \
+    mahjong_core/src
+}
+
+run_test() {
+  RESULT=$(cargo test --all-targets || echo "error")
+  run_fix >/dev/null 2>&1
+  if [[ "$RESULT" = "error" ]]; then
+    exit 1
+  fi
 }

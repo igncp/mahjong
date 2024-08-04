@@ -29,3 +29,11 @@ redis = "0.23.3"
 diesel_migrations = "2.1.0"
 ts-rs = "9.0.1"
 env_logger = "0.10.0"
+
+[lib]
+name = "mahjong_service"
+path = "src/lib.rs"
+
+[[bin]]
+name = "mahjong_service"
+path = "src/bin.rs"

@@ -8,6 +8,7 @@ use crate::auth::{AuthInfo, AuthInfoAnonymous, AuthInfoData, AuthInfoEmail, Auth
 use diesel::prelude::*;
 use diesel::PgConnection;
 use mahjong_core::deck::DEFAULT_DECK;
+use mahjong_core::hand::KongTile;
 use mahjong_core::{
     game::GameStyle,
     round::{Round, RoundTileClaimed},
@@ -650,15 +651,17 @@ impl DieselGamePlayer {
         use schema::game_player::table as game_player_table;
 
         db_request(|| {
-            diesel::delete(game_player_table)
-                .filter(schema::game_player::dsl::game_id.eq(&game.id))
-                .execute(connection)
-        });
+            connection.transaction(|t_connection| {
+                diesel::delete(game_player_table)
+                    .filter(schema::game_player::dsl::game_id.eq(&game.id))
+                    .execute(t_connection)?;
 
-        db_request(|| {
-            diesel::insert_into(game_player_table)
-                .values(diesel_game_players)
-                .execute(connection)
+                diesel::insert_into(game_player_table)
+                    .values(diesel_game_players)
+                    .execute(t_connection)?;
+
+                diesel::result::QueryResult::Ok(())
+            })
         });
     }
 
@@ -675,38 +678,44 @@ impl DieselGameScore {
     pub fn update_from_game(connection: &mut PgConnection, service_game: &ServiceGame) {
         use schema::game_score::table as game_score_table;
 
-        loop {
-            if diesel::delete(game_score_table)
-                .filter(schema::game_score::dsl::game_id.eq(&service_game.game.id))
-                .execute(connection)
-                .is_ok()
-            {
-                break;
-            }
-            wait_common();
-        }
+        db_request(|| {
+            connection.transaction(|t_connection| {
+                loop {
+                    if diesel::delete(game_score_table)
+                        .filter(schema::game_score::dsl::game_id.eq(&service_game.game.id))
+                        .execute(t_connection)
+                        .is_ok()
+                    {
+                        break;
+                    }
+                    wait_common();
+                }
 
-        let scores = service_game
-            .game
-            .score
-            .iter()
-            .map(|(player_id, score)| Self {
-                game_id: service_game.game.id.clone(),
-                player_id: player_id.clone(),
-                score: *score as i32,
+                let scores = service_game
+                    .game
+                    .score
+                    .iter()
+                    .map(|(player_id, score)| Self {
+                        game_id: service_game.game.id.clone(),
+                        player_id: player_id.clone(),
+                        score: *score as i32,
+                    })
+                    .collect::<Vec<Self>>();
+
+                loop {
+                    if diesel::insert_into(game_score_table)
+                        .values(&scores)
+                        .execute(t_connection)
+                        .is_ok()
+                    {
+                        break;
+                    }
+                    wait_common();
+                }
+
+                diesel::result::QueryResult::Ok(())
             })
-            .collect::<Vec<Self>>();
-
-        loop {
-            if diesel::insert_into(game_score_table)
-                .values(&scores)
-                .execute(connection)
-                .is_ok()
-            {
-                break;
-            }
-            wait_common();
-        }
+        })
     }
 
     pub fn read_from_game(connection: &mut PgConnection, game_id: &GameId) -> Score {
@@ -939,6 +948,7 @@ impl DieselGameHand {
                     let game_hand = Self {
                         concealed,
                         game_id: service_game.game.id.clone(),
+                        is_kong: false,
                         player_id: player_id.clone(),
                         set_id,
                         tile_id: tile_id as i32,
@@ -947,6 +957,27 @@ impl DieselGameHand {
 
                     hands.push(game_hand);
                 });
+
+                hand.kong_tiles
+                    .iter()
+                    .enumerate()
+                    .for_each(|(tile_index, tile)| {
+                        let tile_id = tile.id;
+                        let concealed = if tile.concealed { 1 } else { 0 };
+                        let set_id = tile.set_id.clone();
+
+                        let game_hand = Self {
+                            concealed,
+                            game_id: service_game.game.id.clone(),
+                            is_kong: true,
+                            player_id: player_id.clone(),
+                            set_id: Some(set_id),
+                            tile_id: tile_id as i32,
+                            tile_index: tile_index as i32,
+                        };
+
+                        hands.push(game_hand);
+                    });
             });
 
         service_game
@@ -963,6 +994,7 @@ impl DieselGameHand {
                         let game_hand = Self {
                             concealed: 0,
                             game_id: service_game.game.id.clone(),
+                            is_kong: false,
                             player_id: player_id.clone(),
                             set_id: None,
                             tile_id: *tile_id as i32,
@@ -1015,11 +1047,20 @@ impl DieselGameHand {
                     .get(&player_id)
                     .unwrap_or(&Hand::new(Vec::new()))
                     .clone();
-                current_hand.push(HandTile {
-                    id: tile_id,
-                    concealed,
-                    set_id,
-                });
+
+                if game_hand.is_kong {
+                    current_hand.kong_tiles.insert(KongTile {
+                        id: tile_id,
+                        concealed,
+                        set_id: set_id.unwrap(),
+                    });
+                } else {
+                    current_hand.push(HandTile {
+                        id: tile_id,
+                        concealed,
+                        set_id,
+                    });
+                }
 
                 hands.0.insert(player_id, current_hand);
             }

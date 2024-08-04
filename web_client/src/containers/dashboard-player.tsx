@@ -346,14 +346,15 @@ const DashboardUser = ({ userId }: TProps) => {
             onClick={() => {
               const aiPlayersNum = 4 - realPlayersNum;
 
+              const aiPlayersNames = Array.from({ length: aiPlayersNum }).map(
+                (_, i) =>
+                  t("dashboard.defaultPlayerName", "AI Player {{number}}", {
+                    number: realPlayersNum + i + 1,
+                  }),
+              );
+
               HttpClient.userCreateGame({
-                ai_player_names: Array.from({ length: aiPlayersNum })
-                  .map((_, i) =>
-                    t("dashboard.defaultPlayerName", "Player {{number}}", {
-                      number: realPlayersNum + i,
-                    }),
-                  )
-                  .slice(0, aiPlayersNum),
+                ai_player_names: aiPlayersNames,
                 auto_sort_own: autoSortOwn,
                 dead_wall: useDeadWall,
                 player_id: userId,

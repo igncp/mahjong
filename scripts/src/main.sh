@@ -30,6 +30,8 @@ Run various scripts for the Mahjong project
   - list: List root files to be used in a pipe
   - pack_wasm: Pack the wasm files
   - profile_instruments: Create a trace file to be inspected by Instruments
+  - count_lines: Count the lines of code
+  - test: Runs tests plus formatting
   - tests_summaries_fix: Convert the tests summaries to chinese chars"
 
 # This is specially convenient for maintaining the clippy rules, which need to
@@ -84,6 +86,12 @@ main() {
     ;;
   service_watch)
     service_watch
+    ;;
+  test)
+    run_test
+    ;;
+  count_lines)
+    count_lines
     ;;
   *)
     echo "$USAGE"

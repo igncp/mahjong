@@ -6,10 +6,12 @@ mod test {
     #[test]
     fn it_puts_melds_with_mahjong_at_the_beginning() {
         let default_meld = PossibleMeld {
+            discard_tile: None,
+            is_concealed: false,
             is_mahjong: false,
+            is_upgrade: false,
             player_id: "0".to_string(),
             tiles: vec![],
-            discard_tile: None,
         };
         let mut melds = [
             PossibleMeld {

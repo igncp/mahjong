@@ -1,19 +1,9 @@
-import { format_tile, get_deck, get_possible_melds_summary } from "pkg";
+import { getDeck } from "src/sdk/pkg-wrapper";
 
-import {
-  setDeck,
-  setFormatTile,
-  setGetPossibleMeldsSummary,
-} from "src/sdk/service-game-summary";
+import { setDeck } from "src/sdk/service-game-summary";
 
 export const setupServiceGameSummary = () => {
-  setFormatTile(format_tile);
-
-  setGetPossibleMeldsSummary((game) =>
-    get_possible_melds_summary(JSON.stringify(game)),
-  );
-
-  const deck = get_deck();
+  const deck = getDeck();
 
   setDeck(deck);
 };

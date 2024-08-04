@@ -535,6 +535,8 @@ impl<'a> GameWrapper<'a> {
             .create_meld(
                 &body.player_id,
                 &body.tiles.clone().into_iter().collect::<Vec<TileId>>(),
+                body.is_upgrade,
+                body.is_concealed,
             )
             .map_err(|_| ServiceError::Custom("Error when creating meld"))?;
 
@@ -563,6 +565,8 @@ impl<'a> GameWrapper<'a> {
             .create_meld(
                 &body.player_id,
                 &body.tiles.clone().into_iter().collect::<Vec<TileId>>(),
+                body.is_upgrade,
+                body.is_concealed,
             )
             .map_err(|_| ServiceError::Custom("Error when creating meld"))?;
 
@@ -738,7 +742,7 @@ fn create_game(player: &Option<ServicePlayer>, opts: &CreateGameOpts) -> Service
                 created_at: timestamp.to_string(),
                 id: game_player.clone(),
                 is_ai: true,
-                name: player_names.get(index).unwrap_or(&default_name).clone(),
+                name: player_names.get(index + 1).unwrap_or(&default_name).clone(),
             };
             players_set.insert(game_player.clone(), service_player);
         }

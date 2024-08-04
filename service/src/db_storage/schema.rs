@@ -86,6 +86,7 @@ diesel::table! {
         set_id -> Nullable<Text>,
         tile_id -> Int4,
         tile_index -> Int4,
+        is_kong -> Bool,
     }
 }
 

@@ -125,6 +125,7 @@ pub struct DieselGameHand {
     pub set_id: Option<String>,
     pub tile_id: i32,
     pub tile_index: i32,
+    pub is_kong: bool,
 }
 
 #[derive(Insertable, AsChangeset, Queryable, Clone)]

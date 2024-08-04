@@ -18,6 +18,7 @@ type Props = {
   onClick?: MouseEventHandler<HTMLSpanElement>;
   onIsDraggingChange?: (isDragging: boolean) => void;
   paddingLeft?: number;
+  size?: number;
   tile?: Tile;
   tooltipFormatter?: (title?: string) => React.ReactNode;
 };
@@ -30,6 +31,7 @@ const TileImg = ({
   onClick,
   onIsDraggingChange,
   paddingLeft,
+  size = 50,
   tile,
   tooltipFormatter,
 }: Props) => {
@@ -66,6 +68,8 @@ const TileImg = ({
     return null;
   }
 
+  const sizePx = `${size}px`;
+
   const imgEl = (
     <span
       onClick={onClick}
@@ -86,10 +90,10 @@ const TileImg = ({
         }
         src={image}
         style={{
-          height: "50px",
+          height: sizePx,
           opacity: isDragging ? 0.5 : 1,
           touchAction: draggableType ? "none" : undefined,
-          width: isDragging ? 0 : "50px",
+          width: isDragging ? 0 : sizePx,
         }}
       />
     </span>

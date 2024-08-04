@@ -1,5 +1,6 @@
 import type { GameSummary } from "bindings/GameSummary";
 import type { Hand } from "bindings/Hand";
+import type { HandTile } from "bindings/HandTile";
 import type { ServiceGame } from "bindings/ServiceGame";
 import type { ServiceGameSummary } from "bindings/ServiceGameSummary";
 import type { ServicePlayerGame } from "bindings/ServicePlayerGame";
@@ -7,10 +8,9 @@ import type { ServicePlayerGame } from "bindings/ServicePlayerGame";
 export type GameId = GameSummary["id"];
 export type GameVersion = GameSummary["version"];
 export type PlayerId = GameSummary["players"][number];
-export type TileId = number;
-export type SetId = NonNullable<
-  NonNullable<GameSummary["hand"]>["list"][number]["set_id"]
->;
+export type TileId = HandTile["id"];
+export type SetId = HandTile["set_id"];
+export type SetIdContent = NonNullable<HandTile["set_id"]>;
 
 export type TAdminPostBreakMeldRequest = {
   player_id: PlayerId;

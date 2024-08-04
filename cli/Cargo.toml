@@ -9,6 +9,7 @@ crossterm = "0.26.1"
 futures-util = "0.3.28"
 mahjong_core = { path = "../mahjong_core" }
 service_contracts = { path = "../service_contracts" }
+mahjong_service = { path = "../service" }
 reqwest = { version = "0.11.18", features = ["json"] }
 serde_json = "1.0.100"
 tokio = { version = "1.29.1", features = ["full"] }

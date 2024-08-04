@@ -1,0 +1,13 @@
+export const format_tile = () => {};
+export const get_can_discard_tile = () => {};
+export const get_dealer_player = () => {};
+export const get_deck = () => {};
+export const get_game_playing_extras = () => {};
+export const get_players_visible_melds = () => {};
+export const get_players_winds = () => {};
+export const get_possible_melds = () => {};
+export const get_possible_melds_summary = () => {};
+export const get_turn_player = () => {};
+export const is_chow = () => {};
+export const is_kong = () => {};
+export const is_pung = () => {};
