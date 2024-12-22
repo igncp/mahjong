@@ -22,16 +22,19 @@ impl Score {
         self.0.get(player_id)
     }
 
+    pub fn iter(&self) -> impl Iterator<Item = (&PlayerId, &ScoreItem)> {
+        self.0.iter()
+    }
+}
+
+// Proxied
+impl Score {
     pub fn insert(&mut self, player_id: impl AsRef<str>, score: ScoreItem) {
         self.0.insert(player_id.as_ref().to_string(), score);
     }
 
     pub fn remove(&mut self, player_id: &PlayerId) -> ScoreItem {
         self.0.remove(player_id).unwrap()
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = (&PlayerId, &ScoreItem)> {
-        self.0.iter()
     }
 }
 
@@ -63,26 +66,6 @@ pub enum ScoringRule {
 }
 
 impl Game {
-    pub fn calculate_hand_score(&mut self, winner_player: &PlayerId) -> (Vec<ScoringRule>, u32) {
-        {
-            let score = &mut self.score;
-            let current_player_score = score.get(winner_player);
-            if current_player_score.is_none() {
-                return (vec![], 0);
-            }
-        }
-
-        let scoring_rules = self.get_scoring_rules(winner_player);
-        let round_points = Self::get_scoring_rules_points(&scoring_rules);
-
-        let current_player_score = self.score.get(winner_player).unwrap();
-
-        self.score
-            .insert(winner_player, current_player_score + round_points);
-
-        (scoring_rules, round_points)
-    }
-
     fn get_scoring_rules_points(scoring_rules: &Vec<ScoringRule>) -> u32 {
         let mut round_points = 0;
 
@@ -210,5 +193,27 @@ impl Game {
         }
 
         rules
+    }
+}
+
+impl Game {
+    pub fn calculate_hand_score(&mut self, winner_player: &PlayerId) -> (Vec<ScoringRule>, u32) {
+        {
+            let score = &mut self.score;
+            let current_player_score = score.get(winner_player);
+            if current_player_score.is_none() {
+                return (vec![], 0);
+            }
+        }
+
+        let scoring_rules = self.get_scoring_rules(winner_player);
+        let round_points = Self::get_scoring_rules_points(&scoring_rules);
+
+        let current_player_score = self.score.get(winner_player).unwrap();
+
+        self.score
+            .insert(winner_player, current_player_score + round_points);
+
+        (scoring_rules, round_points)
     }
 }

@@ -16,9 +16,7 @@ export const githubAuth = {
   login: () => {
     const params = qs.stringify({
       client_id: env.GITHUB_CLIENT_ID,
-      redirect_uri:
-        env.GITHUB_REDIRECT ||
-        "https://mahjong-rust.com/api/v1/github_callback",
+      redirect_uri: `${env.SERVICE_URL}/v1/github_callback`,
     });
 
     window.location.href = `https://github.com/login/oauth/authorize?${params}`;

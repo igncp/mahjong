@@ -56,13 +56,15 @@ const DashboardUser = ({ userId }: TProps) => {
   const router = useRouter();
 
   useEffect(() => {
-    const subscription = HttpClient.getUserDashboard().subscribe({
+    const subscription = HttpClient.getUserDashboard({
+      type: "UserGetDashboard",
+    }).subscribe({
       error: () => {
         tokenObserver.next(null);
         subscription.unsubscribe();
       },
-      next: (newQueryResponse) => {
-        setDashboardQueryResponse(newQueryResponse);
+      next: ({ dashboard }) => {
+        setDashboardQueryResponse(dashboard);
       },
     });
 
@@ -358,10 +360,11 @@ const DashboardUser = ({ userId }: TProps) => {
                 auto_sort_own: autoSortOwn,
                 dead_wall: useDeadWall,
                 player_id: userId,
+                type: "UserCreateGame",
               })
                 .pipe(first())
                 .subscribe({
-                  next: (game) => {
+                  next: ({ game }) => {
                     router.push(
                       SiteUrls.playerGame(game.game_summary.id, userId),
                     );

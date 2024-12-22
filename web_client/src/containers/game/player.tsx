@@ -378,10 +378,12 @@ const Game = ({ gameId, userId }: IProps) => {
                   <Button
                     disabled={!can_pass_turn || loading}
                     onClick={() => {
-                      HttpClient.userMovePlayer(gameId, {
+                      HttpClient.userMovePlayer({
+                        game_id: gameId,
                         player_id: userId,
+                        type: "UserMovePlayer",
                       }).subscribe({
-                        next: (newGame) => {
+                        next: ({ game: newGame }) => {
                           setServiceGame(newGame);
                         },
                       });
@@ -421,15 +423,17 @@ const Game = ({ gameId, userId }: IProps) => {
                         });
                       };
 
-                      HttpClient.userDrawTile(gameId, {
+                      HttpClient.userDrawTile({
+                        game_id: gameId,
                         game_version: serviceGameSummary.game_summary.version,
                         player_id: userId,
+                        type: "UserDrawTile",
                       }).subscribe({
                         error: () => {
                           sendErrorMessage();
                         },
-                        next: (gameSummary) => {
-                          setServiceGame(gameSummary);
+                        next: ({ game }) => {
+                          setServiceGame(game);
                         },
                       });
                     }}

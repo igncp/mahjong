@@ -1,3 +1,4 @@
+use super::Players;
 use crate::{macros::derive_game_common, round::Round, Score, Table, TileId};
 use std::{
     fmt::{Display, Formatter},
@@ -5,12 +6,11 @@ use std::{
 };
 use ts_rs::TS;
 
-use super::Players;
-
 derive_game_common! {
 #[derive(PartialEq, Eq, TS, Copy)]
 pub enum GamePhase {
     Beginning,
+    Charleston,
     DecidingDealer,
     End,
     InitialDraw,
@@ -65,6 +65,7 @@ impl Display for GamePhase {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Beginning => write!(f, "Beginning"),
+            Self::Charleston => write!(f, "Charleston"),
             Self::DecidingDealer => write!(f, "Deciding Dealer"),
             Self::End => write!(f, "End"),
             Self::InitialDraw => write!(f, "Initial Draw"),

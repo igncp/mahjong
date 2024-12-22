@@ -4,7 +4,8 @@
       "playAnonymously": "Play anonymously",
       "showUsernamePass": "Use username + password",
       "submit": "Submit",
-      "submitGithub": "Login with Github"
+      "submitGithub": "Login with Github",
+      "trackOffscreenGame": "Track an offscreen game"
     },
     "error": {
       "invalidUserPass": "Invalid username or password",

@@ -8,20 +8,18 @@ use crate::{
 use actix_web::{web, HttpResponse};
 use mahjong_core::{
     game::{DrawTileResult, GameVersion},
+    hand::SetIdContent,
     Game, GamePhase, PlayerId, Players, TileId,
 };
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use service_contracts::{
     AdminPostAIContinueRequest, AdminPostAIContinueResponse, AdminPostBreakMeldRequest,
     AdminPostBreakMeldResponse, AdminPostClaimTileResponse, AdminPostCreateMeldRequest,
     AdminPostCreateMeldResponse, AdminPostDiscardTileResponse, AdminPostDrawTileResponse,
     AdminPostMovePlayerResponse, AdminPostSayMahjongResponse, GameSettings, GameSettingsSummary,
     ServiceGame, ServiceGameSummary, ServicePlayer, SocketMessage, UserPostAIContinueRequest,
-    UserPostAIContinueResponse, UserPostBreakMeldRequest, UserPostBreakMeldResponse,
-    UserPostCreateGameResponse, UserPostCreateMeldRequest, UserPostCreateMeldResponse,
-    UserPostDiscardTileResponse, UserPostDrawTileResponse, UserPostJoinGameResponse,
-    UserPostMovePlayerResponse, UserPostPassRoundResponse, UserPostSayMahjongResponse,
-    UserPostSetGameSettingsResponse, UserPostSortHandResponse,
+    UserPostAIContinueResponse, UserPostJoinGameResponse, UserPostPassRoundResponse,
+    UserPostSayMahjongResponse, UserPostSetGameSettingsResponse, UserPostSortHandResponse,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::debug;
@@ -43,7 +41,7 @@ pub struct CreateGameOpts<'a> {
 impl<'a> GameWrapper<'a> {
     async fn from_storage_base(
         storage: &'a DataStorage,
-        game_id: &web::Path<String>,
+        game_id: &String,
         socket_server: DataSocketServer,
         game_version: Option<&'a GameVersion>,
         use_cache: bool,
@@ -75,7 +73,7 @@ impl<'a> GameWrapper<'a> {
 
     pub async fn from_storage(
         storage: &'a DataStorage,
-        game_id: &web::Path<String>,
+        game_id: &String,
         socket_server: DataSocketServer,
         game_version: Option<&'a GameVersion>,
     ) -> Result<GameWrapper<'a>, ServiceError> {
@@ -194,17 +192,34 @@ impl<'a> GameWrapper<'a> {
         Ok(HttpResponse::Ok().json(data))
     }
 
+    async fn save_and_return_2<A>(&self, data: A, err_msg: &'static str) -> Result<A, ServiceError>
+    where
+        A: serde::Serialize,
+    {
+        self.storage
+            .save_game(&self.service_game)
+            .await
+            .map_err(|_| ServiceError::Custom(err_msg))?;
+
+        self.sync_game();
+
+        Ok(data)
+    }
+
     pub async fn handle_admin_new_game(&self) -> ResponseCommon {
         self.save_and_return(&self.service_game, "Error creating game")
             .await
     }
 
-    pub async fn handle_user_new_game(&self, player_id: &PlayerId) -> ResponseCommon {
+    pub async fn handle_user_new_game(
+        &self,
+        player_id: &PlayerId,
+    ) -> Result<ServiceGameSummary, ServiceError> {
         let game_summary = ServiceGameSummary::from_service_game(&self.service_game, player_id)
             .ok_or(ServiceError::Custom("Error creating game"))?;
-        let response = UserPostCreateGameResponse(game_summary);
 
-        self.save_and_return(response, "Error creating game").await
+        self.save_and_return_2(game_summary, "Error creating game")
+            .await
     }
 
     pub fn user_load_game(&self, player_id: &PlayerId) -> ResponseCommon {
@@ -281,7 +296,10 @@ impl<'a> GameWrapper<'a> {
             .await
     }
 
-    pub async fn handle_user_draw_tile(&mut self, player_id: &PlayerId) -> ResponseCommon {
+    pub async fn handle_user_draw_tile(
+        &mut self,
+        player_id: &PlayerId,
+    ) -> Result<ServiceGameSummary, ServiceError> {
         let current_player = self
             .service_game
             .game
@@ -289,14 +307,14 @@ impl<'a> GameWrapper<'a> {
             .ok_or(ServiceError::Custom("Error getting current player"))?;
 
         if &current_player != player_id {
-            return Ok(HttpResponse::BadRequest().body("Not your turn"));
+            return Err(ServiceError::Custom("Not your turn"));
         }
 
         let tile_drawn = self.service_game.game.draw_tile_from_wall();
 
         match tile_drawn {
             DrawTileResult::WallExhausted | DrawTileResult::AlreadyDrawn => {
-                return Ok(HttpResponse::BadRequest().body("Error when drawing tile"));
+                return Err(ServiceError::Custom("Error when drawing tile"));
             }
             DrawTileResult::Normal(_) | DrawTileResult::Bonus(_) => {}
         }
@@ -304,9 +322,8 @@ impl<'a> GameWrapper<'a> {
         self.sync_game_updated();
 
         let game = ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
-        let response = UserPostDrawTileResponse(game);
 
-        self.save_and_return(&response, "Error when drawing tile")
+        self.save_and_return_2(game, "Error when drawing tile")
             .await
     }
 
@@ -409,7 +426,10 @@ impl<'a> GameWrapper<'a> {
             .await
     }
 
-    pub async fn handle_user_move_player(&mut self, player_id: &PlayerId) -> ResponseCommon {
+    pub async fn handle_user_move_player(
+        &mut self,
+        player_id: &PlayerId,
+    ) -> Result<ServiceGameSummary, ServiceError> {
         let current_player = self
             .service_game
             .game
@@ -423,7 +443,7 @@ impl<'a> GameWrapper<'a> {
         });
 
         if are_more_real && current_player != player_id.clone() {
-            return Ok(HttpResponse::BadRequest().body("Not your turn"));
+            return Err(ServiceError::Custom("Not your turn"));
         }
 
         self.service_game
@@ -436,16 +456,12 @@ impl<'a> GameWrapper<'a> {
 
         let game_summary =
             ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
-        let response = UserPostMovePlayerResponse(game_summary);
 
-        self.save_and_return(response, "Error moving player").await
+        self.save_and_return_2(game_summary, "Error moving player")
+            .await
     }
 
-    pub async fn handle_discard_tile(
-        &mut self,
-        is_admin: bool,
-        tile_id: &TileId,
-    ) -> ResponseCommon {
+    pub async fn handle_discard_tile_admin(&mut self, tile_id: &TileId) -> ResponseCommon {
         let now_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -462,23 +478,41 @@ impl<'a> GameWrapper<'a> {
 
         self.sync_game_updated();
 
-        if is_admin {
-            let response: AdminPostDiscardTileResponse = game;
-            self.save_and_return(&response, "Error when discarding the tile")
-                .await
-        } else {
-            let player_id = self
-                .service_game
-                .game
-                .get_current_player()
-                .ok_or(ServiceError::Custom("Error getting current player"))?;
+        let response: AdminPostDiscardTileResponse = game;
+        self.save_and_return(&response, "Error when discarding the tile")
+            .await
+    }
 
-            let game_summary = ServiceGameSummary::from_service_game(&game, &player_id).unwrap();
-            let response = UserPostDiscardTileResponse(game_summary);
+    pub async fn handle_discard_tile_user(
+        &mut self,
+        tile_id: &TileId,
+    ) -> Result<ServiceGameSummary, ServiceError> {
+        let now_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
 
-            self.save_and_return(&response, "Error when discarding the tile")
-                .await
-        }
+        self.service_game
+            .game
+            .discard_tile_to_board(tile_id)
+            .unwrap_or_default();
+
+        let mut game = self.service_game.clone();
+
+        game.settings.last_discard_time = now_time as i128;
+
+        self.sync_game_updated();
+
+        let player_id = self
+            .service_game
+            .game
+            .get_current_player()
+            .ok_or(ServiceError::Custom("Error getting current player"))?;
+
+        let game_summary = ServiceGameSummary::from_service_game(&game, &player_id).unwrap();
+
+        self.save_and_return_2(game_summary, "Error when discarding the tile")
+            .await
     }
 
     pub async fn handle_admin_break_meld(
@@ -509,20 +543,19 @@ impl<'a> GameWrapper<'a> {
 
     pub async fn handle_user_break_meld(
         &mut self,
-        body: &UserPostBreakMeldRequest,
-    ) -> ResponseCommon {
+        player_id: &PlayerId,
+        set_id: &SetIdContent,
+    ) -> Result<ServiceGameSummary, ServiceError> {
         self.service_game
             .game
-            .break_meld(&body.player_id, &body.set_id)
+            .break_meld(player_id, set_id)
             .map_err(|_| ServiceError::Custom("Error when breaking meld"))?;
 
         self.sync_game_updated();
 
-        let game =
-            ServiceGameSummary::from_service_game(&self.service_game, &body.player_id).unwrap();
-        let response = UserPostBreakMeldResponse(game);
+        let game = ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
 
-        self.save_and_return(&response, "Error when breaking meld")
+        self.save_and_return_2(game, "Error when breaking meld")
             .await
     }
 
@@ -558,25 +591,26 @@ impl<'a> GameWrapper<'a> {
 
     pub async fn handle_user_create_meld(
         &mut self,
-        body: &UserPostCreateMeldRequest,
-    ) -> ResponseCommon {
+        player_id: &PlayerId,
+        tiles: &FxHashSet<TileId>,
+        is_upgrade: bool,
+        is_concealed: bool,
+    ) -> Result<ServiceGameSummary, ServiceError> {
         self.service_game
             .game
             .create_meld(
-                &body.player_id,
-                &body.tiles.clone().into_iter().collect::<Vec<TileId>>(),
-                body.is_upgrade,
-                body.is_concealed,
+                player_id,
+                &tiles.clone().into_iter().collect::<Vec<TileId>>(),
+                is_upgrade,
+                is_concealed,
             )
             .map_err(|_| ServiceError::Custom("Error when creating meld"))?;
 
         self.sync_game_updated();
 
-        let game =
-            ServiceGameSummary::from_service_game(&self.service_game, &body.player_id).unwrap();
-        let response = UserPostCreateMeldResponse(game);
+        let game = ServiceGameSummary::from_service_game(&self.service_game, player_id).unwrap();
 
-        self.save_and_return(&response, "Error when creating meld")
+        self.save_and_return_2(game, "Error when creating meld")
             .await
     }
 

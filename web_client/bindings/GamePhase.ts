@@ -2,6 +2,7 @@
 
 export type GamePhase =
   | "Beginning"
+  | "Charleston"
   | "DecidingDealer"
   | "End"
   | "InitialDraw"

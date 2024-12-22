@@ -3,7 +3,7 @@
 use auth::AuthHandler;
 use db_storage::DBStorage;
 use dotenv::dotenv;
-use http_server::MahjongServer;
+use http_server::start_server;
 use logs::setup_logs;
 use std::process;
 use tracing::{error, info};
@@ -38,5 +38,5 @@ async fn main() -> std::io::Result<()> {
 
     info!("Starting the application");
 
-    MahjongServer::start(storage).await
+    start_server(storage).await
 }

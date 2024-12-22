@@ -1,8 +1,11 @@
 import { DownOutlined, UpOutlined } from "@ant-design/icons";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { getIsLoggedIn } from "src/lib/auth";
+import { SiteUrls } from "src/lib/site/urls";
 import Button from "src/ui/common/button";
 
 import PageContentComp from "../ui/common/page-content";
@@ -25,6 +28,12 @@ const PageContent = ({
   const { t } = useTranslation();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const router = useRouter();
+  const isLoggedIn = getIsLoggedIn();
+
+  const trackOffscreenGame = () => {
+    router.push(SiteUrls.offscreenGame);
+  };
 
   useEffect(() => {
     if (headerCollapsible) {
@@ -46,17 +55,19 @@ const PageContent = ({
         ].join(" ")}
       >
         <Header />
-        <div className={styles.collapse}>
-          <button
-            onClick={() => {
-              setIsCollapsed(true);
-            }}
-          >
-            <UpOutlined />
-          </button>
-        </div>
+        {headerCollapsible && (
+          <div className={styles.collapse}>
+            <button
+              onClick={() => {
+                setIsCollapsed(true);
+              }}
+            >
+              <UpOutlined />
+            </button>
+          </div>
+        )}
       </div>
-      {isCollapsed && (
+      {isCollapsed && headerCollapsible && (
         <div className={styles.expand}>
           <button
             onClick={() => {
@@ -69,12 +80,21 @@ const PageContent = ({
       )}
       <div className={styles.pageInner}>
         <main style={contentStyle}>{children}</main>
-        <footer>
-          <Button className={styles.githubButton}>
+        <footer className="flex flex-col items-center justify-center gap-[24px]">
+          <Button className={styles.footerButton}>
             <Link href="https://github.com/igncp/mahjong" target="_blank">
               {t("code")}
             </Link>
           </Button>
+          {!!isLoggedIn && (
+            <Button
+              className={styles.footerButton}
+              onClick={trackOffscreenGame}
+              style={{ backgroundColor: "green", color: "white" }}
+            >
+              {t("auth.button.trackOffscreenGame")}
+            </Button>
+          )}
         </footer>
       </div>
     </PageContentComp>

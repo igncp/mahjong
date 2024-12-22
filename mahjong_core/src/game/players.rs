@@ -18,6 +18,15 @@ impl Players {
     }
 }
 
+impl Players {
+    pub fn swap(&mut self, p1: &PlayerId, p2: &PlayerId) {
+        let p1idx = self.0.iter().position(|x| x == p1).unwrap();
+        let p2idx = self.0.iter().position(|x| x == p2).unwrap();
+
+        self.0.swap(p1idx, p2idx);
+    }
+}
+
 // Proxied methods
 impl Players {
     pub fn len(&self) -> usize {
@@ -36,15 +45,18 @@ impl Players {
         self.0.is_empty()
     }
 
+    pub fn first(&self) -> &PlayerId {
+        self.0.first().unwrap()
+    }
+}
+
+// Proxied methods
+impl Players {
     pub fn push(&mut self, player_id: PlayerId) {
         self.0.push(player_id);
     }
 
     pub fn shuffle(&mut self) {
         self.0.shuffle(&mut thread_rng());
-    }
-
-    pub fn first(&self) -> &PlayerId {
-        self.0.first().unwrap()
     }
 }

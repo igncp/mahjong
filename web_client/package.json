@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "build": "rm -rf out .next && next build",
-    "dev": "rm -rf .next && next dev -p 9000",
+    "dev:be": "cd ../service && cargo watch -x run",
+    "dev:fe": "rm -rf .next && next dev -p 9000",
     "e2e": "bash scripts/run_e2e_docker.sh",
     "e2e:prod": "E2E_BASE_URL=https://mahjong-rust.com playwright test",
     "e2e:run": "(if [ ! -d out ]; then npm run build; fi) && npm run start:e2e",

@@ -1,3 +1,4 @@
+import type { Deck } from "bindings/Deck";
 import type { LibGetGamePlayingExtrasParam } from "bindings/LibGetGamePlayingExtrasParam";
 import type { LibGetGamePlayingExtrasReturn } from "bindings/LibGetGamePlayingExtrasReturn";
 import type { LibGetIsMeldParam } from "bindings/LibGetIsMeldParam";
@@ -27,7 +28,7 @@ export const getPossibleMelds = (
   param: LibGetPossibleMeldsParam,
 ): LibGetPossibleMeldsReturn => get_possible_melds(param);
 
-export const getDeck = () => get_deck();
+export const getDeck = (): Deck => get_deck();
 
 export type PlayingExtrasParsed = Omit<
   LibGetGamePlayingExtrasReturn,

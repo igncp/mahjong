@@ -34,6 +34,7 @@ pub enum PlayExitLocation {
     CompletedPlayers,
     CouldNotClaimTile,
     DecidedDealer,
+    FinishedCharleston,
     InitialDraw,
     InitialDrawError(DrawError),
     InitialShuffle,
@@ -72,6 +73,19 @@ pub fn sort_by_is_mahjong(a: &PossibleMeld, b: &PossibleMeld) -> std::cmp::Order
     }
 }
 
+impl StandardAI<'_> {
+    pub fn get_is_after_discard(&self) -> bool {
+        let current_player = self.game.get_current_player();
+        if current_player.is_none() {
+            return false;
+        }
+        let current_hand = self.game.table.hands.get(&current_player.unwrap());
+
+        current_hand.unwrap().len() < self.game.style.tiles_after_claim()
+            && self.game.round.tile_claimed.is_some()
+    }
+}
+
 impl<'a> StandardAI<'a> {
     pub fn new(
         game: &'a mut Game,
@@ -101,6 +115,23 @@ impl<'a> StandardAI<'a> {
         }
 
         match self.game.phase {
+            GamePhase::Charleston => {
+                let finished_charleston = self.game.move_charleston();
+
+                if finished_charleston.is_ok() {
+                    return PlayActionResult {
+                        changed: true,
+                        exit_location: PlayExitLocation::FinishedCharleston,
+                        metadata,
+                    };
+                }
+
+                return PlayActionResult {
+                    changed: false,
+                    exit_location: PlayExitLocation::NoAction,
+                    metadata,
+                };
+            }
             GamePhase::WaitingPlayers => {
                 return match self.game.complete_players(self.shuffle_players) {
                     Ok(_) => PlayActionResult {
@@ -456,16 +487,5 @@ impl<'a> StandardAI<'a> {
             exit_location: PlayExitLocation::NoAction,
             metadata,
         }
-    }
-
-    pub fn get_is_after_discard(&self) -> bool {
-        let current_player = self.game.get_current_player();
-        if current_player.is_none() {
-            return false;
-        }
-        let current_hand = self.game.table.hands.get(&current_player.unwrap());
-
-        current_hand.unwrap().len() < self.game.style.tiles_after_claim()
-            && self.game.round.tile_claimed.is_some()
     }
 }

@@ -25,7 +25,7 @@ export const setDeck = (newDeck: Deck) => {
   deck = newDeck;
 };
 
-export const getDeck = () => deck;
+export const getDeck = (): Deck => deck;
 
 export const getTile = (tileId: TileId) => deck[tileId] as Tile;
 
@@ -57,14 +57,16 @@ export class ModelServiceGameSummary {
 
     this.loadingState[1](true);
 
-    HttpClient.userBreakMeld(gameState.game_summary.id, {
+    HttpClient.userBreakMeld({
+      game_id: gameState.game_summary.id,
       player_id: gameState.game_summary.player_id,
       set_id: setId,
+      type: "UserBreakMeld",
     }).subscribe({
       error: () => {
         this.handleError();
       },
-      next: (newGame) => {
+      next: ({ game: newGame }) => {
         this.loadingState[1](false);
         this.gameState[1](newGame);
       },
@@ -102,16 +104,18 @@ export class ModelServiceGameSummary {
 
     this.loadingState[1](true);
 
-    HttpClient.userCreateMeld(gameState.game_summary.id, {
+    HttpClient.userCreateMeld({
+      game_id: gameState.game_summary.id,
       is_concealed: meld.is_concealed,
       is_upgrade: meld.is_upgrade,
       player_id: gameState.game_summary.player_id,
       tiles: meld.tiles,
+      type: "UserCreateMeld",
     }).subscribe({
       error: () => {
         this.handleError();
       },
-      next: (newGame) => {
+      next: ({ game: newGame }) => {
         this.loadingState[1](false);
         this.gameState[1](newGame);
       },
@@ -127,13 +131,15 @@ export class ModelServiceGameSummary {
 
     this.loadingState[1](true);
 
-    HttpClient.userDiscardTile(gameState.game_summary.id, {
+    HttpClient.userDiscardTile({
+      game_id: gameState.game_summary.id,
       tile_id: tileId,
+      type: "UserDiscardTile",
     }).subscribe({
       error: () => {
         this.handleError();
       },
-      next: (serviceGame) => {
+      next: ({ game: serviceGame }) => {
         this.loadingState[1](false);
         this.gameState[1](serviceGame);
       },

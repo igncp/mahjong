@@ -2,7 +2,8 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { useTranslation } from "react-i18next";
 
-import { GameScreen, IndexScreen } from "src/screens/list";
+import { SiteUrls } from "src/lib/site/urls";
+import { GameScreen, IndexScreen, OffscreenGame } from "src/screens/list";
 
 const Home = () => {
   const { asPath } = useRouter();
@@ -19,7 +20,7 @@ const Home = () => {
     <>
       {typeof window !== "undefined" && (
         <Head>
-          <title>{t("page.title", "Mahjong Web Client")}</title>
+          <title>{t("page.title")}</title>
         </Head>
       )}
       {(() => {
@@ -32,6 +33,9 @@ const Home = () => {
                 userId={paths[3] || ""}
               />
             );
+
+          case paths[0] === SiteUrls.offscreenGame.split("/")[2]:
+            return <OffscreenGame />;
 
           default:
             return <IndexScreen />;

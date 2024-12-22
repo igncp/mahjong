@@ -56,7 +56,10 @@ impl<'a> UserWrapper<'a> {
         Ok(HttpResponse::Ok().json(info))
     }
 
-    pub async fn get_dashboard(&self, auth_info_summary: &AuthInfoSummary) -> ResponseCommon {
+    pub async fn get_dashboard(
+        &self,
+        auth_info_summary: &AuthInfoSummary,
+    ) -> Result<UserGetDashboardResponse, ServiceError> {
         let player = DashboardPlayer {
             created_at: self.player.created_at.clone(),
             id: self.player.id.clone(),
@@ -71,7 +74,7 @@ impl<'a> UserWrapper<'a> {
             .await;
 
         if games.is_err() {
-            return Err(ServiceError::Custom("Error loading player games").into());
+            return Err(ServiceError::Custom("Error loading player games"));
         }
 
         let games = games.unwrap();
@@ -85,14 +88,12 @@ impl<'a> UserWrapper<'a> {
             })
             .collect();
 
-        let dashboard = UserGetDashboardResponse {
+        Ok(UserGetDashboardResponse {
             auth_info: auth_info_summary.clone(),
             player,
             player_games,
             player_total_score: info.unwrap().total_score,
-        };
-
-        Ok(HttpResponse::Ok().json(dashboard))
+        })
     }
 
     pub async fn update_info(&mut self, new_data: &UserPatchInfoRequest) -> ResponseCommon {

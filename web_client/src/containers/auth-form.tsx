@@ -1,10 +1,12 @@
 import { useFormik } from "formik";
+import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { first } from "rxjs";
 import z from "zod";
 
 import { anonymousAuth, githubAuth } from "src/lib/auth";
+import { SiteUrls } from "src/lib/site/urls";
 import { tokenObserver } from "src/sdk/auth";
 import { HttpClient } from "src/sdk/http-client";
 import Alert from "src/ui/common/alert";
@@ -27,6 +29,7 @@ const AuthForm = () => {
   const [error, setError] = useState<null | string>(null);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const onPlayAnonymously = useCallback(() => {
     setIsLoading(true);
@@ -124,6 +127,10 @@ const AuthForm = () => {
 
   const loginWithGithub = () => {
     githubAuth.login();
+  };
+
+  const trackOffscreenGame = () => {
+    router.push(SiteUrls.offscreenGame);
   };
 
   return (
@@ -229,7 +236,15 @@ const AuthForm = () => {
                 onClick={loginWithGithub}
                 type="primary"
               >
-                {t("auth.button.submitGithub", "Login with Github")}
+                {t("auth.button.submitGithub")}
+              </Button>
+              <Button
+                disabled={formik.isSubmitting}
+                onClick={trackOffscreenGame}
+                style={{ backgroundColor: "green" }}
+                type="primary"
+              >
+                {t("auth.button.trackOffscreenGame")}
               </Button>
             </form>
           </Card>

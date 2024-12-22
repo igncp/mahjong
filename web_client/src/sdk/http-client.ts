@@ -1,9 +1,8 @@
 import type { AdminPostMovePlayerResponse } from "bindings/AdminPostMovePlayerResponse";
 import type { AdminPostSortHandsResponse } from "bindings/AdminPostSortHandsResponse";
 import type { GetDeckResponse } from "bindings/GetDeckResponse";
-import type { UserGetDashboardResponse } from "bindings/UserGetDashboardResponse";
-import type { UserGetGamesQuery } from "bindings/UserGetGamesQuery";
-import type { UserGetGamesResponse } from "bindings/UserGetGamesResponse";
+import type { Queries } from "bindings/Queries";
+import type { QueriesResponses } from "bindings/QueriesResponses";
 import type { UserGetInfoResponse } from "bindings/UserGetInfoResponse";
 import type { UserGetLoadGameResponse } from "bindings/UserGetLoadGameResponse";
 import type { UserLoadGameQuery } from "bindings/UserLoadGameQuery";
@@ -11,21 +10,9 @@ import type { UserPatchInfoRequest } from "bindings/UserPatchInfoRequest";
 import type { UserPatchInfoResponse } from "bindings/UserPatchInfoResponse";
 import type { UserPostAIContinueRequest } from "bindings/UserPostAIContinueRequest";
 import type { UserPostAIContinueResponse } from "bindings/UserPostAIContinueResponse";
-import type { UserPostBreakMeldRequest } from "bindings/UserPostBreakMeldRequest";
-import type { UserPostBreakMeldResponse } from "bindings/UserPostBreakMeldResponse";
 import type { UserPostClaimTileRequest } from "bindings/UserPostClaimTileRequest";
 import type { UserPostClaimTileResponse } from "bindings/UserPostClaimTileResponse";
-import type { UserPostCreateGameRequest } from "bindings/UserPostCreateGameRequest";
-import type { UserPostCreateGameResponse } from "bindings/UserPostCreateGameResponse";
-import type { UserPostCreateMeldRequest } from "bindings/UserPostCreateMeldRequest";
-import type { UserPostCreateMeldResponse } from "bindings/UserPostCreateMeldResponse";
-import type { UserPostDiscardTileRequest } from "bindings/UserPostDiscardTileRequest";
-import type { UserPostDiscardTileResponse } from "bindings/UserPostDiscardTileResponse";
-import type { UserPostDrawTileRequest } from "bindings/UserPostDrawTileRequest";
-import type { UserPostDrawTileResponse } from "bindings/UserPostDrawTileResponse";
 import type { UserPostJoinGameResponse } from "bindings/UserPostJoinGameResponse";
-import type { UserPostMovePlayerRequest } from "bindings/UserPostMovePlayerRequest";
-import type { UserPostMovePlayerResponse } from "bindings/UserPostMovePlayerResponse";
 import type { UserPostPassRoundRequest } from "bindings/UserPostPassRoundRequest";
 import type { UserPostPassRoundResponse } from "bindings/UserPostPassRoundResponse";
 import type { UserPostSayMahjongRequest } from "bindings/UserPostSayMahjongRequest";
@@ -72,6 +59,10 @@ export const setBaseUrl = (val: string) => {
   baseUrl = val;
 };
 
+type Query<A> = Extract<Queries, { type: A }>;
+
+type QueryResponse<A> = Extract<QueriesResponses, { type: A }>;
+
 const fetchJson = <T>(url: string, opts?: RequestInit): Promise<T> => {
   const tokenHeader = getAuthTokenHeader();
 
@@ -84,6 +75,14 @@ const fetchJson = <T>(url: string, opts?: RequestInit): Promise<T> => {
     },
   }).then((r) => r.json());
 };
+
+const userCommon = <A>(body: Query<A>) =>
+  from(
+    fetchJson<QueryResponse<A>>("/v1/user/game", {
+      body: JSON.stringify(body),
+      method: "POST",
+    }),
+  );
 
 export const HttpClient = {
   async adminAIContinue(
@@ -240,13 +239,7 @@ export const HttpClient = {
   getHealth: async (): Promise<void> =>
     await fetch(`${baseUrl}/health`).then(() => undefined),
 
-  getUserDashboard() {
-    return from(
-      fetchJson<UserGetDashboardResponse>(`/v1/user/dashboard`, {
-        method: "GET",
-      }),
-    );
-  },
+  getUserDashboard: userCommon<"UserGetDashboard">,
 
   setAuth(body: UserPostSetAuthRequest) {
     return from(
@@ -274,17 +267,7 @@ export const HttpClient = {
     );
   },
 
-  userBreakMeld(gameId: GameId, body: UserPostBreakMeldRequest) {
-    return from(
-      fetchJson<UserPostBreakMeldResponse>(
-        `/v1/user/game/${gameId}/break-meld`,
-        {
-          body: JSON.stringify(body),
-          method: "POST",
-        },
-      ),
-    );
-  },
+  userBreakMeld: userCommon<"UserBreakMeld">,
 
   userClaimTile(gameId: GameId, body: UserPostClaimTileRequest) {
     return from(
@@ -310,53 +293,13 @@ export const HttpClient = {
     );
   },
 
-  userCreateGame(body: UserPostCreateGameRequest) {
-    return from(
-      fetchJson<UserPostCreateGameResponse>("/v1/user/game", {
-        body: JSON.stringify(body),
-        method: "POST",
-      }),
-    );
-  },
+  userCreateGame: userCommon<"UserCreateGame">,
 
-  userCreateMeld(gameId: GameId, body: UserPostCreateMeldRequest) {
-    return from(
-      fetchJson<UserPostCreateMeldResponse>(
-        `/v1/user/game/${gameId}/create-meld`,
-        {
-          body: JSON.stringify(body),
-          method: "POST",
-        },
-      ),
-    );
-  },
+  userCreateMeld: userCommon<"UserCreateMeld">,
 
-  userDiscardTile(gameId: GameId, body: UserPostDiscardTileRequest) {
-    return from(
-      fetchJson<UserPostDiscardTileResponse>(
-        `/v1/user/game/${gameId}/discard-tile`,
-        {
-          body: JSON.stringify(body),
-          method: "POST",
-        },
-      ),
-    );
-  },
+  userDiscardTile: userCommon<"UserDiscardTile">,
 
-  userDrawTile(gameId: GameId, body: UserPostDrawTileRequest) {
-    return from(
-      fetchJson<UserPostDrawTileResponse>(`/v1/user/game/${gameId}/draw-tile`, {
-        body: JSON.stringify(body),
-        method: "POST",
-      }),
-    );
-  },
-
-  userGetGames(query: UserGetGamesQuery) {
-    return from(
-      fetchJson<UserGetGamesResponse>(`/v1/user/game?${qs.stringify(query)}`),
-    );
-  },
+  userDrawTile: userCommon<"UserDrawTile">,
 
   userGetInfo(userId: PlayerId) {
     return from(fetchJson<UserGetInfoResponse>(`/v1/user/info/${userId}`));
@@ -378,17 +321,7 @@ export const HttpClient = {
     );
   },
 
-  userMovePlayer(gameId: GameId, body: UserPostMovePlayerRequest) {
-    return from(
-      fetchJson<UserPostMovePlayerResponse>(
-        `/v1/user/game/${gameId}/move-player`,
-        {
-          body: JSON.stringify(body),
-          method: "POST",
-        },
-      ),
-    );
-  },
+  userMovePlayer: userCommon<"UserMovePlayer">,
 
   userPassRound(gameId: GameId, body: UserPostPassRoundRequest) {
     return from(

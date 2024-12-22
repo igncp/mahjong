@@ -8,12 +8,15 @@
 
 - FE: search of a specific tile (show how many in board, how many in other melds)
 - FE: Audio effects
+- FE: Animations
 - FE: Perspective of tiles
 - FE: Display the last tile in board in different size
 - FE: Display other player melds, and bonus tiles, in small size and on hover
 - BE: leaderboard using redis
 - BE: promote anonymous account to real account
 - BE: decouple mahjong specific logic from server to a different package
+- BE: Allow running without redis
+- BE: Use event sourcing in the DB for games
 - CORE: Other rules from https://en.wikipedia.org/wiki/Mahjong
 - CORE: Replace bool returning functions with side effects
 - CORE: Minimum points win support

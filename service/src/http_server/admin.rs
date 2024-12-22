@@ -161,7 +161,7 @@ async fn admin_post_game_discard_tile(
 
     let mut game_wrapper = GameWrapper::from_storage(&storage, &game_id, srv, None).await?;
 
-    game_wrapper.handle_discard_tile(true, &body.tile_id).await
+    game_wrapper.handle_discard_tile_admin(&body.tile_id).await
 }
 
 #[post("/game/{game_id}/claim-tile")]
@@ -219,7 +219,7 @@ async fn admin_post_game_say_mahjong(
 }
 
 pub fn get_admin_scope() -> actix_web::Scope {
-    web::scope("/v1/admin")
+    web::scope("/api/v1/admin")
         .service(admin_get_game_by_id)
         .service(admin_get_games)
         .service(admin_post_game)

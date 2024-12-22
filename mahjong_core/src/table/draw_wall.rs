@@ -101,6 +101,60 @@ impl DrawWall {
         false
     }
 
+    pub fn len(&self) -> usize {
+        self.segments
+            .values()
+            .map(|segment| segment.0.len())
+            .sum::<usize>()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn iter_all<'a>(
+        &'a self,
+        vec: &'a mut Vec<(TileId, DrawWallPlace)>,
+    ) -> impl DoubleEndedIterator<Item = &'a (TileId, DrawWallPlace)> {
+        let mut wall_copy = self.clone();
+
+        for (wind, segment) in wall_copy.segments.iter_mut() {
+            for tile in segment.0.iter() {
+                vec.push((*tile, DrawWallPlace::Segment(wind.clone())));
+            }
+        }
+
+        let mut dead_wall = wall_copy.dead_wall.clone();
+        while let Some(tile) = dead_wall.0.pop() {
+            vec.push((tile, DrawWallPlace::DeadWall));
+        }
+
+        let mut unordered = wall_copy.unordered.clone();
+        while let Some(tile) = unordered.pop() {
+            vec.push((tile, DrawWallPlace::Unordered));
+        }
+
+        vec.iter()
+    }
+
+    pub fn get_next(&self, wind: &Wind) -> Option<&TileId> {
+        let mut wind_index = WINDS_ROUND_ORDER.iter().position(|w| w == wind).unwrap();
+        for _ in 0..WINDS_ROUND_ORDER.len() {
+            let current_wind = WINDS_ROUND_ORDER.get(wind_index).unwrap();
+            let segment = self.segments.get(current_wind);
+            if let Some(segment) = segment {
+                if !segment.0.is_empty() {
+                    return segment.0.last();
+                }
+            }
+            wind_index = (wind_index + 1) % WINDS_ROUND_ORDER.len();
+        }
+
+        None
+    }
+}
+
+impl DrawWall {
     pub fn position_tiles(&mut self, opts: Option<PositionTilesOpts>) {
         let mut use_dead_wall = false;
         if let Some(opts) = opts {
@@ -150,42 +204,6 @@ impl DrawWall {
         None
     }
 
-    pub fn len(&self) -> usize {
-        self.segments
-            .values()
-            .map(|segment| segment.0.len())
-            .sum::<usize>()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    pub fn iter_all<'a>(
-        &'a self,
-        vec: &'a mut Vec<(TileId, DrawWallPlace)>,
-    ) -> impl DoubleEndedIterator<Item = &(TileId, DrawWallPlace)> {
-        let mut wall_copy = self.clone();
-
-        for (wind, segment) in wall_copy.segments.iter_mut() {
-            for tile in segment.0.iter() {
-                vec.push((*tile, DrawWallPlace::Segment(wind.clone())));
-            }
-        }
-
-        let mut dead_wall = wall_copy.dead_wall.clone();
-        while let Some(tile) = dead_wall.0.pop() {
-            vec.push((tile, DrawWallPlace::DeadWall));
-        }
-
-        let mut unordered = wall_copy.unordered.clone();
-        while let Some(tile) = unordered.pop() {
-            vec.push((tile, DrawWallPlace::Unordered));
-        }
-
-        vec.iter()
-    }
-
     pub fn clear(&mut self) {
         self.segments.clear();
         self.dead_wall.0.clear();
@@ -205,21 +223,5 @@ impl DrawWall {
                 break;
             }
         }
-    }
-
-    pub fn get_next(&self, wind: &Wind) -> Option<&TileId> {
-        let mut wind_index = WINDS_ROUND_ORDER.iter().position(|w| w == wind).unwrap();
-        for _ in 0..WINDS_ROUND_ORDER.len() {
-            let current_wind = WINDS_ROUND_ORDER.get(wind_index).unwrap();
-            let segment = self.segments.get(current_wind);
-            if let Some(segment) = segment {
-                if !segment.0.is_empty() {
-                    return segment.0.last();
-                }
-            }
-            wind_index = (wind_index + 1) % WINDS_ROUND_ORDER.len();
-        }
-
-        None
     }
 }

@@ -49,6 +49,7 @@ count_lines() {
 }
 
 run_test() {
+  rm -rf web_client/bindings
   RESULT=$(cargo test --all-targets || echo "error")
   run_fix >/dev/null 2>&1
   if [[ "$RESULT" = "error" ]]; then

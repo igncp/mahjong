@@ -9,6 +9,7 @@ node_modules
 .idea
 *.tgz
 *.svg
+*.env
 perf.data
 perf.data.*
 .direnv

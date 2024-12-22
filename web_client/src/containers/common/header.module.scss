@@ -1,6 +1,6 @@
 @import "../../ui/styles";
 
-.githubButton {
+.desktopButton {
   @include mobile {
     display: none;
   }

@@ -9,3 +9,9 @@ export const GameScreen = dynamic(() => import("./game"), {
 export const IndexScreen = dynamic(() => import("./index"), {
   ssr: false,
 }) as FC;
+export const OffscreenGame = dynamic(
+  () => import("src/containers/offscreen-game"),
+  {
+    ssr: false,
+  },
+) as FC;

@@ -2,7 +2,7 @@ use crate::{game_summary::GameSummary, PlayerId, TileId};
 
 use super::StandardAI;
 
-impl<'a> StandardAI<'a> {
+impl StandardAI<'_> {
     // This can become complex if it takes into account different scoring rules.
     // For now it should only take into account the possibility to create a meld.
     // In future it should review which tiles have been claimed by other players.

@@ -11,6 +11,7 @@ import { useEffectExceptOnMount } from "src/sdk/hooks";
 import Tooltip from "./common/tooltip";
 
 type Props = {
+  className?: string;
   draggableItem?: unknown;
   draggableType?: string;
   dropRef?: ConnectDropTarget;
@@ -24,6 +25,7 @@ type Props = {
 };
 
 const TileImg = ({
+  className,
   draggableItem,
   draggableType,
   dropRef,
@@ -72,6 +74,7 @@ const TileImg = ({
 
   const imgEl = (
     <span
+      className={className}
       onClick={onClick}
       ref={dropRef as unknown as LegacyRef<HTMLSpanElement>}
     >

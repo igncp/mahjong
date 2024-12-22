@@ -2,8 +2,20 @@ set -e
 
 DOCKER_IMAGE_TAG=$(uname -m)
 
+run_docker_prod() {
+  export NEXT_PUBLIC_SERVICE_URL=https://mahjong-rust.com/api
+  if [ -f scripts/.env ]; then
+    export $(cat scripts/.env | xargs)
+  fi
+  run_docker
+}
+
 run_docker() (
   web() {
+    if [ -d web_client/out/doc ]; then
+      return
+    fi
+
     cargo doc --release --no-deps
     run_pack_wasm
 
@@ -12,47 +24,92 @@ run_docker() (
   }
 
   docker_service() {
-    (
-      cd service
-      cargo build --release --target-dir target
-      patchelf --set-interpreter /lib/x86_64-linux-gnu/ld-linux-$(uname -m | sed 's|_|-|g').so.2 \
-        ./target/release/mahjong_service
-    )
+    BRANCH_NAME="$(git rev-parse --abbrev-ref HEAD)"
 
-    docker build \
-      -t "igncp/mahjong_service:$DOCKER_IMAGE_TAG" \
-      -f Dockerfile.service \
-      --progress=plain \
-      .
+    if [ -z "$DOCKER_NO_PUSH" ]; then
+      docker buildx build \
+        --platform linux/arm64 \
+        -f Dockerfile.service \
+        -t "igncp/mahjong_service:$BRANCH_NAME" \
+        --push \
+        --progress=plain \
+        .
 
-    docker image push \
-      "igncp/mahjong_service:$DOCKER_IMAGE_TAG"
+      if [ "$NO_K8S_DEPLOY" != "1" ]; then
+        docker_deploy
+      fi
+    else
+      echo "DOCKER_NO_PUSH is set, not pushing"
+
+      docker build \
+        -f Dockerfile.service \
+        -t "igncp/mahjong_service:$BRANCH_NAME" \
+        --progress=plain \
+        .
+    fi
   }
 
-  docker_front() {
-    docker build \
-      -t "igncp/mahjong_front:$DOCKER_IMAGE_TAG" \
-      -f Dockerfile.front \
-      --progress=plain \
-      .
+  docker_deploy() {
+    DEPLOYMENT_NAME="mahjong-server"
+    MISSING_ENVS=""
 
-    docker image push \
-      igncp/mahjong_front:$DOCKER_IMAGE_TAG
+    if [ -z "$DEPLOYMENT_LOCATION" ]; then
+      echo "DEPLOYMENT_LOCATION is not set"
+      MISSING_ENVS="true"
+    fi
+
+    if [ -z "$DEPLOYMENT_TOKEN" ]; then
+      echo "DEPLOYMENT_TOKEN is not set"
+      MISSING_ENVS="true"
+    fi
+
+    if [ -n "$MISSING_ENVS" ]; then
+      exit 1
+    fi
+
+    curl "$DEPLOYMENT_LOCATION/apis/apps/v1/namespaces/default/deployments/$DEPLOYMENT_NAME" \
+      -i \
+      --insecure \
+      --silent \
+      --show-error \
+      -X PATCH \
+      -H "Authorization: Bearer $DEPLOYMENT_TOKEN" \
+      -H "Accept: application/json" \
+      -H "Content-Type: application/strategic-merge-patch+json" \
+      --data "@-" <<EOF
+{
+  "spec": {
+    "template": {
+      "metadata": {
+        "annotations": {
+          "$DEPLOYMENT_NAME/restartedAt": "$(date +%Y-%m-%d_%T%Z)"
+        }
+      }
+    }
+  }
+}
+EOF
+
+    echo ''
+    echo "Redeployed $DEPLOYMENT_NAME"
   }
 
-  echo "DEPLOY_SKIP='$DEPLOY_SKIP'"
-  echo "DEPLOY_ONLY='$DEPLOY_ONLY'"
+  web
+  docker_service
+)
 
-  if [ -z "$(echo "$DEPLOY_SKIP" | grep 'front' || true)" ] &&
-    [ -z "$(echo "$DEPLOY_ONLY" | grep -v 'front' || true)" ]; then
-    web
-    docker_front
-  fi
+run_docker_build() (
+  cd service
 
-  if [ -z "$(echo "$DEPLOY_SKIP" | grep 'service' || true)" ] &&
-    [ -z "$(echo "$DEPLOY_ONLY" | grep -v 'service' || true)" ]; then
-    docker_service
-  fi
+  PLATFORM=$(uname -m)
+
+  echo "PLATFORM: $PLATFORM"
+
+  cargo build --release
+
+  mv \
+    ../target/release/mahjong_service \
+    ../mahjong_service
 )
 
 run_check_docker() {

@@ -4,7 +4,8 @@
       "playAnonymously": "匿名玩",
       "showUsernamePass": "使用使用者名稱+密碼",
       "submit": "提交",
-      "submitGithub": "使用Github登錄"
+      "submitGithub": "使用Github登錄",
+      "trackOffscreenGame": "追踪屏幕外的游戏"
     },
     "error": {
       "invalidUserPass": "無效的用戶名或密碼",

@@ -21,161 +21,13 @@ use crate::{Tile, Wind, WINDS_ROUND_ORDER};
 use rustc_hash::FxHashSet;
 use uuid::Uuid;
 
+mod charleston;
 mod creation;
 mod definition;
 mod errors;
 mod players;
 
 impl Game {
-    pub fn set_players(&mut self, players: &Players) {
-        if players.len() != self.players.len() {
-            return;
-        }
-
-        let current_players = self.players.clone();
-
-        players.clone_into(&mut self.players);
-
-        for (index, player_id) in self.players.iter().enumerate() {
-            let current_player = current_players.get(index).unwrap();
-            let player_hand = self.table.hands.remove(current_player);
-            let score = self.score.remove(current_player);
-
-            self.table.hands.insert(player_id, player_hand);
-            self.score.insert(player_id, score);
-        }
-    }
-
-    pub fn say_mahjong(&mut self, player_id: &PlayerId) -> Result<(), CanSayMahjongError> {
-        let hand = self.table.hands.get(player_id).unwrap();
-
-        hand.can_say_mahjong()?;
-
-        self.calculate_hand_score(player_id);
-        let player_index = self.players.iter().position(|p| p == player_id).unwrap();
-
-        self.round.move_after_win(&mut self.phase, player_index);
-
-        if self.phase != GamePhase::End {
-            self.phase = GamePhase::InitialShuffle;
-        }
-
-        Ok(())
-    }
-
-    pub fn pass_null_round(&mut self) -> Result<(), PassNullRoundError> {
-        if self.table.draw_wall.can_draw() {
-            return Err(PassNullRoundError::WallNotEmpty);
-        }
-
-        if self.round.tile_claimed.is_some() {
-            for hand in self.table.hands.0.values() {
-                if hand.can_drop_tile() {
-                    return Err(PassNullRoundError::HandCanDropTile);
-                }
-
-                if hand.can_say_mahjong().is_ok() {
-                    return Err(PassNullRoundError::HandCanSayMahjong);
-                }
-            }
-        }
-
-        self.round.move_after_draw(&mut self.phase);
-
-        if self.phase != GamePhase::End {
-            self.phase = GamePhase::InitialShuffle;
-        }
-
-        Ok(())
-    }
-
-    pub fn start(&mut self, shuffle_players: bool) {
-        if self.phase != GamePhase::Beginning {
-            return;
-        }
-
-        self.phase = GamePhase::WaitingPlayers;
-
-        self.complete_players(shuffle_players).unwrap_or_default();
-    }
-
-    pub fn decide_dealer(&mut self) -> Result<(), DecideDealerError> {
-        let mut new_players = self.players.clone();
-        let winds = self.round.get_initial_winds_slice();
-
-        winds.iter(|(player_index, player_wind)| {
-            let wind_index = WINDS_ROUND_ORDER
-                .iter()
-                .position(|w| w == player_wind)
-                .unwrap();
-
-            new_players.0[wind_index].clone_from(&self.players.0[player_index]);
-        });
-
-        self.round.dealer_player_index = 0;
-        self.round.east_player_index = 0;
-        self.round.player_index = 0;
-        self.round.tile_claimed = None;
-
-        self.phase = GamePhase::InitialShuffle;
-
-        Ok(())
-    }
-
-    pub fn prepare_table(&mut self, with_dead_wall: bool) {
-        self.table = DEFAULT_DECK.create_table(&self.players);
-        self.table.draw_wall.position_tiles(Some(PositionTilesOpts {
-            shuffle: Some(true),
-            dead_wall: Some(with_dead_wall),
-        }));
-        self.phase = GamePhase::InitialDraw;
-    }
-
-    fn draw_tile_for_player(&mut self, player_id: &PlayerId) -> Result<(), DrawError> {
-        let player_wind = self.round.get_player_wind(&self.players.0, player_id);
-
-        loop {
-            let tile_id = self.table.draw_wall.pop_for_wind(&player_wind);
-
-            if tile_id.is_none() {
-                return Err(DrawError::NotEnoughTiles);
-            }
-
-            let tile_id = tile_id.unwrap();
-            let is_bonus = DEFAULT_DECK.0[tile_id].is_bonus();
-
-            if is_bonus {
-                let bonus_tiles = self.table.bonus_tiles.get_or_create(player_id);
-
-                bonus_tiles.push(tile_id);
-                continue;
-            }
-
-            let hand = self.table.hands.0.get_mut(player_id).unwrap();
-            hand.push(HandTile::from_id(tile_id));
-            return Ok(());
-        }
-    }
-
-    pub fn initial_draw(&mut self) -> Result<(), DrawError> {
-        let tiles_after_claim = self.style.tiles_after_claim();
-
-        for player_id in self.players.0.clone() {
-            'loop_label: loop {
-                let hand = self.table.hands.0.get(&player_id).unwrap();
-                if hand.len() == tiles_after_claim - 1 {
-                    break 'loop_label;
-                }
-
-                self.draw_tile_for_player(&player_id)?;
-            }
-        }
-
-        self.phase = GamePhase::Playing;
-
-        Ok(())
-    }
-
     // If `check_for_mahjong` is true, then it will only check for mahjong, if is false, then it
     // will check for melds that are not mahjong (they are exclusive)
     pub fn get_possible_melds_for_player(
@@ -334,6 +186,204 @@ impl Game {
 
     pub fn get_current_player(&self) -> Option<PlayerId> {
         self.players.get(self.round.player_index).cloned()
+    }
+
+    pub fn get_board_tile_player_diff(
+        &self,
+        round: Option<&Round>,
+        hand: Option<&Hand>,
+        player_id: &PlayerId,
+    ) -> PlayerDiff {
+        let round = round.unwrap_or(&self.round);
+        let tile_claimed = round.tile_claimed.clone();
+
+        if let Some(tile_claimed) = tile_claimed {
+            tile_claimed.by?;
+
+            let hand = match hand {
+                Some(hand) => hand,
+                None => self.table.hands.0.get(player_id).unwrap(),
+            };
+            if !hand.list.iter().any(|h| h.id == tile_claimed.id) {
+                return None;
+            }
+
+            let player_index = self.players.iter().position(|p| p == player_id);
+            let other_player_index = self.players.iter().position(|p| *p == tile_claimed.from);
+
+            if player_index.is_none() || other_player_index.is_none() {
+                return None;
+            }
+
+            let player_index = player_index.unwrap();
+            let other_player_index = other_player_index.unwrap();
+            let raw_diff = player_index as i32 - other_player_index as i32;
+
+            return Some(if raw_diff == -3 { 1 } else { raw_diff });
+        }
+
+        None
+    }
+
+    pub fn get_dealer(&self) -> Option<&PlayerId> {
+        self.players.get(self.round.dealer_player_index)
+    }
+
+    pub fn get_player_wind(&self) -> Wind {
+        let current_player = self.get_current_player().unwrap();
+
+        self.round.get_player_wind(&self.players.0, &current_player)
+    }
+}
+
+impl Game {
+    pub fn set_players(&mut self, players: &Players) {
+        if players.len() != self.players.len() {
+            return;
+        }
+
+        let current_players = self.players.clone();
+
+        players.clone_into(&mut self.players);
+
+        for (index, player_id) in self.players.iter().enumerate() {
+            let current_player = current_players.get(index).unwrap();
+            let player_hand = self.table.hands.remove(current_player);
+            let score = self.score.remove(current_player);
+
+            self.table.hands.insert(player_id, player_hand);
+            self.score.insert(player_id, score);
+        }
+    }
+
+    pub fn say_mahjong(&mut self, player_id: &PlayerId) -> Result<(), CanSayMahjongError> {
+        let hand = self.table.hands.get(player_id).unwrap();
+
+        hand.can_say_mahjong()?;
+
+        self.calculate_hand_score(player_id);
+        let player_index = self.players.iter().position(|p| p == player_id).unwrap();
+
+        self.round.move_after_win(&mut self.phase, player_index);
+
+        if self.phase != GamePhase::End {
+            self.phase = GamePhase::InitialShuffle;
+        }
+
+        Ok(())
+    }
+
+    pub fn pass_null_round(&mut self) -> Result<(), PassNullRoundError> {
+        if self.table.draw_wall.can_draw() {
+            return Err(PassNullRoundError::WallNotEmpty);
+        }
+
+        if self.round.tile_claimed.is_some() {
+            for hand in self.table.hands.0.values() {
+                if hand.can_drop_tile() {
+                    return Err(PassNullRoundError::HandCanDropTile);
+                }
+
+                if hand.can_say_mahjong().is_ok() {
+                    return Err(PassNullRoundError::HandCanSayMahjong);
+                }
+            }
+        }
+
+        self.round.move_after_draw(&mut self.phase);
+
+        if self.phase != GamePhase::End {
+            self.phase = GamePhase::InitialShuffle;
+        }
+
+        Ok(())
+    }
+
+    pub fn start(&mut self, shuffle_players: bool) {
+        if self.phase != GamePhase::Beginning {
+            return;
+        }
+
+        self.phase = GamePhase::WaitingPlayers;
+
+        self.complete_players(shuffle_players).unwrap_or_default();
+    }
+
+    pub fn decide_dealer(&mut self) -> Result<(), DecideDealerError> {
+        let mut new_players = self.players.clone();
+        let winds = self.round.get_initial_winds_slice();
+
+        winds.iter(|(player_index, player_wind)| {
+            let wind_index = WINDS_ROUND_ORDER
+                .iter()
+                .position(|w| w == player_wind)
+                .unwrap();
+
+            new_players.0[wind_index].clone_from(&self.players.0[player_index]);
+        });
+
+        self.round.dealer_player_index = 0;
+        self.round.east_player_index = 0;
+        self.round.player_index = 0;
+        self.round.tile_claimed = None;
+
+        self.phase = GamePhase::InitialShuffle;
+
+        Ok(())
+    }
+
+    pub fn prepare_table(&mut self, with_dead_wall: bool) {
+        self.table = DEFAULT_DECK.create_table(&self.players);
+        self.table.draw_wall.position_tiles(Some(PositionTilesOpts {
+            shuffle: Some(true),
+            dead_wall: Some(with_dead_wall),
+        }));
+        self.phase = GamePhase::InitialDraw;
+    }
+
+    fn draw_tile_for_player(&mut self, player_id: &PlayerId) -> Result<(), DrawError> {
+        let player_wind = self.round.get_player_wind(&self.players.0, player_id);
+
+        loop {
+            let tile_id = self.table.draw_wall.pop_for_wind(&player_wind);
+
+            if tile_id.is_none() {
+                return Err(DrawError::NotEnoughTiles);
+            }
+
+            let tile_id = tile_id.unwrap();
+            let is_bonus = DEFAULT_DECK.0[tile_id].is_bonus();
+
+            if is_bonus {
+                let bonus_tiles = self.table.bonus_tiles.get_or_create(player_id);
+
+                bonus_tiles.push(tile_id);
+                continue;
+            }
+
+            let hand = self.table.hands.0.get_mut(player_id).unwrap();
+            hand.push(HandTile::from_id(tile_id));
+            return Ok(());
+        }
+    }
+
+    pub fn initial_draw(&mut self) -> Result<(), DrawError> {
+        let tiles_after_claim = self.style.tiles_after_claim();
+
+        for player_id in self.players.0.clone() {
+            'loop_label: loop {
+                let hand = self.table.hands.0.get(&player_id).unwrap();
+                if hand.len() == tiles_after_claim - 1 {
+                    break 'loop_label;
+                }
+
+                self.draw_tile_for_player(&player_id)?;
+            }
+        }
+
+        self.phase = GamePhase::Playing;
+
+        Ok(())
     }
 
     pub fn draw_tile_from_wall(&mut self) -> DrawTileResult {
@@ -580,43 +630,6 @@ impl Game {
         Ok(())
     }
 
-    pub fn get_board_tile_player_diff(
-        &self,
-        round: Option<&Round>,
-        hand: Option<&Hand>,
-        player_id: &PlayerId,
-    ) -> PlayerDiff {
-        let round = round.unwrap_or(&self.round);
-        let tile_claimed = round.tile_claimed.clone();
-
-        if let Some(tile_claimed) = tile_claimed {
-            tile_claimed.by?;
-
-            let hand = match hand {
-                Some(hand) => hand,
-                None => self.table.hands.0.get(player_id).unwrap(),
-            };
-            if !hand.list.iter().any(|h| h.id == tile_claimed.id) {
-                return None;
-            }
-
-            let player_index = self.players.iter().position(|p| p == player_id);
-            let other_player_index = self.players.iter().position(|p| *p == tile_claimed.from);
-
-            if player_index.is_none() || other_player_index.is_none() {
-                return None;
-            }
-
-            let player_index = player_index.unwrap();
-            let other_player_index = other_player_index.unwrap();
-            let raw_diff = player_index as i32 - other_player_index as i32;
-
-            return Some(if raw_diff == -3 { 1 } else { raw_diff });
-        }
-
-        None
-    }
-
     pub fn claim_tile(&mut self, player_id: &PlayerId) -> bool {
         let player_hand = self.table.hands.0.get_mut(player_id);
         if player_hand.is_none() {
@@ -648,10 +661,6 @@ impl Game {
         true
     }
 
-    pub fn get_dealer(&self) -> Option<&PlayerId> {
-        self.players.get(self.round.dealer_player_index)
-    }
-
     pub fn update_version(&mut self) {
         self.version = Uuid::new_v4().to_string();
     }
@@ -661,12 +670,6 @@ impl Game {
             || Uuid::new_v4().to_string(),
             |inner_id| inner_id.to_string(),
         );
-    }
-
-    pub fn get_player_wind(&self) -> Wind {
-        let current_player = self.get_current_player().unwrap();
-
-        self.round.get_player_wind(&self.players.0, &current_player)
     }
 
     pub fn complete_players(&mut self, shuffle_players: bool) -> Result<(), &'static str> {
@@ -692,5 +695,21 @@ impl Game {
         self.phase = GamePhase::DecidingDealer;
 
         Ok(())
+    }
+
+    pub fn set_wind_for_player(&mut self, player_id: &PlayerId, wind: &Wind) {
+        let current_player_with_wind = self
+            .players
+            .0
+            .iter()
+            .find(|p| self.round.get_player_wind(&self.players.0, p) == *wind)
+            .unwrap()
+            .clone();
+
+        if &current_player_with_wind == player_id {
+            return;
+        }
+
+        self.players.swap(player_id, &current_player_with_wind);
     }
 }

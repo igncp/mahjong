@@ -2,6 +2,12 @@
 
 set -e
 
+SCRIPTPATH="$(
+  cd -- "$(dirname "$0")" >/dev/null 2>&1
+  pwd -P
+)"
+cd "$SCRIPTPATH/.."
+
 . ./src/check.sh
 . ./src/docker.sh
 . ./src/gh.sh
@@ -11,10 +17,6 @@ set -e
 . ./src/tests_summaries_fix.sh
 . ./src/wasm.sh
 
-SCRIPTPATH="$(
-  cd -- "$(dirname "$0")" >/dev/null 2>&1
-  pwd -P
-)"
 cd "$SCRIPTPATH/../.."
 
 USAGE="bash src/main.sh <command>
@@ -22,29 +24,18 @@ Run various scripts for the Mahjong project
   - check: Run all checks
   - check_docker: Run all checks inside docker
   - clippy: Run only clippy checks
+  - count_lines: Count the lines of code
   - dev_install: Install some dependencies for development (alias: install_dev)
   - docker: Build docker images
+  - docker_build: Script to build the code, is run inside docker
+  - docker_prod: Build docker images for production, locally
   - fix: Run linters in fix mode
   - gh_checks: Triggers a manual check in GitHub Actions
   - gh_deploy: Triggers a manual deployment in GitHub Actions
-  - list: List root files to be used in a pipe
-  - pack_wasm: Pack the wasm files
+  - pack_wasm: Pack the wasm files (alias: wasm)
   - profile_instruments: Create a trace file to be inspected by Instruments
-  - count_lines: Count the lines of code
   - test: Runs tests plus formatting
   - tests_summaries_fix: Convert the tests summaries to chinese chars"
-
-# This is specially convenient for maintaining the clippy rules, which need to
-# be in each crate
-list() {
-  FILES=(
-    "../mahjong_core/src/lib.rs"
-    "../service/src/main.rs"
-    "../service_contracts/src/lib.rs"
-    "../tui_client/src/main.rs"
-    "../web_lib/src/lib.rs"
-  )
-}
 
 main() {
   case "$1" in
@@ -60,13 +51,16 @@ main() {
   docker)
     run_docker
     ;;
+  docker_build)
+    run_docker_build
+    ;;
+  docker_prod)
+    run_docker_prod
+    ;;
   fix)
     run_fix
     ;;
-  list)
-    list
-    ;;
-  pack_wasm)
+  wasm | pack_wasm)
     run_pack_wasm
     ;;
   gh_deploy)

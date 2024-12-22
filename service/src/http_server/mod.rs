@@ -1,3 +1,4 @@
+use self::user::get_user_scope;
 use crate::auth::{
     AuthHandler, AuthInfoData, GetAuthInfo, GithubAuth, GithubCallbackQuery, UnauthorizedError,
 };
@@ -6,12 +7,17 @@ use crate::env::ENV_FRONTEND_URL;
 use crate::games_loop::GamesLoop;
 use crate::http_server::admin::get_admin_scope;
 pub use crate::http_server::base::{DataSocketServer, DataStorage, GamesManager};
-use crate::http_server::user::get_user_scope;
 use crate::service_error::{ResponseCommon, ServiceError};
 use crate::socket::{MahjongWebsocketServer, MahjongWebsocketSession};
 use actix::prelude::*;
 use actix_cors::Cors;
-use actix_web::{get, post, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_files::{Files, NamedFile};
+use actix_web::{
+    dev::{fn_service, ServiceRequest, ServiceResponse},
+    get,
+    http::StatusCode,
+    post, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
+};
 use actix_web_actors::ws;
 use mahjong_core::deck::DEFAULT_DECK;
 use serde::{Deserialize, Serialize};
@@ -24,19 +30,19 @@ mod admin;
 mod base;
 mod user;
 
-#[get("/health")]
+#[get("/api/health")]
 async fn get_health() -> impl Responder {
     HttpResponse::Ok().body("OK")
 }
 
-#[get("/v1/deck")]
+#[get("/api/v1/deck")]
 async fn get_deck() -> ResponseCommon {
     let response = GetDeckResponse(DEFAULT_DECK.clone().0);
 
     Ok(HttpResponse::Ok().json(response))
 }
 
-#[get("/v1/github_callback")]
+#[get("/api/v1/github_callback")]
 async fn github_callback(req: HttpRequest, storage: DataStorage) -> Result<impl Responder, Error> {
     let query = web::Query::<GithubCallbackQuery>::from_query(req.query_string());
 
@@ -62,7 +68,7 @@ async fn github_callback(req: HttpRequest, storage: DataStorage) -> Result<impl 
     Ok(redirect)
 }
 
-#[get("/v1/ws")]
+#[get("/api/v1/ws")]
 async fn get_ws(
     req: HttpRequest,
     stream: web::Payload,
@@ -100,7 +106,7 @@ async fn get_ws(
     )
 }
 
-#[post("/v1/test/delete-games")]
+#[post("/api/v1/test/delete-games")]
 async fn test_post_delete_games(req: HttpRequest, storage: DataStorage) -> ResponseCommon {
     let user_id = AuthHandler::new(&storage, &req).get_user_from_token()?;
 
@@ -145,49 +151,63 @@ async fn test_post_delete_games(req: HttpRequest, storage: DataStorage) -> Respo
     }))
 }
 
-pub struct MahjongServer;
+pub async fn start_server(storage: Box<dyn Storage>) -> std::io::Result<()> {
+    let port = 3000;
+    let address = "0.0.0.0";
 
-impl MahjongServer {
-    pub async fn start(storage: Box<dyn Storage>) -> std::io::Result<()> {
-        let port = 3000;
-        let address = "0.0.0.0";
+    warn!("Starting the Mahjong HTTP server on http://{address}:{port}");
 
-        warn!("Starting the Mahjong HTTP server on http://{address}:{port}");
+    let games_manager = GamesManager::default();
+    let games_manager_arc = Arc::new(Mutex::new(games_manager));
+    let loop_games_manager_arc = games_manager_arc.clone();
+    let storage_arc = Arc::new(storage);
+    let loop_storage_arc = storage_arc.clone();
+    let socket_server = Arc::new(Mutex::new(MahjongWebsocketServer::default().start()));
+    let loop_socket_server = socket_server.clone();
 
-        let games_manager = GamesManager::new();
-        let games_manager_arc = Arc::new(Mutex::new(games_manager));
-        let loop_games_manager_arc = games_manager_arc.clone();
-        let storage_arc = Arc::new(storage);
-        let loop_storage_arc = storage_arc.clone();
-        let socket_server = Arc::new(Mutex::new(MahjongWebsocketServer::new().start()));
-        let loop_socket_server = socket_server.clone();
+    GamesLoop::new(loop_storage_arc, loop_socket_server, loop_games_manager_arc).run();
 
-        GamesLoop::new(loop_storage_arc, loop_socket_server, loop_games_manager_arc).run();
+    HttpServer::new(move || {
+        let storage_data: DataStorage = web::Data::new(storage_arc.clone());
+        let games_manager_data = web::Data::new(games_manager_arc.clone());
+        let cors = Cors::permissive();
+        let endpoints_server = socket_server.clone();
 
-        HttpServer::new(move || {
-            let storage_data: DataStorage = web::Data::new(storage_arc.clone());
-            let games_manager_data = web::Data::new(games_manager_arc.clone());
-            let cors = Cors::permissive();
-            let endpoints_server = socket_server.clone();
+        let user_scope = get_user_scope();
+        let admin_scope = get_admin_scope();
 
-            let user_scope = get_user_scope();
-            let admin_scope = get_admin_scope();
+        let static_files = Files::new("/", "./static")
+            .index_file("index.html")
+            .redirect_to_slash_directory()
+            .default_handler(fn_service(|req: ServiceRequest| async {
+                let (req, _) = req.into_parts();
 
-            App::new()
-                .app_data(games_manager_data)
-                .app_data(storage_data)
-                .app_data(web::Data::new(endpoints_server))
-                .service(admin_scope)
-                .service(get_deck)
-                .service(get_health)
-                .service(get_ws)
-                .service(github_callback)
-                .service(test_post_delete_games)
-                .service(user_scope)
-                .wrap(cors)
-        })
-        .bind((address, port))?
-        .run()
-        .await
-    }
+                let file = NamedFile::open_async("./static/404/index.html").await?;
+
+                let res = file
+                    .customize()
+                    .with_status(StatusCode::NOT_FOUND)
+                    .respond_to(&req)
+                    .map_into_boxed_body();
+
+                Ok(ServiceResponse::new(req, res))
+            }));
+
+        App::new()
+            .app_data(games_manager_data)
+            .app_data(storage_data)
+            .app_data(web::Data::new(endpoints_server))
+            .service(admin_scope)
+            .service(get_deck)
+            .service(get_health)
+            .service(get_ws)
+            .service(github_callback)
+            .service(test_post_delete_games)
+            .service(user_scope)
+            .service(static_files)
+            .wrap(cors)
+    })
+    .bind((address, port))?
+    .run()
+    .await
 }

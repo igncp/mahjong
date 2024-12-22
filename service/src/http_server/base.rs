@@ -10,17 +10,12 @@ use std::sync::{Arc, Mutex};
 pub type DataStorage = web::Data<Arc<Box<dyn Storage>>>;
 pub type DataSocketServer = web::Data<Arc<Mutex<Addr<MahjongWebsocketServer>>>>;
 
+#[derive(Default)]
 pub struct GamesManager {
     games_locks: FxHashMap<GameId, Arc<Mutex<()>>>,
 }
 
 impl GamesManager {
-    pub fn new() -> Self {
-        Self {
-            games_locks: FxHashMap::default(),
-        }
-    }
-
     pub fn get_game_mutex(&mut self, game_id: &GameId) -> Arc<Mutex<()>> {
         let mutex_arc = self
             .games_locks

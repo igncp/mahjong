@@ -25,7 +25,7 @@ pub fn print_game_tile(tile: &Tile) -> String {
                 Dragon::Green => '發',
                 Dragon::White => '白',
             };
-            result.push_str(&dragon_letter.to_string());
+            result.push(dragon_letter);
         }
         Tile::Wind(tile) => {
             let wind_letter = tile.value.to_string();
@@ -38,7 +38,7 @@ pub fn print_game_tile(tile: &Tile) -> String {
                 Flower::Chrysanthemum => '菊',
                 Flower::Bamboo => '竹',
             };
-            result.push_str(&flower_letter.to_string());
+            result.push(flower_letter);
         }
         Tile::Season(tile) => {
             let season_letter = match tile.value {
@@ -47,7 +47,7 @@ pub fn print_game_tile(tile: &Tile) -> String {
                 Season::Autumn => '秋',
                 Season::Winter => '冬',
             };
-            result.push_str(&season_letter.to_string());
+            result.push(season_letter);
         }
         Tile::Suit(tile) => {
             let value_str = match tile.value {
@@ -608,15 +608,6 @@ impl Board {
         board
     }
 
-    pub fn push_by_summary(&mut self, summary: &str) {
-        summary
-            .split(',')
-            .filter(|tile| !tile.is_empty())
-            .for_each(|tile| {
-                self.0.push(Tile::id_from_summary(tile));
-            });
-    }
-
     pub fn to_summary(&self) -> String {
         self.0
             .iter()
@@ -626,13 +617,18 @@ impl Board {
     }
 }
 
-impl DrawWall {
-    pub fn replace_tail_summary(&mut self, wind: &Wind, summary: &str) {
-        let tile = Tile::id_from_summary(summary);
-
-        self.replace_tail(wind, &tile)
+impl Board {
+    pub fn push_by_summary(&mut self, summary: &str) {
+        summary
+            .split(',')
+            .filter(|tile| !tile.is_empty())
+            .for_each(|tile| {
+                self.0.push(Tile::id_from_summary(tile));
+            });
     }
+}
 
+impl DrawWall {
     pub fn summary_next(&self, wind: &Wind) -> String {
         let next_tile = self.get_next(wind);
 
@@ -640,6 +636,14 @@ impl DrawWall {
             Some(tile) => Tile::summary_from_ids(&[*tile]),
             None => String::new(),
         }
+    }
+}
+
+impl DrawWall {
+    pub fn replace_tail_summary(&mut self, wind: &Wind, summary: &str) {
+        let tile = Tile::id_from_summary(summary);
+
+        self.replace_tail(wind, &tile)
     }
 }
 

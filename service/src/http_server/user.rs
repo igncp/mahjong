@@ -7,50 +7,132 @@ use crate::user_wrapper::UserWrapper;
 use actix_web::{get, patch, post, web, HttpRequest, HttpResponse};
 use mahjong_core::GameId;
 use service_contracts::{
-    UserGetGamesQuery, UserGetGamesResponse, UserLoadGameQuery, UserPatchInfoRequest,
-    UserPostAIContinueRequest, UserPostBreakMeldRequest, UserPostClaimTileRequest,
-    UserPostCreateGameRequest, UserPostCreateMeldRequest, UserPostDiscardTileRequest,
-    UserPostDrawTileRequest, UserPostMovePlayerRequest, UserPostPassRoundRequest,
-    UserPostSayMahjongRequest, UserPostSetAuthAnonRequest, UserPostSetAuthRequest,
-    UserPostSetAuthResponse, UserPostSetGameSettingsRequest, UserPostSortHandRequest,
+    Queries, QueriesResponses, UserLoadGameQuery, UserPatchInfoRequest, UserPostAIContinueRequest,
+    UserPostClaimTileRequest, UserPostPassRoundRequest, UserPostSayMahjongRequest,
+    UserPostSetAuthAnonRequest, UserPostSetAuthRequest, UserPostSetAuthResponse,
+    UserPostSetGameSettingsRequest, UserPostSortHandRequest,
 };
 use tracing::debug;
 
-#[get("/game")]
-async fn user_get_games(storage: DataStorage, req: HttpRequest) -> ResponseCommon {
-    let params = web::Query::<UserGetGamesQuery>::from_query(req.query_string());
-    if params.is_err() {
-        return Ok(HttpResponse::BadRequest().body("Invalid player id"));
-    }
-    let player_id = params.unwrap().player_id.clone();
+#[post("/game")]
+async fn user_game_handler(
+    storage: DataStorage,
+    req: HttpRequest,
+    srv: DataSocketServer,
+    manager: GamesManagerData,
+    body: web::Json<Queries>,
+) -> ResponseCommon {
+    let player_id = match &body.0 {
+        Queries::UserCreateGame { player_id, .. } => player_id,
+        Queries::UserDiscardTile { .. } => {
+            &AuthHandler::new(&storage, &req).get_user_from_token()?
+        }
+        Queries::UserCreateMeld { player_id, .. } => player_id,
+        Queries::UserDrawTile { player_id, .. } => player_id,
+        Queries::UserGetDashboard => &AuthHandler::new(&storage, &req).get_user_from_token()?,
+        Queries::UserMovePlayer { player_id, .. } => player_id,
+        Queries::UserBreakMeld { player_id, .. } => player_id,
+    };
+    AuthHandler::new(&storage, &req).verify_user(player_id)?;
 
-    AuthHandler::new(&storage, &req).verify_user(&player_id)?;
+    let response = match &body.0 {
+        Queries::UserBreakMeld {
+            game_id, set_id, ..
+        } => {
+            get_lock!(manager, game_id);
 
-    let player = storage.get_player(&player_id).await;
+            let mut game_wrapper = GameWrapper::from_storage(&storage, game_id, srv, None).await?;
 
-    if player.is_err() || player.unwrap().is_none() {
-        return Ok(HttpResponse::BadRequest().body("Invalid player id"));
-    }
+            QueriesResponses::UserBreakMeld {
+                game: game_wrapper
+                    .handle_user_break_meld(player_id, set_id)
+                    .await?,
+            }
+        }
+        Queries::UserCreateGame {
+            ai_player_names,
+            auto_sort_own,
+            dead_wall,
+            ..
+        } => {
+            debug!("Creating game for user: {:?}", player_id);
+            let create_game_opts = CreateGameOpts {
+                ai_player_names: ai_player_names.as_ref(),
+                auto_sort_own: auto_sort_own.as_ref(),
+                dead_wall: dead_wall.as_ref(),
+                player_id: Some(player_id),
+            };
+            let game_wrapper = GameWrapper::from_new_game(&storage, srv, &create_game_opts).await?;
 
-    let games = storage
-        .get_player_games(&Some(player_id))
-        .await
-        .map_err(|_| ServiceError::Custom("Error getting games"))?;
+            debug!("Saving game for user: {:?}", player_id);
 
-    let response = UserGetGamesResponse(games);
+            QueriesResponses::UserCreateGame {
+                game: game_wrapper.handle_user_new_game(player_id).await?,
+            }
+        }
+        Queries::UserCreateMeld {
+            game_id,
+            tiles,
+            is_upgrade,
+            is_concealed,
+            ..
+        } => {
+            get_lock!(manager, game_id);
+
+            let mut game_wrapper = GameWrapper::from_storage(&storage, game_id, srv, None).await?;
+
+            QueriesResponses::UserCreateMeld {
+                game: game_wrapper
+                    .handle_user_create_meld(player_id, tiles, *is_upgrade, *is_concealed)
+                    .await?,
+            }
+        }
+        Queries::UserDiscardTile { game_id, tile_id } => {
+            debug!("Discarding tile");
+            get_lock!(manager, game_id);
+            let mut game_wrapper = GameWrapper::from_storage(&storage, game_id, srv, None).await?;
+            let current_user_id = &game_wrapper.get_current_player_id()?;
+            AuthHandler::new(&storage, &req).verify_user(current_user_id)?;
+
+            QueriesResponses::UserDiscardTile {
+                game: game_wrapper.handle_discard_tile_user(tile_id).await?,
+            }
+        }
+        Queries::UserDrawTile {
+            game_id,
+            game_version,
+            ..
+        } => {
+            get_lock!(manager, game_id);
+
+            let mut game_wrapper =
+                GameWrapper::from_storage(&storage, game_id, srv, Some(game_version)).await?;
+
+            QueriesResponses::UserDrawTile {
+                game: game_wrapper.handle_user_draw_tile(player_id).await?,
+            }
+        }
+        Queries::UserGetDashboard => {
+            let user_wrapper = UserWrapper::from_storage(&storage, player_id).await?;
+            let auth_handler = AuthHandler::new(&storage, &req);
+            let auth_info_summary = auth_handler.get_auth_info_summary().await?;
+
+            QueriesResponses::UserGetDashboard {
+                dashboard: user_wrapper.get_dashboard(&auth_info_summary).await?,
+            }
+        }
+        Queries::UserMovePlayer { game_id, .. } => {
+            get_lock!(manager, game_id);
+
+            let mut game_wrapper = GameWrapper::from_storage(&storage, game_id, srv, None).await?;
+
+            QueriesResponses::UserMovePlayer {
+                game: game_wrapper.handle_user_move_player(player_id).await?,
+            }
+        }
+    };
+
     Ok(HttpResponse::Ok().json(response))
-}
-
-#[get("/dashboard")]
-async fn user_get_dashboard(storage: DataStorage, req: HttpRequest) -> ResponseCommon {
-    let auth_handler = AuthHandler::new(&storage, &req);
-
-    let user_id = auth_handler.get_user_from_token()?;
-
-    let user_wrapper = UserWrapper::from_storage(&storage, &user_id).await?;
-    let auth_info_summary = auth_handler.get_auth_info_summary().await?;
-
-    user_wrapper.get_dashboard(&auth_info_summary).await
 }
 
 #[get("/game/{game_id}")]
@@ -71,24 +153,6 @@ async fn user_get_game_load(
     game_wrapper.user_load_game(&params.player_id)
 }
 
-#[post("/game/{game_id}/discard-tile")]
-async fn user_post_game_discard_tile(
-    storage: DataStorage,
-    body: web::Json<UserPostDiscardTileRequest>,
-    game_id: web::Path<String>,
-    req: HttpRequest,
-    manager: GamesManagerData,
-    srv: DataSocketServer,
-) -> ResponseCommon {
-    debug!("Discarding tile");
-    get_lock!(manager, game_id);
-    let mut game_wrapper = GameWrapper::from_storage(&storage, &game_id, srv, None).await?;
-    let current_user_id = &game_wrapper.get_current_player_id()?;
-    AuthHandler::new(&storage, &req).verify_user(current_user_id)?;
-
-    game_wrapper.handle_discard_tile(false, &body.tile_id).await
-}
-
 #[post("/game/{game_id}/ai-continue")]
 async fn user_post_game_ai_continue(
     storage: DataStorage,
@@ -107,29 +171,6 @@ async fn user_post_game_ai_continue(
     game_wrapper.handle_user_ai_continue(&body).await
 }
 
-#[post("/game")]
-async fn user_post_game_create(
-    storage: DataStorage,
-    srv: DataSocketServer,
-    body: web::Json<UserPostCreateGameRequest>,
-    req: HttpRequest,
-) -> ResponseCommon {
-    AuthHandler::new(&storage, &req).verify_user(&body.player_id)?;
-
-    debug!("Creating game for user: {:?}", &body.player_id);
-    let create_game_opts = CreateGameOpts {
-        ai_player_names: body.ai_player_names.as_ref(),
-        auto_sort_own: body.auto_sort_own.as_ref(),
-        dead_wall: body.dead_wall.as_ref(),
-        player_id: Some(&body.player_id),
-    };
-    let game_wrapper = GameWrapper::from_new_game(&storage, srv, &create_game_opts).await?;
-
-    debug!("Saving game for user: {:?}", &body.player_id);
-
-    game_wrapper.handle_user_new_game(&body.player_id).await
-}
-
 #[post("/game/{game_id}/join")]
 async fn user_post_game_join(
     storage: DataStorage,
@@ -145,43 +186,6 @@ async fn user_post_game_join(
     let mut game_wrapper = GameWrapper::from_storage(&storage, &game_id, srv, None).await?;
 
     game_wrapper.handle_user_join_game(&player_id).await
-}
-
-#[post("/game/{game_id}/draw-tile")]
-async fn user_post_game_draw_tile(
-    storage: DataStorage,
-    game_id: web::Path<GameId>,
-    body: web::Json<UserPostDrawTileRequest>,
-    srv: DataSocketServer,
-    req: HttpRequest,
-    manager: GamesManagerData,
-) -> ResponseCommon {
-    AuthHandler::new(&storage, &req).verify_user(&body.player_id)?;
-
-    get_lock!(manager, game_id);
-
-    let mut game_wrapper =
-        GameWrapper::from_storage(&storage, &game_id, srv, Some(&body.game_version)).await?;
-
-    game_wrapper.handle_user_draw_tile(&body.player_id).await
-}
-
-#[post("/game/{game_id}/move-player")]
-async fn user_post_game_move_player(
-    storage: DataStorage,
-    game_id: web::Path<GameId>,
-    body: web::Json<UserPostMovePlayerRequest>,
-    srv: DataSocketServer,
-    manager: GamesManagerData,
-    req: HttpRequest,
-) -> ResponseCommon {
-    AuthHandler::new(&storage, &req).verify_user(&body.player_id)?;
-
-    get_lock!(manager, game_id);
-
-    let mut game_wrapper = GameWrapper::from_storage(&storage, &game_id, srv, None).await?;
-
-    game_wrapper.handle_user_move_player(&body.player_id).await
 }
 
 #[post("/game/{game_id}/sort-hand")]
@@ -202,42 +206,6 @@ async fn user_post_game_sort_hand(
     game_wrapper
         .handle_user_sort_hand(&body.player_id, &body.tiles)
         .await
-}
-
-#[post("/game/{game_id}/create-meld")]
-async fn user_post_game_create_meld(
-    storage: DataStorage,
-    game_id: web::Path<GameId>,
-    body: web::Json<UserPostCreateMeldRequest>,
-    srv: DataSocketServer,
-    manager: GamesManagerData,
-    req: HttpRequest,
-) -> ResponseCommon {
-    AuthHandler::new(&storage, &req).verify_user(&body.player_id)?;
-
-    get_lock!(manager, game_id);
-
-    let mut game_wrapper = GameWrapper::from_storage(&storage, &game_id, srv, None).await?;
-
-    game_wrapper.handle_user_create_meld(&body).await
-}
-
-#[post("/game/{game_id}/break-meld")]
-async fn user_post_game_break_meld(
-    storage: DataStorage,
-    game_id: web::Path<GameId>,
-    body: web::Json<UserPostBreakMeldRequest>,
-    srv: DataSocketServer,
-    manager: GamesManagerData,
-    req: HttpRequest,
-) -> ResponseCommon {
-    AuthHandler::new(&storage, &req).verify_user(&body.player_id)?;
-
-    get_lock!(manager, game_id);
-
-    let mut game_wrapper = GameWrapper::from_storage(&storage, &game_id, srv, None).await?;
-
-    game_wrapper.handle_user_break_meld(&body).await
 }
 
 #[post("/game/{game_id}/claim-tile")]
@@ -447,23 +415,16 @@ async fn user_patch_info(
 }
 
 pub fn get_user_scope() -> actix_web::Scope {
-    web::scope("/v1/user")
-        .service(user_get_dashboard)
+    web::scope("/api/v1/user")
         .service(user_get_game_load)
-        .service(user_get_games)
+        .service(user_game_handler)
         .service(user_get_info)
         .service(user_patch_info)
         .service(user_post_auth)
         .service(user_post_auth_anonymous)
         .service(user_post_game_ai_continue)
-        .service(user_post_game_break_meld)
         .service(user_post_game_claim_tile)
-        .service(user_post_game_create)
-        .service(user_post_game_create_meld)
-        .service(user_post_game_discard_tile)
-        .service(user_post_game_draw_tile)
         .service(user_post_game_join)
-        .service(user_post_game_move_player)
         .service(user_post_game_pass_round)
         .service(user_post_game_say_mahjong)
         .service(user_post_game_settings)

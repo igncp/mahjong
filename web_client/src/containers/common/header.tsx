@@ -20,6 +20,12 @@ const Header = () => {
   const router = useRouter();
   const { i18n, t } = useTranslation();
 
+  const trackOffscreenGame = () => {
+    router.push(SiteUrls.offscreenGame);
+  };
+
+  const isInRealGameScreen = router.asPath === SiteUrls.offscreenGame;
+
   return (
     <HeaderComp linkPath={SiteUrls.index} text={t("header.title", "Mahjong")}>
       <span
@@ -29,14 +35,25 @@ const Header = () => {
           textAlign: "right",
         }}
       >
+        {isLoggedIn && !isInRealGameScreen && (
+          <Button
+            className={styles.desktopButton}
+            onClick={trackOffscreenGame}
+            style={{ backgroundColor: "green" }}
+            type="primary"
+          >
+            {t("auth.button.trackOffscreenGame")}
+          </Button>
+        )}
         <Button
           onClick={() => {
             i18n.changeLanguage(i18n.language === "en" ? "zh" : "en");
           }}
+          style={spacing}
         >
           {i18n.language === "en" ? "中文" : "EN"}
         </Button>
-        <Button className={styles.githubButton} style={spacing}>
+        <Button className={styles.desktopButton} style={spacing}>
           <Link href="https://github.com/igncp/mahjong" target="_blank">
             {t("code")}
           </Link>

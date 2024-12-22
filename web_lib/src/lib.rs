@@ -4,6 +4,7 @@ pub use melds::{get_possible_melds, is_chow, is_kong, is_pung};
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 
 mod melds;
+mod offscreen_game;
 mod service_game_summary;
 
 #[wasm_bindgen]

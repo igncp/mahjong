@@ -446,7 +446,10 @@ impl Hands {
     pub fn get(&self, player: &PlayerId) -> Option<Hand> {
         self.0.get(player).cloned()
     }
+}
 
+// Proxied
+impl Hands {
     pub fn remove(&mut self, player: &PlayerId) -> Hand {
         self.0.remove(player).unwrap()
     }
@@ -461,6 +464,18 @@ impl Hands {
         self.0.get(player).unwrap().len()
     }
 
+    pub fn get_style(&self) -> GameStyle {
+        self.0
+            .values()
+            .next()
+            .cloned()
+            .unwrap()
+            .style
+            .unwrap_or_default()
+    }
+}
+
+impl Hands {
     pub fn insert_ids(&mut self, player: &str, tiles: &[TileId]) -> &mut Self {
         self.0.insert(player.to_string(), Hand::from_ids(tiles));
         self
@@ -470,15 +485,5 @@ impl Hands {
         let mut hand = self.0.get(player).unwrap().clone();
         hand.sort_default();
         self.0.insert(player.clone(), hand);
-    }
-
-    pub fn get_style(&self) -> GameStyle {
-        self.0
-            .values()
-            .next()
-            .cloned()
-            .unwrap()
-            .style
-            .unwrap_or_default()
     }
 }

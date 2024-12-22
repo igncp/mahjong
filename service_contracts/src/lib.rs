@@ -180,15 +180,65 @@ pub struct WebSocketQuery {
 
 pub type AdminGetGamesResponse = Vec<ServicePlayerGame>;
 
-// Initially separating the get-games endpoints by mode to allow changing the response in future
 #[derive(Deserialize, Serialize, TS)]
 #[ts(export)]
-pub struct UserGetGamesQuery {
-    pub player_id: String,
+#[serde(tag = "type")]
+pub enum Queries {
+    UserBreakMeld {
+        game_id: GameId,
+        player_id: PlayerId,
+        set_id: SetIdContent,
+    },
+    UserCreateGame {
+        ai_player_names: Option<Vec<String>>,
+        auto_sort_own: Option<bool>,
+        dead_wall: Option<bool>,
+        player_id: PlayerId,
+    },
+    UserCreateMeld {
+        game_id: GameId,
+        is_concealed: bool,
+        is_upgrade: bool,
+        player_id: PlayerId,
+        tiles: FxHashSet<TileId>,
+    },
+    UserDiscardTile {
+        game_id: GameId,
+        tile_id: TileId,
+    },
+    UserDrawTile {
+        game_id: GameId,
+        game_version: GameVersion,
+        player_id: PlayerId,
+    },
+    UserGetDashboard,
+    UserMovePlayer {
+        game_id: GameId,
+        player_id: PlayerId,
+    },
 }
+
 #[derive(Deserialize, Serialize, TS)]
 #[ts(export)]
-pub struct UserGetGamesResponse(pub Vec<ServicePlayerGame>);
+pub struct UserGetDashboardResponse {
+    pub auth_info: AuthInfoSummary,
+    pub player: DashboardPlayer,
+    pub player_games: Vec<DashboardGame>,
+    pub player_total_score: i32,
+}
+
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export)]
+#[serde(tag = "type")]
+pub enum QueriesResponses {
+    UserBreakMeld { game: ServiceGameSummary },
+    UserCreateGame { game: ServiceGameSummary },
+    UserCreateMeld { game: ServiceGameSummary },
+    UserDiscardTile { game: ServiceGameSummary },
+    UserDrawTile { game: ServiceGameSummary },
+    UserGetDashboard { dashboard: UserGetDashboardResponse },
+    UserMovePlayer { game: ServiceGameSummary },
+}
 
 pub type AdminPostDrawTileResponse = Hand;
 
@@ -215,37 +265,6 @@ pub struct AdminPostDiscardTileRequest {
     pub tile_id: TileId,
 }
 pub type AdminPostDiscardTileResponse = ServiceGame;
-
-#[derive(Deserialize, Serialize, TS)]
-#[ts(export)]
-pub struct UserPostDiscardTileRequest {
-    pub tile_id: TileId,
-}
-#[derive(Deserialize, Serialize, TS)]
-#[ts(export)]
-pub struct UserPostDiscardTileResponse(pub ServiceGameSummary);
-
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export)]
-pub struct UserPostDrawTileRequest {
-    pub game_version: GameVersion,
-    pub player_id: PlayerId,
-}
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export)]
-pub struct UserPostDrawTileResponse(pub ServiceGameSummary);
-
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export)]
-pub struct UserPostCreateGameRequest {
-    pub ai_player_names: Option<Vec<String>>,
-    pub auto_sort_own: Option<bool>,
-    pub dead_wall: Option<bool>,
-    pub player_id: PlayerId,
-}
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export)]
-pub struct UserPostCreateGameResponse(pub ServiceGameSummary);
 
 pub type AdminPostMovePlayerRequest = ();
 
@@ -279,15 +298,6 @@ pub struct UserGetLoadGameResponse(pub ServiceGameSummary);
 
 #[derive(Deserialize, Serialize, TS)]
 #[ts(export)]
-pub struct UserPostMovePlayerRequest {
-    pub player_id: PlayerId,
-}
-#[derive(Deserialize, Serialize, TS)]
-#[ts(export)]
-pub struct UserPostMovePlayerResponse(pub ServiceGameSummary);
-
-#[derive(Deserialize, Serialize, TS)]
-#[ts(export)]
 pub struct UserPostSortHandRequest {
     pub game_version: GameVersion,
     pub player_id: PlayerId,
@@ -296,28 +306,6 @@ pub struct UserPostSortHandRequest {
 #[derive(Deserialize, Serialize, TS)]
 #[ts(export)]
 pub struct UserPostSortHandResponse(pub ServiceGameSummary);
-
-#[derive(Deserialize, Serialize, TS)]
-#[ts(export)]
-pub struct UserPostCreateMeldRequest {
-    pub player_id: PlayerId,
-    pub tiles: FxHashSet<TileId>,
-    pub is_upgrade: bool,
-    pub is_concealed: bool,
-}
-#[derive(Deserialize, Serialize, TS)]
-#[ts(export)]
-pub struct UserPostCreateMeldResponse(pub ServiceGameSummary);
-
-#[derive(Deserialize, Serialize, TS)]
-#[ts(export)]
-pub struct UserPostBreakMeldRequest {
-    pub player_id: PlayerId,
-    pub set_id: SetIdContent,
-}
-#[derive(Deserialize, Serialize, TS)]
-#[ts(export)]
-pub struct UserPostBreakMeldResponse(pub ServiceGameSummary);
 
 #[derive(Deserialize, Serialize, TS)]
 #[ts(export)]
@@ -449,15 +437,6 @@ pub enum AuthProvider {
 pub struct AuthInfoSummary {
     pub provider: AuthProvider,
     pub username: Option<String>,
-}
-
-#[derive(Deserialize, Serialize, TS)]
-#[ts(export)]
-pub struct UserGetDashboardResponse {
-    pub auth_info: AuthInfoSummary,
-    pub player: DashboardPlayer,
-    pub player_games: Vec<DashboardGame>,
-    pub player_total_score: i32,
 }
 
 #[derive(Deserialize, Serialize, TS)]

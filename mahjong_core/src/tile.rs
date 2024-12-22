@@ -25,16 +25,6 @@ impl Tile {
         }
     }
 
-    pub fn set_id(&mut self, id: TileId) {
-        match self {
-            Self::Suit(tile) => tile.id = id,
-            Self::Dragon(tile) => tile.id = id,
-            Self::Wind(tile) => tile.id = id,
-            Self::Season(tile) => tile.id = id,
-            Self::Flower(tile) => tile.id = id,
-        }
-    }
-
     pub fn is_same_type(&self, tile_b: &Self) -> bool {
         match self {
             Self::Suit(_) => matches!(tile_b, Self::Suit(_)),
@@ -118,5 +108,17 @@ impl Tile {
 
     pub fn is_bonus(&self) -> bool {
         matches!(self, Self::Flower(_) | Self::Season(_))
+    }
+}
+
+impl Tile {
+    pub fn set_id(&mut self, id: TileId) {
+        match self {
+            Self::Suit(tile) => tile.id = id,
+            Self::Dragon(tile) => tile.id = id,
+            Self::Wind(tile) => tile.id = id,
+            Self::Season(tile) => tile.id = id,
+            Self::Flower(tile) => tile.id = id,
+        }
     }
 }

@@ -1,18 +1,24 @@
-FROM debian:12-slim
-USER root
-
-# libssl3 needs unstable
-RUN echo 'deb http://deb.debian.org/debian unstable main' >> /etc/apt/sources.list \
-  && apt-get update \
-  && apt-get install -y libssl-dev ca-certificates postgresql
-
-RUN useradd -m -s /bin/bash rust \
-  && mkdir -p /app \
-  && chown -R rust:rust /app
-
-USER rust
+FROM rust:1-slim-bookworm AS chef
+RUN apt update
+RUN apt install -y pkg-config libssl-dev libpq-dev
+RUN cargo install cargo-chef
 WORKDIR /app
 
-COPY --chown=rust:rust service/target/release/mahjong_service .
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+COPY . .
+RUN bash scripts/src/main.sh docker_build
+
+FROM debian:bookworm-slim
+RUN apt update
+RUN apt install -y libssl-dev libpq-dev
+WORKDIR /app
+COPY --from=builder /app/mahjong_service .
+COPY ./web_client/out static
 
 CMD ./mahjong_service

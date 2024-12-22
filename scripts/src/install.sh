@@ -31,7 +31,7 @@ run_setup_dev_install() {
     --rm \
     --name mahjong_db \
     -d \
-    -v $(pwd)/mahjong_db:/var/lib/postgresql/data \
+    -v mahjong_db:/var/lib/postgresql/data \
     -p 5432:5432 \
     -e POSTGRES_USER=postgres \
     -e POSTGRES_PASSWORD=postgres \

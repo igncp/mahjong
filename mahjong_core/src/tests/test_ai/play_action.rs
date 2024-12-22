@@ -89,6 +89,7 @@ mod test {
                 },
                 PlayExitLocation::WaitingDealerOrder => "Phase: Deciding Dealer",
                 PlayExitLocation::CompletedPlayers => "Phase: Waiting Players",
+                PlayExitLocation::FinishedCharleston => "",
             };
 
             if summary.is_empty() {

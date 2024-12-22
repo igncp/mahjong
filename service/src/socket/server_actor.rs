@@ -16,8 +16,8 @@ pub struct MahjongWebsocketServer {
     rng: ThreadRng,
 }
 
-impl MahjongWebsocketServer {
-    pub fn new() -> Self {
+impl Default for MahjongWebsocketServer {
+    fn default() -> Self {
         let rooms = FxHashMap::default();
 
         Self {
@@ -26,7 +26,9 @@ impl MahjongWebsocketServer {
             rng: rand::thread_rng(),
         }
     }
+}
 
+impl MahjongWebsocketServer {
     fn send_message(&self, room: &str, message: &SocketMessage, skip_id: SessionId) {
         let message = serde_json::to_string(&message).unwrap();
         if let Some(sessions) = self.rooms.get(room) {

@@ -5,3 +5,6 @@ Dockerfile.service
 out
 **/mahjong_db
 **/node_modules
+target
+mahjong_db
+service/mahjong_db

@@ -1,6 +1,8 @@
 import type { Tile } from "bindings/Tile";
 import type { getI18n } from "react-i18next";
 
+import type { TileId } from "src/sdk/core";
+
 const prefix = "https://upload.wikimedia.org/wikipedia/commons/";
 
 // https://en.wikipedia.org/wiki/Mahjong_tiles#Contents
@@ -148,6 +150,30 @@ export const getTileInfo = (
       default:
         tile.Suit.suit satisfies never;
     }
+  }
+
+  return null;
+};
+
+export const getTileId = (tile: Tile): null | TileId => {
+  if ("Flower" in tile) {
+    return tile.Flower.id;
+  }
+
+  if ("Wind" in tile) {
+    return tile.Wind.id;
+  }
+
+  if ("Dragon" in tile) {
+    return tile.Dragon.id;
+  }
+
+  if ("Season" in tile) {
+    return tile.Season.id;
+  }
+
+  if ("Suit" in tile) {
+    return tile.Suit.id;
   }
 
   return null;

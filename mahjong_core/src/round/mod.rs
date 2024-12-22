@@ -58,6 +58,29 @@ impl Round {
             initial_winds: None,
         }
     }
+
+    pub fn get_claimable_tile(&self, player_id: &PlayerId) -> Option<TileId> {
+        let tile_claimed = self.tile_claimed.clone()?;
+
+        if tile_claimed.by.is_some() || tile_claimed.from == *player_id {
+            return None;
+        }
+
+        Some(tile_claimed.id)
+    }
+
+    pub fn get_initial_winds_slice(&self) -> DecideDealerWinds {
+        DecideDealerWinds::from_number(self.initial_winds)
+    }
+
+    pub fn get_player_wind(&self, players: &[PlayerId], player_id: &PlayerId) -> Wind {
+        let player_index = players.iter().position(|p| p == player_id).unwrap();
+        let wind_index = (player_index + 4 - self.east_player_index) % 4;
+        WINDS_ROUND_ORDER[wind_index].clone()
+    }
+}
+
+impl Round {
     pub fn next_turn(&mut self, hands: &Hands) -> Result<(), NextTurnError> {
         if self.wall_tile_drawn.is_none() {
             return Err(NextTurnError::StuckWallTileNotDrawn);
@@ -147,20 +170,6 @@ impl Round {
         self.common_next_round(phase)
     }
 
-    pub fn get_claimable_tile(&self, player_id: &PlayerId) -> Option<TileId> {
-        let tile_claimed = self.tile_claimed.clone()?;
-
-        if tile_claimed.by.is_some() || tile_claimed.from == *player_id {
-            return None;
-        }
-
-        Some(tile_claimed.id)
-    }
-
-    pub fn get_initial_winds_slice(&self) -> DecideDealerWinds {
-        DecideDealerWinds::from_number(self.initial_winds)
-    }
-
     pub fn set_initial_winds(
         &mut self,
         winds: Option<[Wind; 4]>,
@@ -168,11 +177,5 @@ impl Round {
         let winds = DecideDealerWinds::new(winds)?;
         self.initial_winds = winds.to_number();
         Ok(())
-    }
-
-    pub fn get_player_wind(&self, players: &[PlayerId], player_id: &PlayerId) -> Wind {
-        let player_index = players.iter().position(|p| p == player_id).unwrap();
-        let wind_index = (player_index + 4 - self.east_player_index) % 4;
-        WINDS_ROUND_ORDER[wind_index].clone()
     }
 }
