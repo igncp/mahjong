@@ -165,8 +165,8 @@ impl Storage for DBStorage {
         if use_cache {
             let game_str: Option<String> = redis_connection.get(redis_key).unwrap();
 
-            if game_str.is_some() {
-                let game: ServiceGame = serde_json::from_str(&game_str.unwrap()).unwrap();
+            if let Some(game_str) = game_str {
+                let game: ServiceGame = serde_json::from_str(&game_str).unwrap();
 
                 return Ok(Some(game));
             }

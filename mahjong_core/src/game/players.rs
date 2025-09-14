@@ -33,7 +33,7 @@ impl Players {
         self.0.len()
     }
 
-    pub fn iter(&self) -> std::slice::Iter<PlayerId> {
+    pub fn iter(&self) -> std::slice::Iter<'_, PlayerId> {
         self.0.iter()
     }
 

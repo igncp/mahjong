@@ -1,17 +1,19 @@
+import styles from "./board.module.scss";
+import Settings from "./settings";
 import {
   InfoCircleOutlined,
   QuestionCircleOutlined,
   SettingFilled,
+  SolutionOutlined,
   ThunderboltOutlined,
 } from "@ant-design/icons";
 import type { ServiceGameSummary } from "bindings/ServiceGameSummary";
 import type { Wind } from "bindings/Wind";
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-
-import type { PlayingExtrasParsed } from "src/sdk/pkg-wrapper";
-
 import type { TileId } from "src/sdk/core";
+import type { PlayingExtrasParsed } from "src/sdk/pkg-wrapper";
 import type { ModelServiceGameSummary } from "src/sdk/service-game-summary";
 import Modal from "src/ui/common/modal";
 import Text from "src/ui/common/text";
@@ -25,9 +27,6 @@ import {
 } from "src/ui/game/use-game-ui";
 import TileImg from "src/ui/tile-img";
 
-import styles from "./board.module.scss";
-import Settings from "./settings";
-
 export type BoardPlayer = {
   id: string;
   name: string;
@@ -38,6 +37,9 @@ interface IProps {
   canDropInBoard: boolean;
   dealerPlayer: BoardPlayer["id"] | undefined;
   getMeldType: (tiles: TileId[]) => string;
+  hand: ReactNode;
+  info: ReactNode;
+  infoHighlight: boolean;
   isMobile: boolean;
   players: [BoardPlayer, BoardPlayer, BoardPlayer, BoardPlayer];
   playersVisibleMelds: PlayingExtrasParsed["players_visible_melds"] | undefined;
@@ -54,6 +56,9 @@ const GameBoard = ({
   canDropInBoard,
   dealerPlayer,
   getMeldType,
+  hand,
+  info,
+  infoHighlight,
   isMobile,
   players,
   playersVisibleMelds,
@@ -63,6 +68,7 @@ const GameBoard = ({
   windToText,
 }: IProps) => {
   const [displayHelpModal, setDisplayHelpModal] = useState(false);
+  const [displayInfoModal, setDisplayInfoModal] = useState(false);
   const [displaySettingsModal, setDisplaySettingsModal] = useState(false);
   const { t } = useTranslation();
 
@@ -89,33 +95,41 @@ const GameBoard = ({
       <div className={styles.banner}>
         <Text>{bannerDisplay}</Text>
       </div>
-      <span className={styles.content}>
-        {serviceGameSummary.game_summary.board.map(
-          (tileId, tileIndex, tiles) => {
-            const isDiscardedTile =
-              tiles.length === tileIndex + 1 &&
-              typeof serviceGameSummary.game_summary.round.discarded_tile ===
-                "number";
+      <span className={styles.contentWrapper}>
+        <div className="w-full flex-1">
+          <div className={styles.content}>
+            {serviceGameSummary.game_summary.board.map(
+              (tileId, tileIndex, tiles) => {
+                const isDiscardedTile =
+                  tiles.length === tileIndex + 1 &&
+                  typeof serviceGameSummary.game_summary.round
+                    .discarded_tile === "number";
 
-            const tile = serviceGameM.getTile(tileId);
+                const tile = serviceGameM.getTile(tileId);
 
-            return (
-              <span
-                key={tileId}
-                {...(isDiscardedTile
-                  ? {
-                      className: styles.discardedTile,
-                      onClick: () => {
-                        serviceGameM.claimTile();
-                      },
-                    }
-                  : {})}
-              >
-                <TileImg tile={tile} />
-              </span>
-            );
-          },
-        )}
+                return (
+                  <span
+                    className={[
+                      styles.tileWrapper,
+                      isDiscardedTile ? styles.discardedTile : "",
+                    ].join(" ")}
+                    key={tileId}
+                    {...(isDiscardedTile
+                      ? {
+                          onClick: () => {
+                            serviceGameM.claimTile();
+                          },
+                        }
+                      : {})}
+                  >
+                    <TileImg size={false} tile={tile} />
+                  </span>
+                );
+              },
+            )}
+          </div>
+        </div>
+        {hand}
         {sortedPlayers.map((player, idx) => {
           const userStyle = [
             styles.userBottom,
@@ -229,6 +243,15 @@ const GameBoard = ({
             }}
           />
         )}
+        {isMobile && (
+          <span
+            className={styles.infoModalTrigger}
+            onClick={() => setDisplayInfoModal(true)}
+          >
+            {infoHighlight && <span className={styles.infoHighlight} />}
+            <SolutionOutlined rev="" />
+          </span>
+        )}
         <span
           className={styles.helpModalTrigger}
           onClick={() => setDisplayHelpModal(true)}
@@ -241,6 +264,13 @@ const GameBoard = ({
         >
           <SettingFilled rev="" />
         </span>
+        <Modal
+          footer={null}
+          onCancel={() => setDisplayInfoModal(false)}
+          open={displayInfoModal}
+        >
+          {info}
+        </Modal>
         <Modal
           footer={null}
           onCancel={() => setDisplayHelpModal(false)}

@@ -1,11 +1,5 @@
-import type { Deck } from "bindings/Deck";
-import type { GameSettingsSummary } from "bindings/GameSettingsSummary";
-import type { Hand } from "bindings/Hand";
-import type { PossibleMeld } from "bindings/PossibleMeld";
-import type { ServiceGameSummary } from "bindings/ServiceGameSummary";
-import type { Tile } from "bindings/Tile";
-import { Subject } from "rxjs";
-
+import type { TileId } from "./core";
+import { HttpClient } from "./http-client";
 import {
   formatTile,
   getGamePlayingExtras,
@@ -13,9 +7,13 @@ import {
   isKong,
   isPung,
 } from "./pkg-wrapper";
-
-import type { TileId } from "./core";
-import { HttpClient } from "./http-client";
+import type { Deck } from "bindings/Deck";
+import type { GameSettingsSummary } from "bindings/GameSettingsSummary";
+import type { Hand } from "bindings/Hand";
+import type { PossibleMeld } from "bindings/PossibleMeld";
+import type { ServiceGameSummary } from "bindings/ServiceGameSummary";
+import type { Tile } from "bindings/Tile";
+import { Subject } from "rxjs";
 
 export type ModelState<A> = [A | null, (v: A) => void];
 

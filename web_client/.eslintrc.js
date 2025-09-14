@@ -19,7 +19,7 @@ const paddingRule = [
         { blankLine: "always", next: "*", prev: item },
         { blankLine: "always", next: item, prev: "*" },
       ])
-      .flat()
+      .flat(),
   )
   .concat([
     {
@@ -67,6 +67,7 @@ module.exports = {
     "perfectionist/sort-classes": "error",
     "perfectionist/sort-enums": "error",
     "perfectionist/sort-exports": "error",
+    "perfectionist/sort-imports": "error",
     "perfectionist/sort-interfaces": "error",
     "perfectionist/sort-jsx-props": "error",
     "perfectionist/sort-maps": "error",

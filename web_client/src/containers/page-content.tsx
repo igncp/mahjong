@@ -1,16 +1,14 @@
+import PageContentComp from "../ui/common/page-content";
+import Header from "./common/header";
+import styles from "./page-content.module.scss";
 import { DownOutlined, UpOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-
 import { getIsLoggedIn } from "src/lib/auth";
 import { SiteUrls } from "src/lib/site/urls";
 import Button from "src/ui/common/button";
-
-import PageContentComp from "../ui/common/page-content";
-import Header from "./common/header";
-import styles from "./page-content.module.scss";
 
 type Props = {
   children: React.ReactNode;

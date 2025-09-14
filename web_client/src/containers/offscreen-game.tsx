@@ -1,19 +1,16 @@
+import PageContent from "./page-content";
 import { CloseCircleOutlined } from "@ant-design/icons";
 import { message } from "antd";
 import Alert from "antd/es/alert/Alert";
 import type { RoundValidationError } from "bindings/RoundValidationError";
+import { OffscreenGame, ScoringRule, Wind } from "pkg/web_lib";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-
-import { OffscreenGame, ScoringRule, Wind } from "pkg/web_lib";
-import { getDeck } from "src/sdk/pkg-wrapper";
-
 import { getTileInfo } from "src/lib/tile-info";
+import { getDeck } from "src/sdk/pkg-wrapper";
 import Button from "src/ui/common/button";
 import Title from "src/ui/common/title";
 import TileImg from "src/ui/tile-img";
-
-import PageContent from "./page-content";
 
 const OffscreenGamePage = () => {
   const [hasRendered, setHasRendered] = useState(false);
@@ -461,6 +458,8 @@ const OffscreenGamePage = () => {
                                   return "Seat Season";
                                 case ScoringRule.SelfDraw:
                                   return "Self Draw";
+                                case ScoringRule.Purity:
+                                  return "Purity";
                                 default:
                                   rule satisfies never;
 

@@ -4,10 +4,8 @@ import { useCallback, useMemo } from "react";
 import { useDrop } from "react-dnd";
 import { useTranslation } from "react-i18next";
 import { Subject } from "rxjs";
-
-import type { PlayingExtrasParsed } from "src/sdk/pkg-wrapper";
-
 import type { TileId } from "src/sdk/core";
+import type { PlayingExtrasParsed } from "src/sdk/pkg-wrapper";
 import type { ModelServiceGameSummary } from "src/sdk/service-game-summary";
 
 export const DROP_BG = "#e7e7e7";

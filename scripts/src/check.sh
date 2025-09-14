@@ -7,6 +7,7 @@ run_clippy() {
 }
 
 run_fix() {
+  cargo test
   cd web_client
   sed -i 's|key: |key in |' bindings/DrawWall.ts
   bun run lint:fix

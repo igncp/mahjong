@@ -1,6 +1,5 @@
-import { expect, test } from "@playwright/test";
-
 import { DashboardPage } from "./poms/dashboard-page";
+import { expect, test } from "@playwright/test";
 
 test.beforeEach(async ({ baseURL, page }) => {
   const dashboardPage = new DashboardPage({ baseURL, page });

@@ -1,4 +1,4 @@
-use std::io::{Error, ErrorKind};
+use std::io::Error;
 
 use clap::{Arg, Command};
 use mahjong_service::db_storage::DBStorage;
@@ -15,12 +15,7 @@ pub async fn print_game(opts: PrintGameOpts) -> Result<(), Error> {
         .get_game(&opts.game_id, false)
         .await
         .unwrap()
-        .ok_or_else(|| {
-            Error::new(
-                ErrorKind::Other,
-                format!("Game with ID {} not found", opts.game_id),
-            )
-        })?;
+        .ok_or_else(|| Error::other(format!("Game with ID {} not found", opts.game_id)))?;
 
     println!("Game:\n{}", game.game.get_summary_sorted());
 

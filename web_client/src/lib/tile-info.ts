@@ -1,6 +1,5 @@
 import type { Tile } from "bindings/Tile";
 import type { getI18n } from "react-i18next";
-
 import type { TileId } from "src/sdk/core";
 
 const prefix = "https://upload.wikimedia.org/wikipedia/commons/";

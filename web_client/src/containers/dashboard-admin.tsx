@@ -1,15 +1,13 @@
+import { SiteUrls } from "../lib/site/urls";
+import PageContent from "./page-content";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import type { MouseEventHandler } from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-
 import type { TAdminGetGamesResponse } from "src/sdk/core";
 import { HttpClient } from "src/sdk/http-client";
 import List, { ListItem } from "src/ui/common/list";
-
-import { SiteUrls } from "../lib/site/urls";
-import PageContent from "./page-content";
 
 const DashboardAdmin = () => {
   const [page, setPage] = useState<null | TAdminGetGamesResponse>(null);

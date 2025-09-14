@@ -1,5 +1,4 @@
 import { usePreview } from "react-dnd-preview";
-
 import { getTile } from "src/sdk/service-game-summary";
 import TileImg from "src/ui/tile-img";
 

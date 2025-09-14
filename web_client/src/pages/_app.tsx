@@ -5,7 +5,6 @@ import qs from "qs";
 import { HTML5toTouch } from "rdndmb-html5-to-touch";
 import { DndProvider } from "react-dnd-multi-backend";
 import { I18nextProvider, initReactI18next } from "react-i18next";
-
 import { DnDPreview } from "src/containers/dnd-preview";
 import { TOKEN_KEY } from "src/lib/constants";
 import { env } from "src/lib/env";

@@ -34,7 +34,7 @@ impl OffscreenGame {
         for player in self.game.players.iter() {
             let hand = self.game.table.hands.get(player).unwrap();
 
-            if hand.can_say_mahjong().map_or(false, |_| true) {
+            if hand.can_say_mahjong().is_ok_and(|_| true) {
                 hand_with_mahjong = Some(player.clone());
                 break;
             }

@@ -1,7 +1,6 @@
+import { parseJwt } from "./auth";
 import type { DependencyList, EffectCallback } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-
-import { parseJwt } from "./auth";
 
 export const useUserTokenClaims = (
   token: null | string,

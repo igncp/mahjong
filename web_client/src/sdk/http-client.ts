@@ -1,3 +1,26 @@
+import { getAuthTokenHeader, tokenObserver } from "./auth";
+import type {
+  GameId,
+  PlayerId,
+  TAdminGetGameResponse,
+  TAdminGetGamesResponse,
+  TAdminPostAIContinueRequest,
+  TAdminPostAIContinueResponse,
+  TAdminPostBreakMeldRequest,
+  TAdminPostBreakMeldResponse,
+  TAdminPostCreateMeldRequest,
+  TAdminPostCreateMeldResponse,
+  TAdminPostDiscardTileRequest,
+  TAdminPostDiscardTileResponse,
+  TAdminPostDrawCardResponse,
+  TAdminPostNewGameResponse,
+  TAdminPostSayMahjongRequest,
+  TAdminPostSayMahjongResponse,
+  TSocketMessageFromClient,
+  TSocketMessageFromServer,
+  TSocketWrapper,
+  TTestDeleteGamesResponse,
+} from "./core";
 import type { AdminPostMovePlayerResponse } from "bindings/AdminPostMovePlayerResponse";
 import type { AdminPostSortHandsResponse } from "bindings/AdminPostSortHandsResponse";
 import type { GetDeckResponse } from "bindings/GetDeckResponse";
@@ -28,30 +51,6 @@ import type { UserPostSortHandResponse } from "bindings/UserPostSortHandResponse
 import type { WebSocketQuery } from "bindings/WebSocketQuery";
 import qs from "qs";
 import { BehaviorSubject, from } from "rxjs";
-
-import { getAuthTokenHeader, tokenObserver } from "./auth";
-import type {
-  GameId,
-  PlayerId,
-  TAdminGetGameResponse,
-  TAdminGetGamesResponse,
-  TAdminPostAIContinueRequest,
-  TAdminPostAIContinueResponse,
-  TAdminPostBreakMeldRequest,
-  TAdminPostBreakMeldResponse,
-  TAdminPostCreateMeldRequest,
-  TAdminPostCreateMeldResponse,
-  TAdminPostDiscardTileRequest,
-  TAdminPostDiscardTileResponse,
-  TAdminPostDrawCardResponse,
-  TAdminPostNewGameResponse,
-  TAdminPostSayMahjongRequest,
-  TAdminPostSayMahjongResponse,
-  TSocketMessageFromClient,
-  TSocketMessageFromServer,
-  TSocketWrapper,
-  TTestDeleteGamesResponse,
-} from "./core";
 
 let baseUrl = "";
 

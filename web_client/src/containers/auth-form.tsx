@@ -1,10 +1,10 @@
+import styles from "./auth-form.module.scss";
+import PageContent from "./page-content";
 import { useFormik } from "formik";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { first } from "rxjs";
-import z from "zod";
-
 import { anonymousAuth, githubAuth } from "src/lib/auth";
 import { SiteUrls } from "src/lib/site/urls";
 import { tokenObserver } from "src/sdk/auth";
@@ -15,9 +15,7 @@ import Card from "src/ui/common/card";
 import Input from "src/ui/common/input";
 import Space from "src/ui/common/space";
 import Text from "src/ui/common/text";
-
-import styles from "./auth-form.module.scss";
-import PageContent from "./page-content";
+import z from "zod";
 
 type FormState = {
   password: string;

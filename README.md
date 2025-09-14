@@ -10,7 +10,7 @@ handle games which handles most of the game mechanics.
     - Can be communicated via an HTTP API
     - It creates a WebSocket per active game, to process the game and communicate with clients
 1. Scripts to handle different tasks related to the code deployment and tests
-    - For example running linting, tests, and deploying to Docker
+    - For example running linting, tests, and deploying to Dockerhub
 1. Web client to play, both for desktop and mobile web
     - It uses a drag-n-drop UI to play, and it has translated texts
     - Includes E2E tests
@@ -20,10 +20,9 @@ You can find the project's Rust documentation [here](https://mahjong-rust.com/do
 
 ## Development
 
-The project main dependencies are Rust and Nodejs. There is a
-[flake.nix](./flake.nix) file with all the required libraries needed for
-development, including android, but it requires that you have the Nix package
-manager installed.
+There is a [flake.nix](./flake.nix) file with all the required libraries needed
+for development, including android, it requires that you have the Nix
+package manager installed.
 
 Once you have cloned the repository there are a few things to setup:
 

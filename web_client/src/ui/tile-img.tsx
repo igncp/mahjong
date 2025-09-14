@@ -1,14 +1,12 @@
+import Tooltip from "./common/tooltip";
 import type { Tile } from "bindings/Tile";
 import type { LegacyRef, MouseEventHandler } from "react";
 import { memo, useMemo } from "react";
 import type { ConnectDropTarget } from "react-dnd";
 import { useDrag } from "react-dnd";
 import { useTranslation } from "react-i18next";
-
 import { getTileInfo } from "src/lib/tile-info";
 import { useEffectExceptOnMount } from "src/sdk/hooks";
-
-import Tooltip from "./common/tooltip";
 
 type Props = {
   className?: string;
@@ -19,7 +17,7 @@ type Props = {
   onClick?: MouseEventHandler<HTMLSpanElement>;
   onIsDraggingChange?: (isDragging: boolean) => void;
   paddingLeft?: number;
-  size?: number;
+  size?: false | number;
   tile?: Tile;
   tooltipFormatter?: (title?: string) => React.ReactNode;
 };
@@ -93,10 +91,12 @@ const TileImg = ({
         }
         src={image}
         style={{
-          height: sizePx,
+          ...(size !== false && {
+            height: sizePx,
+            width: isDragging ? 0 : sizePx,
+          }),
           opacity: isDragging ? 0.5 : 1,
           touchAction: draggableType ? "none" : undefined,
-          width: isDragging ? 0 : sizePx,
         }}
       />
     </span>

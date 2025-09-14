@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-
 import AuthForm from "src/containers/auth-form";
 import Dashboard from "src/containers/dashboard";
 import { getIsLoggedIn } from "src/lib/auth";

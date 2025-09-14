@@ -12,22 +12,22 @@ run_setup_dev_install() {
     cp .env.sample .env
   fi
 
-  if [ -n "$(docker ps | grep mahjong_redis)" ]; then
-    docker kill mahjong_redis || true
+  if [ -n "$(podman ps | grep mahjong_redis)" ]; then
+    podman kill mahjong_redis || true
   fi
 
-  docker run \
+  podman run \
     --rm \
     --name mahjong_redis \
     -p 6379:6379 \
     -d \
     redis:7
 
-  if [ -n "$(docker ps | grep mahjong_db)" ]; then
-    docker kill mahjong_db || true
+  if [ -n "$(podman ps | grep mahjong_db)" ]; then
+    podman kill mahjong_db || true
   fi
 
-  docker run \
+  podman run \
     --rm \
     --name mahjong_db \
     -d \
@@ -43,7 +43,7 @@ run_setup_dev_install() {
 
   if [ "$1" == "--reset" ]; then
     echo "Resetting database"
-    docker exec -it mahjong_db psql -U postgres \
+    podman exec -it mahjong_db psql -U postgres \
       -c "DROP DATABASE mahjong;" \
       -c "CREATE DATABASE mahjong;"
   fi
@@ -60,4 +60,12 @@ run_setup_dev_install() {
   bun i
 
   echo "Setup dev install done"
+}
+
+run_dev_fe() {
+  cd web_client && bun run dev:fe
+}
+
+run_dev_be() {
+  cd web_client && bun run dev:be
 }

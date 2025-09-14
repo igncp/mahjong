@@ -27,6 +27,10 @@ mod test {
                 ScoringRule::SeatSeason => format!("- P1: {base_hand} 冬,春,秋,夏"),
                 ScoringRule::SelfDraw => String::new(),
                 ScoringRule::CommonHand => format!("- P1: {base_hand}"),
+                ScoringRule::Purity => {
+                    "- P1: _ 一萬,二萬,三萬 四萬,五萬,六萬 七萬,八萬,九萬 一萬,二萬,三萬 四萬,四萬"
+                        .to_string()
+                }
             };
 
             if game_summary.is_empty() {
@@ -57,6 +61,10 @@ mod test {
                 }
                 ScoringRule::AllInTriplets => {
                     format!("- P1: {base_hand}")
+                }
+                ScoringRule::Purity => {
+                    "- P1: _ 一萬,一萬,一萬 四萬,五萬,六萬 七萬,八萬,九萬 一筒,二筒,三筒 北,北"
+                        .to_string()
                 }
                 ScoringRule::AllFlowers => {
                     format!("- P1: {base_hand} 竹,菊,蘭")

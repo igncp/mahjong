@@ -1,14 +1,12 @@
+import styles from "./settings.module.scss";
 import type { GameSettings } from "bindings/GameSettings";
 import type { ServiceGameSummary } from "bindings/ServiceGameSummary";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-
 import type { ModelServiceGameSummary } from "src/sdk/service-game-summary";
 import type { SelectOption } from "src/ui/common/select";
 import Select from "src/ui/common/select";
 import Text from "src/ui/common/text";
-
-import styles from "./settings.module.scss";
 
 const convertDiscardWaitMsValue = (value: GameSettings["discard_wait_ms"]) => {
   if (value === null) return "none";

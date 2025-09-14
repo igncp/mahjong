@@ -9,9 +9,9 @@ SCRIPTPATH="$(
 cd "$SCRIPTPATH/.."
 
 . ./src/check.sh
+. ./src/dev.sh
 . ./src/docker.sh
 . ./src/gh.sh
-. ./src/install.sh
 . ./src/profile.sh
 . ./src/service_watch.sh
 . ./src/tests_summaries_fix.sh
@@ -25,6 +25,8 @@ Run various scripts for the Mahjong project
   - check_docker: Run all checks inside docker
   - clippy: Run only clippy checks
   - count_lines: Count the lines of code
+  - dev_be: Run the backend in dev mode
+  - dev_fe: Run the frontend in dev mode
   - dev_install: Install some dependencies for development (alias: install_dev)
   - docker: Build docker images
   - docker_build: Script to build the code, is run inside docker
@@ -71,6 +73,12 @@ main() {
     ;;
   dev_install | install_dev)
     run_setup_dev_install "$2"
+    ;;
+  dev_fe)
+    run_dev_fe
+    ;;
+  dev_be)
+    run_dev_be
     ;;
   tests_summaries_fix)
     tests_summaries_fix

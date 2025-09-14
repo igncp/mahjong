@@ -3,8 +3,19 @@
 set -e
 
 run_pack_wasm() {
+  sudo echo
   rm -rf web_lib/pkg web_client/pkg
-  # If this fails, try: `cargo generate-lockfile`
-  (cd web_lib && wasm-pack build --release)
+
+  # It is necessary to build with wasm-pack inside Docker in NixOS due to
+  # wasm-bindgen not working on NixOS directly, even inside the nix shell
+  podman start -ai mahjong-rust ||
+    podman run -it \
+      -v "$PWD:/data" \
+      --name mahjong-rust \
+      rust:bookworm \
+      bash -c "cd /data && bash scripts/src/docker_build_wasm.sh"
+
+  sudo chown -R $USER web_lib/pkg
+
   mv web_lib/pkg web_client/pkg
 }

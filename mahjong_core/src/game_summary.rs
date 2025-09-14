@@ -17,6 +17,7 @@ pub struct RoundSummary {
     pub dealer_player_index: usize,
     east_player_index: usize,
     pub discarded_tile: Option<TileId>,
+    pub round_index: u32,
     pub player_index: usize,
     wind: Wind,
 }
@@ -99,6 +100,7 @@ impl GameSummary {
             consecutive_same_seats: game.round.consecutive_same_seats,
             player_index: game.round.player_index,
             wind: game.round.wind.clone(),
+            round_index: game.round.round_index,
         };
 
         let draw_wall_count = game.table.draw_wall.len();
@@ -141,6 +143,10 @@ impl GameSummary {
     }
 
     pub fn get_can_pass_turn(&self) -> bool {
+        if self.get_can_claim_tile() {
+            return true;
+        }
+
         self.phase == GamePhase::Playing
             && self.hand.is_some()
             && self.hand.as_ref().unwrap().len() == self.style.tiles_after_claim() - 1

@@ -1,6 +1,5 @@
 import dynamic from "next/dynamic";
 import type { FC } from "react";
-
 import type { IProps as IGameAdminProps } from "src/containers/game/admin";
 import type { IGameJoinScreenProps } from "src/containers/game/join";
 import type { IProps as IGamePlayerProps } from "src/containers/game/player";

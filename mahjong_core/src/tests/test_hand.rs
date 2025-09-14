@@ -37,15 +37,20 @@ mod test {
     fn test_can_say_mahjong() {
         for error in CanSayMahjongError::iter() {
             let summary = match error {
-                CanSayMahjongError::CantDrop => "",
+                CanSayMahjongError::CantDrop => vec![
+                    "",
+                    "一萬,二萬 一筒,一筒,一筒 二筒,二筒,二筒 三筒,三筒,三筒 四筒,四筒",
+                ],
                 CanSayMahjongError::NotPair => {
-                    "一萬,二萬 一筒,一筒,一筒 二筒,二筒,二筒 三筒,三筒,三筒 四筒,四筒,四筒"
+                    vec!["一萬,二萬 一筒,一筒,一筒 二筒,二筒,二筒 三筒,三筒,三筒 四筒,四筒,四筒"]
                 }
             };
 
-            let result = Hand::from_summary(summary).can_say_mahjong();
+            for s in summary {
+                let result = Hand::from_summary(s).can_say_mahjong();
 
-            assert_eq!(error, result.unwrap_err());
+                assert_eq!(error, result.unwrap_err());
+            }
         }
 
         let correct_result = Hand::from_summary(

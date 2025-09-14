@@ -1,15 +1,13 @@
+import PageContent from "../page-content";
 import message from "antd/es/message";
 import { useRouter } from "next/router";
 import { useTranslation } from "react-i18next";
 import { first } from "rxjs/operators";
-
 import { getIsLoggedIn } from "src/lib/auth";
 import { SiteUrls } from "src/lib/site/urls";
 import { HttpClient } from "src/sdk/http-client";
 import Button from "src/ui/common/button";
 import Modal from "src/ui/common/modal";
-
-import PageContent from "../page-content";
 
 export type IGameJoinScreenProps = {
   gameId: string;

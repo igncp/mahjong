@@ -44,6 +44,7 @@ pub enum ScoringRuleWasm {
     SeatFlower,
     SeatSeason,
     SelfDraw,
+    Purity,
 }
 
 impl From<ScoringRule> for ScoringRuleWasm {
@@ -60,6 +61,7 @@ impl From<ScoringRule> for ScoringRuleWasm {
             ScoringRule::SeatFlower => Self::SeatFlower,
             ScoringRule::SeatSeason => Self::SeatSeason,
             ScoringRule::SelfDraw => Self::SelfDraw,
+            ScoringRule::Purity => Self::Purity,
         }
     }
 }
@@ -78,6 +80,7 @@ impl From<ScoringRuleWasm> for ScoringRule {
             ScoringRuleWasm::SeatFlower => Self::SeatFlower,
             ScoringRuleWasm::SeatSeason => Self::SeatSeason,
             ScoringRuleWasm::SelfDraw => Self::SelfDraw,
+            ScoringRuleWasm::Purity => Self::Purity,
         }
     }
 }

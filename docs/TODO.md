@@ -9,9 +9,11 @@
 - FE: search of a specific tile (show how many in board, how many in other melds)
 - FE: Audio effects
 - FE: Animations
-- FE: Perspective of tiles
+- FE: Perspective of tiles: threejs
 - FE: Display the last tile in board in different size
 - FE: Display other player melds, and bonus tiles, in small size and on hover
+- FE: Avatars
+- FE: Full screen game by default
 - BE: leaderboard using redis
 - BE: promote anonymous account to real account
 - BE: decouple mahjong specific logic from server to a different package
@@ -20,6 +22,7 @@
 - CORE: Other rules from https://en.wikipedia.org/wiki/Mahjong
 - CORE: Replace bool returning functions with side effects
 - CORE: Minimum points win support
+- CORE: Other players pay points to winner
 - CORE: Support declaring concealed melds
 - CORE: Support charleston in the drawing phase
 - CORE: Average rounds are too high in the simulation
@@ -30,9 +33,11 @@
 - FS: Support rhythym of play setting
 - FS: Move more logic from web to the web_lib
 - FS: Random starting position
-- Move other projects bash scripts to the main scripts dir
-- Convert DB operations into transactions (there is an example)
-- Change player names when they are AI
+- MISC: Move other projects bash scripts to the main scripts dir
+- BE: Convert DB operations into transactions (there is an example)
+- BE: Change player names when they are AI
+- BE: MCP support
+- FS: Customize game name
 - Full AI game
 - Use the game version in more endpoints
 - Improve scoring logic (explicitly list points sources)

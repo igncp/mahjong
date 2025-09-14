@@ -63,27 +63,56 @@ pub enum ScoringRule {
     SeatFlower,
     SeatSeason,
     SelfDraw,
+    Purity,
 }
 
 impl Game {
     fn get_scoring_rules_points(scoring_rules: &Vec<ScoringRule>) -> u32 {
+        enum ScoringRulePoints {
+            Addition(u32),
+            Multiplier(u32),
+        }
         let mut round_points = 0;
+        let mut points: Vec<ScoringRulePoints> = vec![];
 
         for rule in scoring_rules {
-            round_points += match rule {
-                ScoringRule::AllFlowers => 2,
-                ScoringRule::AllInTriplets => 3,
-                ScoringRule::AllSeasons => 2,
-                ScoringRule::BasePoint => 1,
-                ScoringRule::CommonHand => 1,
-                ScoringRule::GreatDragons => 8,
-                ScoringRule::LastWallTile => 1,
-                ScoringRule::NoFlowersSeasons => 1,
-                ScoringRule::SeatFlower => 1,
-                ScoringRule::SeatSeason => 1,
-                ScoringRule::SelfDraw => 1,
-            }
+            points.push(match rule {
+                ScoringRule::AllFlowers => ScoringRulePoints::Addition(2),
+                ScoringRule::AllInTriplets => ScoringRulePoints::Addition(3),
+                ScoringRule::AllSeasons => ScoringRulePoints::Addition(2),
+                ScoringRule::BasePoint => ScoringRulePoints::Addition(1),
+                ScoringRule::CommonHand => ScoringRulePoints::Addition(1),
+                ScoringRule::GreatDragons => ScoringRulePoints::Addition(8),
+                ScoringRule::LastWallTile => ScoringRulePoints::Addition(1),
+                ScoringRule::NoFlowersSeasons => ScoringRulePoints::Addition(1),
+                ScoringRule::SeatFlower => ScoringRulePoints::Addition(1),
+                ScoringRule::SeatSeason => ScoringRulePoints::Addition(1),
+                ScoringRule::SelfDraw => ScoringRulePoints::Addition(1),
+                ScoringRule::Purity => ScoringRulePoints::Multiplier(6),
+            });
         }
+
+        round_points += points
+            .iter()
+            .filter_map(|point| {
+                if let ScoringRulePoints::Addition(value) = point {
+                    Some(*value)
+                } else {
+                    None
+                }
+            })
+            .sum::<u32>();
+        let multiplier = points
+            .iter()
+            .filter_map(|point| {
+                if let ScoringRulePoints::Multiplier(value) = point {
+                    Some(*value)
+                } else {
+                    None
+                }
+            })
+            .product::<u32>();
+        round_points *= multiplier.max(1);
 
         round_points
     }
@@ -106,6 +135,14 @@ impl Game {
             .0
             .get(winner_player)
             .unwrap_or(&empty_bonus);
+
+        if winner_melds.melds.iter().all(|meld| {
+            let tile = &DEFAULT_DECK.0[meld.tiles[0]];
+
+            matches!(tile, Tile::Suit(_))
+        }) {
+            rules.push(ScoringRule::Purity);
+        }
 
         if melds_without_pair
             .iter()

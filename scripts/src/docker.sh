@@ -27,7 +27,7 @@ run_docker() (
     BRANCH_NAME="$(git rev-parse --abbrev-ref HEAD)"
 
     if [ -z "$DOCKER_NO_PUSH" ]; then
-      docker buildx build \
+      podman build \
         --platform linux/arm64 \
         -f Dockerfile.service \
         -t "igncp/mahjong_service:$BRANCH_NAME" \
@@ -41,7 +41,7 @@ run_docker() (
     else
       echo "DOCKER_NO_PUSH is set, not pushing"
 
-      docker build \
+      podman build \
         -f Dockerfile.service \
         -t "igncp/mahjong_service:$BRANCH_NAME" \
         --progress=plain \

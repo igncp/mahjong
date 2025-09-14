@@ -1,3 +1,7 @@
+import PageContent from "../page-content";
+import type { BoardPlayer } from "./board";
+import GameBoard from "./board";
+import styles from "./player.module.scss";
 import { InfoCircleOutlined, LoadingOutlined } from "@ant-design/icons";
 import { message } from "antd";
 import type { ServiceGameSummary } from "bindings/ServiceGameSummary";
@@ -9,7 +13,6 @@ import type { LegacyRef } from "react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { first } from "rxjs";
-
 import { SiteUrls } from "src/lib/site/urls";
 import { getTileInfo } from "src/lib/tile-info";
 import type { GameId, PlayerId, SetIdContent, TileId } from "src/sdk/core";
@@ -28,11 +31,6 @@ import Text from "src/ui/common/text";
 import Tooltip from "src/ui/common/tooltip";
 import { useGameUI } from "src/ui/game/use-game-ui";
 import TileImg from "src/ui/tile-img";
-
-import PageContent from "../page-content";
-import type { BoardPlayer } from "./board";
-import GameBoard from "./board";
-import styles from "./player.module.scss";
 
 export interface IProps {
   gameId: GameId;
@@ -219,137 +217,14 @@ const Game = ({ gameId, userId }: IProps) => {
     }
   };
 
-  return (
-    <PageContent headerCollapsible={isMobile}>
-      <div className="mt-[20px] hidden md:block" />
-      {!isMobile && isPlaying && !!playing_player && (
-        <>
-          <Text>
-            <b style={{ fontSize: "20px" }}>{playing_player.name}</b> (
-            <span
-              style={{
-                fontWeight:
-                  serviceGameSummary.game_summary.score[userId] > 0 ? 700 : 400,
-              }}
-            >
-              {t("game.points", {
-                count: serviceGameSummary.game_summary.score[userId],
-              })}
-            </span>
-            )
-            {process.env.NODE_ENV !== "production" && (
-              <>
-                {" "}
-                <CopyToClipboard text={userId} />
-              </>
-            )}
-          </Text>
-          {!!dealer_player && (
-            <Text>
-              {t("game.currentWind")}{" "}
-              <b>{windToText[serviceGameSummary.game_summary.round.wind]}</b>,{" "}
-              {t("game.currentDealer")} <b>{dealer_player.name}</b>
-            </Text>
-          )}
-        </>
-      )}{" "}
-      <span ref={boardDropRef as unknown as LegacyRef<HTMLSpanElement>}>
-        <GameBoard
-          activePlayer={turn_player?.id}
-          canDropInBoard={canDropInBoard}
-          dealerPlayer={dealer_player?.id}
-          getMeldType={getMeldType}
-          isMobile={isMobile}
-          players={
-            boardPlayers as [BoardPlayer, BoardPlayer, BoardPlayer, BoardPlayer]
-          }
-          playersVisibleMelds={players_visible_melds}
-          playersWinds={players_winds}
-          serviceGameM={serviceGameM}
-          serviceGameSummary={serviceGameSummary}
-          windToText={windToText}
-        />
-      </span>
-      {!isWaitingPlayers && !isPlaying && (
-        <div className="my-[20px] flex w-full items-center justify-center">
-          <LoadingOutlined style={{ fontSize: "150%" }} />
-        </div>
-      )}
-      {isWaitingPlayers &&
-        (() => (
-          <>
-            <div>
-              {t(
-                "game.waitingPlayers",
-                "Waiting for other players to join ...",
-              )}
-            </div>
-            {joinUrl && (
-              <div>
-                {t("game.copyLink", "Copy this link and share with them:")}{" "}
-                {joinUrl}{" "}
-                <button
-                  className="text-[#0070f3] underline"
-                  onClick={() => {
-                    navigator.clipboard.writeText(joinUrl);
-
-                    messageApi.info(t("copied", "Copied"));
-                  }}
-                >
-                  {t("copyClipboard", "Copy to clipboard")}
-                </button>
-              </div>
-            )}
-            {qrCodeVal && (
-              <>
-                <div>
-                  {t("game.scanQR", "Or tell them to scan this QR code:")}
-                </div>
-                <img
-                  className="w-[400px] max-w-[100%] border-[1px] border-[black]"
-                  src={qrCodeVal}
-                />
-              </>
-            )}
-          </>
-        ))()}
+  const gameExtraInfo = (
+    <>
       {isPlaying && !!turn_player && !!playing_player && (
-        <>
-          <div>
-            <Card
-              title={
-                hand?.list ? (
-                  <Tooltip title={t("game.discardInfo")}>
-                    {t("game.hand")}: {hand.list.length}{" "}
-                    <InfoCircleOutlined rev="" />
-                  </Tooltip>
-                ) : null
-              }
-            >
-              <div className="flex flex-wrap items-center [&_img]:mb-[10px] [&_img]:cursor-pointer">
-                {(handWithoutMelds?.list || []).map(
-                  (handTile, handTileIndex) => {
-                    const { hasItemOver, ...handTileProps } =
-                      handTilesProps?.[handTileIndex] || {};
-
-                    return (
-                      <Fragment key={`${handTile.id}-${handTileIndex}`}>
-                        <TileImg
-                          {...handTileProps}
-                          isDraggingOther={isDraggingOther}
-                          paddingLeft={hasItemOver ? 10 : 0}
-                        />
-                      </Fragment>
-                    );
-                  },
-                )}
-              </div>
-            </Card>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-[10px] md:justify-normal">
-            <Alert
-              message={
-                <>
+        <div className="mt-[10px] flex flex-wrap items-center justify-center gap-[10px] md:justify-normal">
+          <Alert
+            message={
+              <>
+                <p>
                   {t("game.currentTurn")}:{" "}
                   <b>
                     {turn_player.name}
@@ -357,129 +232,133 @@ const Game = ({ gameId, userId }: IProps) => {
                       ? ` (${t("game.itsYou")})`
                       : ""}
                   </b>
-                </>
-              }
-              style={{ display: "inline-block" }}
-              type="info"
-            />
-            {(() => {
-              const board = gameState[0]?.game_summary.board;
-              const lastTile = board?.[board?.length - 1];
+                </p>
+                <p>
+                  {t("game.currentRound", "Current round")}:{" "}
+                  {(gameState[0]?.game_summary.round.round_index || 0) + 1}
+                </p>
+              </>
+            }
+            style={{ display: "inline-block" }}
+            type="info"
+          />
+          {(() => {
+            const board = gameState[0]?.game_summary.board;
+            const lastTile = board?.[board?.length - 1];
 
-              const tile =
-                typeof lastTile === "number"
-                  ? serviceGameM.getTile(lastTile)
-                  : lastTile;
+            const tile =
+              typeof lastTile === "number"
+                ? serviceGameM.getTile(lastTile)
+                : lastTile;
 
-              const claimTileTitle = tile ? getTileInfo(tile, i18n)?.[1] : null;
+            const claimTileTitle = tile ? getTileInfo(tile, i18n)?.[1] : null;
 
-              return (
-                <div className={styles.boardButtons}>
+            return (
+              <div className={styles.boardButtons}>
+                <Button
+                  disabled={!can_pass_turn || loading}
+                  onClick={() => {
+                    HttpClient.userMovePlayer({
+                      game_id: gameId,
+                      player_id: userId,
+                      type: "UserMovePlayer",
+                    }).subscribe({
+                      next: ({ game: newGame }) => {
+                        setServiceGame(newGame);
+                      },
+                    });
+                  }}
+                  type="primary"
+                >
+                  {t("game.passTurn")}
+                </Button>
+                <Button
+                  disabled={!can_claim_tile || loading}
+                  onClick={() => {
+                    serviceGameM.claimTile();
+                  }}
+                  type="primary"
+                >
+                  {t("game.claimTile")}
+                  {claimTileTitle ? `: ${claimTileTitle}` : ""}
+                </Button>
+                {can_pass_round && (
                   <Button
-                    disabled={!can_pass_turn || loading}
                     onClick={() => {
-                      HttpClient.userMovePlayer({
-                        game_id: gameId,
+                      serviceGameM.passRound();
+                    }}
+                    type="primary"
+                  >
+                    {t("game.passRound", "Pass round")}
+                  </Button>
+                )}
+                <Button
+                  disabled={loading || !can_draw_tile}
+                  onClick={() => {
+                    const sendErrorMessage = () => {
+                      // TODO: Move to the error emitter
+                      messageApi.open({
+                        content: t("game.error.invalidDraw"),
+                        type: "error",
+                      });
+                    };
+
+                    HttpClient.userDrawTile({
+                      game_id: gameId,
+                      game_version: serviceGameSummary.game_summary.version,
+                      player_id: userId,
+                      type: "UserDrawTile",
+                    }).subscribe({
+                      error: () => {
+                        sendErrorMessage();
+                      },
+                      next: ({ game }) => {
+                        setServiceGame(game);
+                      },
+                    });
+                  }}
+                >
+                  {t("game.drawTile")}
+                </Button>
+                {!!serviceGameSummary.settings &&
+                  !serviceGameSummary.settings.auto_sort && (
+                    <Button
+                      disabled={loading}
+                      onClick={() => {
+                        serviceGameM.sortHands();
+                      }}
+                    >
+                      {t("game.sortHand")}
+                    </Button>
+                  )}
+                {!serviceGameSummary.settings.ai_enabled && (
+                  <Button
+                    disabled={loading}
+                    onClick={() => {
+                      HttpClient.userContinueAI(gameId, {
                         player_id: userId,
-                        type: "UserMovePlayer",
                       }).subscribe({
-                        next: ({ game: newGame }) => {
+                        next: ({ service_game_summary: newGame }) => {
                           setServiceGame(newGame);
                         },
                       });
                     }}
-                    type="primary"
                   >
-                    {t("game.passTurn")}
+                    {t("game.continueAI")}
                   </Button>
-                  <Button
-                    disabled={!can_claim_tile || loading}
-                    onClick={() => {
-                      serviceGameM.claimTile();
-                    }}
-                    type="primary"
-                  >
-                    {t("game.claimTile")}
-                    {claimTileTitle ? `: ${claimTileTitle}` : ""}
-                  </Button>
-                  {can_pass_round && (
-                    <Button
-                      onClick={() => {
-                        serviceGameM.passRound();
-                      }}
-                      type="primary"
-                    >
-                      {t("game.passRound", "Pass round")}
-                    </Button>
-                  )}
-                  <Button
-                    disabled={loading || !can_draw_tile}
-                    onClick={() => {
-                      const sendErrorMessage = () => {
-                        // TODO: Move to the error emitter
-                        messageApi.open({
-                          content: t("game.error.invalidDraw"),
-                          type: "error",
-                        });
-                      };
-
-                      HttpClient.userDrawTile({
-                        game_id: gameId,
-                        game_version: serviceGameSummary.game_summary.version,
-                        player_id: userId,
-                        type: "UserDrawTile",
-                      }).subscribe({
-                        error: () => {
-                          sendErrorMessage();
-                        },
-                        next: ({ game }) => {
-                          setServiceGame(game);
-                        },
-                      });
-                    }}
-                  >
-                    {t("game.drawTile")}
-                  </Button>
-                  {!!serviceGameSummary.settings &&
-                    !serviceGameSummary.settings.auto_sort && (
-                      <Button
-                        disabled={loading}
-                        onClick={() => {
-                          serviceGameM.sortHands();
-                        }}
-                      >
-                        {t("game.sortHand")}
-                      </Button>
-                    )}
-                  {!serviceGameSummary.settings.ai_enabled && (
-                    <Button
-                      disabled={loading}
-                      onClick={() => {
-                        HttpClient.userContinueAI(gameId, {
-                          player_id: userId,
-                        }).subscribe({
-                          next: ({ service_game_summary: newGame }) => {
-                            setServiceGame(newGame);
-                          },
-                        });
-                      }}
-                    >
-                      {t("game.continueAI")}
-                    </Button>
-                  )}
-                  <Button
-                    disabled={loading || !can_say_mahjong}
-                    onClick={() => {
-                      serviceGameM.sayMahjong();
-                    }}
-                  >
-                    {t("game.sayMahjong")}
-                  </Button>
-                </div>
-              );
-            })()}
-          </div>
-        </>
+                )}
+                <Button
+                  disabled={loading || !can_say_mahjong}
+                  onClick={() => {
+                    serviceGameM.sayMahjong();
+                  }}
+                >
+                  {t("game.sayMahjong")}
+                </Button>
+              </div>
+            );
+          })()}
+        </div>
       )}
       <div className={styles.smallGrid}>
         {Array.from(setsIds).map((setId) => {
@@ -596,6 +475,141 @@ const Game = ({ gameId, userId }: IProps) => {
           </Card>
         )}
       </div>
+    </>
+  );
+
+  return (
+    <PageContent headerCollapsible={isMobile}>
+      <div className="mt-[20px] hidden md:block" />
+      {!isMobile && isPlaying && !!playing_player && (
+        <>
+          <Text>
+            <b style={{ fontSize: "20px" }}>{playing_player.name}</b> (
+            <span
+              style={{
+                fontWeight:
+                  serviceGameSummary.game_summary.score[userId] > 0 ? 700 : 400,
+              }}
+            >
+              {t("game.points", {
+                count: serviceGameSummary.game_summary.score[userId],
+              })}
+            </span>
+            )
+            {process.env.NODE_ENV !== "production" && (
+              <>
+                {" "}
+                <CopyToClipboard text={userId} />
+              </>
+            )}
+          </Text>
+          {!!dealer_player && (
+            <Text>
+              {t("game.currentWind")}{" "}
+              <b>{windToText[serviceGameSummary.game_summary.round.wind]}</b>,{" "}
+              {t("game.currentDealer")} <b>{dealer_player.name}</b>
+            </Text>
+          )}
+        </>
+      )}{" "}
+      <span ref={boardDropRef as unknown as LegacyRef<HTMLSpanElement>}>
+        <GameBoard
+          activePlayer={turn_player?.id}
+          canDropInBoard={canDropInBoard}
+          dealerPlayer={dealer_player?.id}
+          getMeldType={getMeldType}
+          hand={
+            <div className="mx-[10px] mt-[10px] w-full">
+              <Card
+                className="bg-[rgba(255,255,255,0.2)]"
+                title={
+                  hand?.list ? (
+                    <Tooltip title={t("game.discardInfo")}>
+                      {t("game.hand")}: {hand.list.length}{" "}
+                      <InfoCircleOutlined rev="" />
+                    </Tooltip>
+                  ) : null
+                }
+              >
+                <div className="flex flex-wrap items-center [&_img]:mb-[10px] [&_img]:cursor-pointer">
+                  {(handWithoutMelds?.list || []).map(
+                    (handTile, handTileIndex) => {
+                      const { hasItemOver, ...handTileProps } =
+                        handTilesProps?.[handTileIndex] || {};
+
+                      return (
+                        <Fragment key={`${handTile.id}-${handTileIndex}`}>
+                          <TileImg
+                            {...handTileProps}
+                            isDraggingOther={isDraggingOther}
+                            paddingLeft={hasItemOver ? 10 : 0}
+                            size={isMobile ? 40 : 50}
+                          />
+                        </Fragment>
+                      );
+                    },
+                  )}
+                </div>
+              </Card>
+            </div>
+          }
+          info={isMobile ? gameExtraInfo : null}
+          infoHighlight={!!possible_melds?.length}
+          isMobile={isMobile}
+          players={
+            boardPlayers as [BoardPlayer, BoardPlayer, BoardPlayer, BoardPlayer]
+          }
+          playersVisibleMelds={players_visible_melds}
+          playersWinds={players_winds}
+          serviceGameM={serviceGameM}
+          serviceGameSummary={serviceGameSummary}
+          windToText={windToText}
+        />
+      </span>
+      {!isWaitingPlayers && !isPlaying && (
+        <div className="my-[20px] flex w-full items-center justify-center">
+          <LoadingOutlined style={{ fontSize: "150%" }} />
+        </div>
+      )}
+      {isWaitingPlayers &&
+        (() => (
+          <>
+            <div>
+              {t(
+                "game.waitingPlayers",
+                "Waiting for other players to join ...",
+              )}
+            </div>
+            {joinUrl && (
+              <div>
+                {t("game.copyLink", "Copy this link and share with them:")}{" "}
+                {joinUrl}{" "}
+                <button
+                  className="text-[#0070f3] underline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(joinUrl);
+
+                    messageApi.info(t("copied", "Copied"));
+                  }}
+                >
+                  {t("copyClipboard", "Copy to clipboard")}
+                </button>
+              </div>
+            )}
+            {qrCodeVal && (
+              <>
+                <div>
+                  {t("game.scanQR", "Or tell them to scan this QR code:")}
+                </div>
+                <img
+                  className="w-[400px] max-w-[100%] border-[1px] border-[black]"
+                  src={qrCodeVal}
+                />
+              </>
+            )}
+          </>
+        ))()}
+      {isMobile ? null : gameExtraInfo}
       {contextHolder}
     </PageContent>
   );

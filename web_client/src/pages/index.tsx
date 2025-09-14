@@ -1,7 +1,6 @@
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useTranslation } from "react-i18next";
-
 import { SiteUrls } from "src/lib/site/urls";
 import { GameScreen, IndexScreen, OffscreenGame } from "src/screens/list";
 

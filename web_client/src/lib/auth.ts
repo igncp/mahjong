@@ -1,10 +1,8 @@
-import qs from "query-string";
-
-import { tokenObserver } from "src/sdk/auth";
-import { HttpClient } from "src/sdk/http-client";
-
 import { env } from "./env";
 import { uuid } from "./utils";
+import qs from "query-string";
+import { tokenObserver } from "src/sdk/auth";
+import { HttpClient } from "src/sdk/http-client";
 
 export const getIsLoggedIn = () => {
   const token = tokenObserver.getValue();

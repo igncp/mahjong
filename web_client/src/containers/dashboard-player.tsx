@@ -1,3 +1,6 @@
+import { SiteUrls } from "../lib/site/urls";
+import styles from "./dashboard-player.module.scss";
+import PageContent from "./page-content";
 import { EditOutlined, PlusCircleOutlined } from "@ant-design/icons";
 import type { UserGetDashboardResponse } from "bindings/UserGetDashboardResponse";
 import dayjs from "dayjs";
@@ -7,8 +10,6 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { first } from "rxjs";
-import { string } from "zod";
-
 import { tokenObserver } from "src/sdk/auth";
 import { HttpClient } from "src/sdk/http-client";
 import Button from "src/ui/common/button";
@@ -18,10 +19,7 @@ import Modal from "src/ui/common/modal";
 import Space from "src/ui/common/space";
 import Table from "src/ui/common/table";
 import Title from "src/ui/common/title";
-
-import { SiteUrls } from "../lib/site/urls";
-import styles from "./dashboard-player.module.scss";
-import PageContent from "./page-content";
+import { string } from "zod";
 
 export type TProps = {
   userId: string;

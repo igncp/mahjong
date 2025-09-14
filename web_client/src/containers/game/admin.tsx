@@ -1,14 +1,12 @@
+import PageContent from "../page-content";
 import { useRouter } from "next/router";
 import { Fragment, useEffect, useState } from "react";
-
 import { ModelServiceGame } from "src/lib/models/service-game";
 import { SiteUrls } from "src/lib/site/urls";
 import type { SetIdContent, TAdminGetGameResponse } from "src/sdk/core";
 import { HttpClient } from "src/sdk/http-client";
 import Button from "src/ui/common/button";
 import CopyToClipboard from "src/ui/common/copy-to-clipboard";
-
-import PageContent from "../page-content";
 
 export interface IProps {
   gameId: string;

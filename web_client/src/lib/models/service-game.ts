@@ -1,8 +1,6 @@
 import type { ServiceGame } from "bindings/ServiceGame";
-
-import { formatTile, getPossibleMelds } from "src/sdk/pkg-wrapper";
-
 import type { PlayerId, TileId } from "src/sdk/core";
+import { formatTile, getPossibleMelds } from "src/sdk/pkg-wrapper";
 import { getDeck } from "src/sdk/service-game-summary";
 
 export class ModelServiceGame {

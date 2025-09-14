@@ -7,5 +7,6 @@ export type RoundSummary = {
   discarded_tile: null | number;
   east_player_index: number;
   player_index: number;
+  round_index: number;
   wind: Wind;
 };

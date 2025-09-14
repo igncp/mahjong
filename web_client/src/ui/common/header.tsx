@@ -1,8 +1,7 @@
-import Link from "next/link";
-import React from "react";
-
 import styles from "./header.module.scss";
 import Title from "./title";
+import Link from "next/link";
+import React from "react";
 
 interface IProps {
   children?: React.ReactNode;

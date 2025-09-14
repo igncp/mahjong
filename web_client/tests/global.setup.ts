@@ -1,11 +1,9 @@
-import { expect, test as setup } from "@playwright/test";
-import { lastValueFrom } from "rxjs";
-
-import { HttpClient } from "src/sdk/http-client";
-
 import { API } from "./poms/api";
 import { AuthPage } from "./poms/auth-page";
 import { authFile } from "./utils";
+import { expect, test as setup } from "@playwright/test";
+import { lastValueFrom } from "rxjs";
+import { HttpClient } from "src/sdk/http-client";
 
 // https://playwright.dev/docs/test-global-setup-teardown
 // https://playwright.dev/docs/auth
