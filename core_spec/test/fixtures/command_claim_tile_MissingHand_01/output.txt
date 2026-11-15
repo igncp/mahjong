@@ -1,0 +1,2 @@
+-- A player without a hand cannot claim a tile.
+Error: MissingHand

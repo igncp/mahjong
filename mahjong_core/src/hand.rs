@@ -117,6 +117,7 @@ pub enum SortHandError {
 pub enum CanSayMahjongError {
     CantDrop,
     NotPair,
+    PlayerNotFound,
 }
 
 impl Hand {

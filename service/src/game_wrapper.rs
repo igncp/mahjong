@@ -7,9 +7,10 @@ use crate::{
 };
 use actix_web::{web, HttpResponse};
 use mahjong_core::{
-    game::{DrawTileResult, GameVersion},
+    game::{DrawTileResult, GameCommand, GameVersion},
     hand::SetIdContent,
-    Game, GamePhase, PlayerId, Players, TileId,
+    CommandClaimTile, CommandDiscardTile, CommandDrawTile, Game, GamePhase, PlayerId, Players,
+    TileId,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use service_contracts::{
@@ -271,7 +272,9 @@ impl<'a> GameWrapper<'a> {
     }
 
     pub async fn handle_admin_draw_tile(&mut self) -> ResponseCommon {
-        self.service_game.game.draw_tile_from_wall();
+        let _ = CommandDrawTile
+            .run(&mut self.service_game.game)
+            .unwrap_or_else(|never| match never {});
 
         self.sync_game_updated();
 
@@ -310,7 +313,9 @@ impl<'a> GameWrapper<'a> {
             return Err(ServiceError::Custom("Not your turn"));
         }
 
-        let tile_drawn = self.service_game.game.draw_tile_from_wall();
+        let tile_drawn = CommandDrawTile
+            .run(&mut self.service_game.game)
+            .unwrap_or_else(|never| match never {});
 
         match tile_drawn {
             DrawTileResult::WallExhausted | DrawTileResult::AlreadyDrawn => {
@@ -467,10 +472,7 @@ impl<'a> GameWrapper<'a> {
             .unwrap()
             .as_millis();
 
-        self.service_game
-            .game
-            .discard_tile_to_board(tile_id)
-            .unwrap_or_default();
+        let _ = CommandDiscardTile { tile_id: *tile_id }.run(&mut self.service_game.game);
 
         let mut game = self.service_game.clone();
 
@@ -492,10 +494,7 @@ impl<'a> GameWrapper<'a> {
             .unwrap()
             .as_millis();
 
-        self.service_game
-            .game
-            .discard_tile_to_board(tile_id)
-            .unwrap_or_default();
+        let _ = CommandDiscardTile { tile_id: *tile_id }.run(&mut self.service_game.game);
 
         let mut game = self.service_game.clone();
 
@@ -666,7 +665,9 @@ impl<'a> GameWrapper<'a> {
     }
 
     pub async fn handle_admin_claim_tile(&mut self, player_id: &PlayerId) -> ResponseCommon {
-        let success = self.service_game.game.claim_tile(player_id);
+        let success = CommandClaimTile { player_id }
+            .run(&mut self.service_game.game)
+            .is_ok();
 
         if success {
             self.sync_game_updated();
@@ -679,7 +680,9 @@ impl<'a> GameWrapper<'a> {
     }
 
     pub async fn handle_user_claim_tile(&mut self, player_id: &PlayerId) -> ResponseCommon {
-        let success = self.service_game.game.claim_tile(player_id);
+        let success = CommandClaimTile { player_id }
+            .run(&mut self.service_game.game)
+            .is_ok();
 
         if success {
             self.sync_game_updated();

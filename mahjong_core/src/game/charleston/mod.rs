@@ -1,10 +1,4 @@
 use super::Game;
-use serde::{Deserialize, Serialize};
-use ts_rs::TS;
-
-#[derive(Clone, Serialize, Deserialize, Debug, TS)]
-#[ts(export)]
-pub struct Charleston {}
 
 pub enum MoveCharlestonError {
     CharlestonAlreadyDone,

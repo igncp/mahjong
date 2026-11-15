@@ -1,0 +1,2 @@
+Meld: Kong
+Tiles: 一筒,二筒,三筒,四筒

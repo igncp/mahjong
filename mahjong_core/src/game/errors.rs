@@ -40,6 +40,14 @@ pub enum DrawError {
     NotEnoughTiles,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, EnumIter)]
+pub enum ClaimTileError {
+    MissingHand,
+    HandHasWrongTileCount,
+    NoClaimedTile,
+    BoardEmpty,
+}
+
 impl Default for DrawError {
     fn default() -> Self {
         Self::NotEnoughTiles

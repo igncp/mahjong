@@ -1,0 +1,2 @@
+-- The next wall tile is drawn successfully.
+Result: Normal 一萬

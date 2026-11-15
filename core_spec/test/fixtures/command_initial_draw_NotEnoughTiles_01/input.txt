@@ -1,0 +1,4 @@
+Command: CommandInitialDraw
+- P1: _
+Turn: P1, Dealer: P1, Round: 1, Wind: 東, Phase: Initial Draw
+Consecutive: 0

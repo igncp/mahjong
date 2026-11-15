@@ -11,6 +11,33 @@ run_docker_prod() {
 }
 
 run_docker() (
+  nix_closure() {
+    local architecture="$1"
+    local platform="$2"
+    local system="$3"
+    local closure_dir
+
+    closure_dir="build/mahjong-service-closure-$architecture"
+    docker run --rm \
+      --platform "$platform" \
+      -e GIT_CONFIG_COUNT=1 \
+      -e GIT_CONFIG_KEY_0=safe.directory \
+      -e GIT_CONFIG_VALUE_0=/app \
+      -e NIX_PATH= \
+      -v "$PWD:/app" \
+      nixos/nix:2.32.4 \
+      bash -c \
+      'git config --system --add safe.directory /app
+       cd /app
+       output="$(nix build .#container-app --no-link --no-update-lock-file --system "$2" --option build-users-group "" --extra-experimental-features "nix-command flakes" --print-out-paths)"
+       rm -rf "$1"
+       mkdir -p "$1"
+       mapfile -t closure < <(nix-store -qR "$output")
+       cp -R "${closure[@]}" "$1/"
+       chmod -R a+rw "$1"' \
+      -- "/app/$closure_dir" "$system"
+  }
+
   web() {
     if [ -d web_client/out/doc ]; then
       return
@@ -27,71 +54,36 @@ run_docker() (
     BRANCH_NAME="$(git rev-parse --abbrev-ref HEAD)"
 
     if [ -z "$DOCKER_NO_PUSH" ]; then
-      podman build \
+      nix_closure arm64 linux/arm64 aarch64-linux
+      docker build \
         --platform linux/arm64 \
         -f Dockerfile.service \
-        -t "igncp/mahjong_service:$BRANCH_NAME" \
-        --push \
+        -t "public.ecr.aws/u6b3o0i4/mahjong-repo:$BRANCH_NAME" \
         --progress=plain \
         .
 
-      if [ "$NO_K8S_DEPLOY" != "1" ]; then
-        docker_deploy
-      fi
+      aws ecr-public get-login-password --region us-east-1 |
+        docker login --username AWS --password-stdin public.ecr.aws/u6b3o0i4
+
+      docker push \
+        "public.ecr.aws/u6b3o0i4/mahjong-repo:$BRANCH_NAME"
     else
       echo "DOCKER_NO_PUSH is set, not pushing"
+      case "$(uname -m)" in
+      aarch64 | arm64) nix_closure arm64 linux/arm64 aarch64-linux ;;
+      x86_64 | amd64) nix_closure amd64 linux/amd64 x86_64-linux ;;
+      *)
+        echo "Unsupported architecture: $(uname -m)" >&2
+        exit 1
+        ;;
+      esac
 
-      podman build \
+      docker build \
         -f Dockerfile.service \
-        -t "igncp/mahjong_service:$BRANCH_NAME" \
+        -t "public.ecr.aws/u6b3o0i4/mahjong-repo:$BRANCH_NAME" \
         --progress=plain \
         .
     fi
-  }
-
-  docker_deploy() {
-    DEPLOYMENT_NAME="mahjong-server"
-    MISSING_ENVS=""
-
-    if [ -z "$DEPLOYMENT_LOCATION" ]; then
-      echo "DEPLOYMENT_LOCATION is not set"
-      MISSING_ENVS="true"
-    fi
-
-    if [ -z "$DEPLOYMENT_TOKEN" ]; then
-      echo "DEPLOYMENT_TOKEN is not set"
-      MISSING_ENVS="true"
-    fi
-
-    if [ -n "$MISSING_ENVS" ]; then
-      exit 1
-    fi
-
-    curl "$DEPLOYMENT_LOCATION/apis/apps/v1/namespaces/default/deployments/$DEPLOYMENT_NAME" \
-      -i \
-      --insecure \
-      --silent \
-      --show-error \
-      -X PATCH \
-      -H "Authorization: Bearer $DEPLOYMENT_TOKEN" \
-      -H "Accept: application/json" \
-      -H "Content-Type: application/strategic-merge-patch+json" \
-      --data "@-" <<EOF
-{
-  "spec": {
-    "template": {
-      "metadata": {
-        "annotations": {
-          "$DEPLOYMENT_NAME/restartedAt": "$(date +%Y-%m-%d_%T%Z)"
-        }
-      }
-    }
-  }
-}
-EOF
-
-    echo ''
-    echo "Redeployed $DEPLOYMENT_NAME"
   }
 
   web

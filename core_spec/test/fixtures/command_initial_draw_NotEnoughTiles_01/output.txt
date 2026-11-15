@@ -1,0 +1,2 @@
+-- The initial draw requires enough wall tiles to give every player thirteen tiles.
+Error: NotEnoughTiles

@@ -1,0 +1,5 @@
+Command: CommandClaimTile P1
+- P1: 二萬,三萬,四萬,五萬,六萬,七萬,八萬,九萬,一索,二索,三索,四索,五索
+Board: 一萬
+Turn: P1, Dealer: P1, Round: 1, Wind: 東, Phase: Playing
+Consecutive: 0

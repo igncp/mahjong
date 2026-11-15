@@ -1,0 +1,8 @@
+# HLS build configuration: https://haskell-language-server.readthedocs.io/en/latest/configuration.html#configuring-your-project-build
+cradle:
+  direct:
+    arguments:
+      - -isrc
+      - -itest
+      - -package
+      - hspec

@@ -44,6 +44,7 @@ mod test {
                 CanSayMahjongError::NotPair => {
                     vec!["一萬,二萬 一筒,一筒,一筒 二筒,二筒,二筒 三筒,三筒,三筒 四筒,四筒,四筒"]
                 }
+                CanSayMahjongError::PlayerNotFound => vec![],
             };
 
             for s in summary {

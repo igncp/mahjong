@@ -1,0 +1,4 @@
+Meld: Chow
+Tiles: 一筒,三筒,二筒
+Claimed: 三筒
+PlayerDiff: 1

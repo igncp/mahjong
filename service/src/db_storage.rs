@@ -1,5 +1,5 @@
 use crate::{
-    auth::{AuthInfo, AuthInfoData, GetAuthInfo, Username},
+    auth::{AuthInfo, AuthInfoData, GetAuthInfo},
     common::Storage,
     db_storage::models::{
         DieselAuthInfo, DieselAuthInfoEmail, DieselAuthInfoGithub, DieselGame, DieselGamePlayer,
@@ -11,10 +11,8 @@ use async_trait::async_trait;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
-use mahjong_core::{Game, GameId, PlayerId, Players};
+use mahjong_core::{GameId, PlayerId, Players};
 use redis::Commands;
-use rustc_hash::FxHashMap;
-use serde::{Deserialize, Serialize};
 use service_contracts::{ServiceGame, ServicePlayer, ServicePlayerGame};
 use tracing::debug;
 
@@ -35,13 +33,6 @@ mod schema;
 pub struct DBStorage {
     db_path: String,
     redis_path: String,
-}
-
-#[derive(Serialize, Deserialize)]
-struct FileContent {
-    auth: Option<FxHashMap<Username, AuthInfo>>,
-    games: Option<FxHashMap<GameId, Game>>,
-    players: Option<FxHashMap<PlayerId, ServicePlayer>>,
 }
 
 #[async_trait]

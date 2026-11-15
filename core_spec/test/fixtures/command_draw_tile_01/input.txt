@@ -1,0 +1,4 @@
+Command: CommandDrawTile
+Wall: 一萬
+Turn: P1, Dealer: P1, Round: 1, Wind: 東, Phase: Playing
+Consecutive: 0

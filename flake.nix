@@ -9,41 +9,55 @@
     ...
   }:
     flake-utils.lib.eachDefaultSystem (system: let
-      is-docker-ci = builtins.pathExists ./scripts/nix/is-docker-ci;
-      is-checks-ci = builtins.pathExists ./scripts/nix/is-checks-ci;
       pkgs = import unstable {
         inherit system;
       };
-
-      rust = import ./scripts/nix/rust.nix {inherit pkgs system is-docker-ci is-checks-ci;};
+      rust = import ./scripts/nix/rust.nix {inherit pkgs system;};
+      haskell = import ./scripts/nix/haskell.nix {inherit pkgs;};
     in {
+      packages.container-app = pkgs.rustPlatform.buildRustPackage {
+        pname = "mahjong-service";
+        version = "0.1.0";
+        src = ./.;
+        cargoLock.lockFile = ./Cargo.lock;
+        cargoBuildFlags = ["-p" "mahjong_service"];
+        doCheck = false;
+        nativeBuildInputs = [pkgs.pkg-config];
+        buildInputs = [pkgs.openssl pkgs.postgresql];
+
+        installPhase = ''
+          mkdir -p "$out/bin"
+          cp target/${pkgs.stdenv.hostPlatform.rust.rustcTargetSpec}/release/mahjong_service "$out/bin/mahjong_service"
+        '';
+      };
+
       devShell = pkgs.mkShell {
         TS_RS_EXPORT_DIR = "../web_client/bindings";
         RUST_BACKTRACE = 1;
+        # HLS uses its own GHC package database unless this exposes the test dependencies.
+        GHC_PACKAGE_PATH = "${haskell.test-ghc-package-db}";
 
-        shellHook =
-          ''
-            export PATH=$PATH:$HOME/.cargo/bin
-            export PATH=$PATH:$PWD
-          ''
-          + (
-            if (is-docker-ci || is-checks-ci)
-            then ""
-            else rust.dev-hook
-          );
+        shellHook = ''
+          export PATH="$PWD:$PATH"
+        '';
+
         packages = with pkgs;
-          [bun patchelf postgresql nodejs_22] # without nodejs_22 prettier throws an error
-          ++ (
-            if is-docker-ci
-            then []
-            else [sqlfluff]
-          )
-          ++ (
-            if is-docker-ci == false && is-checks-ci == false
-            then [libargon2 gh entr scc]
-            else []
-          )
-          ++ rust.extra-shell-packages;
+          [
+            alejandra
+            awscli2
+            bun
+            entr
+            libargon2
+            nodejs_22 # without nodejs_22 prettier throws an error
+            patchelf
+            postgresql
+            scc
+            shfmt
+            sqlfluff
+          ]
+          ++ rust.extra-shell-packages
+          ++ haskell.extra-shell-packages;
       };
+      apps = haskell.apps;
     });
 }

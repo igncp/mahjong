@@ -1,8 +1,13 @@
 pub use self::creation::GameNewOpts;
-pub use self::definition::{DrawTileResult, Game, GameId, GamePhase, GameStyle, GameVersion};
+pub use self::definition::{
+    Command, CommandClaimTile, CommandDiscardTile, CommandDrawTile, CommandInitialDraw,
+    CommandPersistedClaimTile, CommandPrepareTable, DrawTileResult, Game, GameId, GamePhase,
+    GameStyle, GameVersion,
+};
 use self::errors::DecideDealerError;
 pub use self::errors::{
-    BreakMeldError, CreateMeldError, DiscardTileError, DrawError, PassNullRoundError,
+    BreakMeldError, ClaimTileError, CreateMeldError, DiscardTileError, DrawError,
+    PassNullRoundError,
 };
 pub use self::players::{PlayerId, Players, PlayersVec};
 use crate::hand::KongTile;
@@ -19,6 +24,7 @@ use crate::{
 };
 use crate::{Tile, Wind, WINDS_ROUND_ORDER};
 use rustc_hash::FxHashSet;
+use std::convert::Infallible;
 use uuid::Uuid;
 
 mod charleston;
@@ -26,6 +32,100 @@ mod creation;
 mod definition;
 mod errors;
 mod players;
+
+pub trait GameCommand {
+    type Output;
+    type Error;
+
+    fn run(&self, game: &mut Game) -> Result<Self::Output, Self::Error>;
+}
+
+impl GameCommand for CommandInitialDraw {
+    type Output = ();
+    type Error = DrawError;
+
+    fn run(&self, game: &mut Game) -> Result<(), Self::Error> {
+        game.initial_draw()
+    }
+}
+
+impl GameCommand for CommandDrawTile {
+    type Output = DrawTileResult;
+    type Error = Infallible;
+
+    fn run(&self, game: &mut Game) -> Result<DrawTileResult, Self::Error> {
+        Ok(game.draw_tile_from_wall())
+    }
+}
+
+impl GameCommand for CommandDiscardTile {
+    type Output = ();
+    type Error = DiscardTileError;
+
+    fn run(&self, game: &mut Game) -> Result<(), Self::Error> {
+        game.discard_tile_to_board(&self.tile_id)
+    }
+}
+
+impl GameCommand for CommandClaimTile<'_> {
+    type Output = ();
+    type Error = ClaimTileError;
+
+    fn run(&self, game: &mut Game) -> Result<Self::Output, Self::Error> {
+        game.claim_tile(self.player_id)
+    }
+}
+
+impl GameCommand for CommandPersistedClaimTile {
+    type Output = ();
+    type Error = ClaimTileError;
+
+    fn run(&self, game: &mut Game) -> Result<Self::Output, Self::Error> {
+        CommandClaimTile::from(self).run(game)
+    }
+}
+
+impl GameCommand for CommandPrepareTable {
+    type Output = ();
+    type Error = Infallible;
+
+    fn run(&self, game: &mut Game) -> Result<(), Self::Error> {
+        game.apply_prepare_table(self.with_dead_wall, self.shuffle_tiles);
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub enum CommandError {
+    ClaimTile(ClaimTileError),
+    DiscardTile(DiscardTileError),
+    InitialDraw(DrawError),
+}
+
+impl GameCommand for Command {
+    type Output = ();
+    type Error = CommandError;
+
+    fn run(&self, game: &mut Game) -> Result<(), Self::Error> {
+        match self {
+            Self::CommandDrawTile(command) => match command.run(game) {
+                Ok(_) => Ok(()),
+                Err(never) => match never {},
+            },
+            Self::CommandDiscardTile(command) => {
+                command.run(game).map_err(CommandError::DiscardTile)
+            }
+            Self::CommandClaimTile(command) => command.run(game).map_err(CommandError::ClaimTile),
+            Self::CommandInitialDraw(command) => {
+                command.run(game).map_err(CommandError::InitialDraw)
+            }
+            Self::CommandPrepareTable(command) => match command.run(game) {
+                Ok(()) => Ok(()),
+                Err(never) => match never {},
+            },
+        }
+    }
+}
 
 impl Game {
     // If `check_for_mahjong` is true, then it will only check for mahjong, if is false, then it
@@ -146,7 +246,6 @@ impl Game {
             .table
             .hands
             .get(&player_id)
-            .clone()
             .unwrap()
             .list
             .into_iter()
@@ -262,7 +361,13 @@ impl Game {
         hand.can_say_mahjong()?;
 
         self.calculate_hand_score(player_id);
-        let player_index = self.players.iter().position(|p| p == player_id).unwrap();
+        let player_index = self.players.iter().position(|p| p == player_id);
+
+        if player_index.is_none() {
+            return Err(CanSayMahjongError::PlayerNotFound);
+        }
+
+        let player_index = player_index.unwrap();
 
         self.round.move_after_win(&mut self.phase, player_index);
 
@@ -326,62 +431,9 @@ impl Game {
         self.round.east_player_index = 0;
         self.round.player_index = 0;
         self.round.tile_claimed = None;
+        self.players = new_players;
 
         self.phase = GamePhase::InitialShuffle;
-
-        Ok(())
-    }
-
-    pub fn prepare_table(&mut self, with_dead_wall: bool) {
-        self.table = DEFAULT_DECK.create_table(&self.players);
-        self.table.draw_wall.position_tiles(Some(PositionTilesOpts {
-            shuffle: Some(true),
-            dead_wall: Some(with_dead_wall),
-        }));
-        self.phase = GamePhase::InitialDraw;
-    }
-
-    fn draw_tile_for_player(&mut self, player_id: &PlayerId) -> Result<(), DrawError> {
-        let player_wind = self.round.get_player_wind(&self.players.0, player_id);
-
-        loop {
-            let tile_id = self.table.draw_wall.pop_for_wind(&player_wind);
-
-            if tile_id.is_none() {
-                return Err(DrawError::NotEnoughTiles);
-            }
-
-            let tile_id = tile_id.unwrap();
-            let is_bonus = DEFAULT_DECK.0[tile_id].is_bonus();
-
-            if is_bonus {
-                let bonus_tiles = self.table.bonus_tiles.get_or_create(player_id);
-
-                bonus_tiles.push(tile_id);
-                continue;
-            }
-
-            let hand = self.table.hands.0.get_mut(player_id).unwrap();
-            hand.push(HandTile::from_id(tile_id));
-            return Ok(());
-        }
-    }
-
-    pub fn initial_draw(&mut self) -> Result<(), DrawError> {
-        let tiles_after_claim = self.style.tiles_after_claim();
-
-        for player_id in self.players.0.clone() {
-            'loop_label: loop {
-                let hand = self.table.hands.0.get(&player_id).unwrap();
-                if hand.len() == tiles_after_claim - 1 {
-                    break 'loop_label;
-                }
-
-                self.draw_tile_for_player(&player_id)?;
-            }
-        }
-
-        self.phase = GamePhase::Playing;
 
         Ok(())
     }
@@ -454,7 +506,7 @@ impl Game {
         }
 
         let tile_index = tile_index.unwrap();
-        let tile = player_hand.get(tile_index).clone();
+        let tile = player_hand.get(tile_index);
 
         if !tile.concealed {
             return Err(DiscardTileError::TileIsExposed);
@@ -481,8 +533,6 @@ impl Game {
             }
         }
 
-        player_hand.list.remove(tile_index);
-
         self.table.board.0.push(tile.id);
 
         self.round.tile_claimed = Some(RoundTileClaimed {
@@ -490,6 +540,8 @@ impl Game {
             id: tile.id,
             by: None,
         });
+
+        player_hand.list.remove(tile_index);
 
         Ok(())
     }
@@ -603,20 +655,20 @@ impl Game {
         player_id: &PlayerId,
         set_id: &String,
     ) -> Result<(), BreakMeldError> {
-        let hand = self.table.hands.0.get(player_id);
+        let hand = self.table.hands.0.get_mut(player_id);
 
         if hand.is_none() {
             return Err(BreakMeldError::MissingHand);
         }
 
-        let mut hand = hand.unwrap().clone();
+        let hand = hand.unwrap();
 
         if hand.kong_tiles.iter().any(|t| t.set_id == set_id.clone()) {
             return Err(BreakMeldError::MeldIsKong);
         }
 
         for hand_tile in hand.list.iter_mut() {
-            if hand_tile.set_id.is_some() && hand_tile.set_id.clone().unwrap() == *set_id {
+            if hand_tile.set_id.is_some() && hand_tile.set_id.as_ref() == Some(set_id) {
                 if !hand_tile.concealed {
                     return Err(BreakMeldError::TileIsExposed);
                 }
@@ -625,23 +677,27 @@ impl Game {
             }
         }
 
-        self.table.hands.0.insert(player_id.clone(), hand);
-
         Ok(())
     }
 
-    pub fn claim_tile(&mut self, player_id: &PlayerId) -> bool {
-        let player_hand = self.table.hands.0.get_mut(player_id);
-        if player_hand.is_none() {
-            return false;
-        }
-        let player_hand = player_hand.unwrap();
+    fn claim_tile(&mut self, player_id: &PlayerId) -> Result<(), ClaimTileError> {
+        let player_hand = self
+            .table
+            .hands
+            .0
+            .get_mut(player_id)
+            .ok_or(ClaimTileError::MissingHand)?;
 
-        if player_hand.len() != self.style.tiles_after_claim() - 1
-            || self.round.tile_claimed.is_none()
-            || self.table.board.0.is_empty()
-        {
-            return false;
+        if player_hand.len() != self.style.tiles_after_claim() - 1 {
+            return Err(ClaimTileError::HandHasWrongTileCount);
+        }
+
+        if self.round.tile_claimed.is_none() {
+            return Err(ClaimTileError::NoClaimedTile);
+        }
+
+        if self.table.board.0.is_empty() {
+            return Err(ClaimTileError::BoardEmpty);
         }
 
         let tile = self.table.board.0.pop().unwrap();
@@ -658,7 +714,7 @@ impl Game {
             set_id: None,
         });
 
-        true
+        Ok(())
     }
 
     pub fn update_version(&mut self) {
@@ -711,5 +767,61 @@ impl Game {
         }
 
         self.players.swap(player_id, &current_player_with_wind);
+    }
+}
+
+impl Game {
+    fn apply_prepare_table(&mut self, with_dead_wall: bool, shuffle_tiles: bool) {
+        self.table = DEFAULT_DECK.create_table(&self.players);
+        self.table.draw_wall.position_tiles(Some(PositionTilesOpts {
+            shuffle: Some(shuffle_tiles),
+            dead_wall: Some(with_dead_wall),
+        }));
+        self.phase = GamePhase::InitialDraw;
+    }
+
+    fn draw_tile_for_player(&mut self, player_id: &PlayerId) -> Result<(), DrawError> {
+        let player_wind = self.round.get_player_wind(&self.players.0, player_id);
+
+        loop {
+            let tile_id = self.table.draw_wall.pop_for_wind(&player_wind);
+
+            if tile_id.is_none() {
+                return Err(DrawError::NotEnoughTiles);
+            }
+
+            let tile_id = tile_id.unwrap();
+            let is_bonus = DEFAULT_DECK.0[tile_id].is_bonus();
+
+            if is_bonus {
+                let bonus_tiles = self.table.bonus_tiles.get_or_create(player_id);
+
+                bonus_tiles.push(tile_id);
+                continue;
+            }
+
+            let hand = self.table.hands.0.get_mut(player_id).unwrap();
+            hand.push(HandTile::from_id(tile_id));
+            return Ok(());
+        }
+    }
+
+    fn initial_draw(&mut self) -> Result<(), DrawError> {
+        let tiles_after_claim = self.style.tiles_after_claim();
+
+        for player_id in self.players.0.clone() {
+            'loop_label: loop {
+                let hand = self.table.hands.0.get(&player_id).unwrap();
+                if hand.len() == tiles_after_claim - 1 {
+                    break 'loop_label;
+                }
+
+                self.draw_tile_for_player(&player_id)?;
+            }
+        }
+
+        self.phase = GamePhase::Playing;
+
+        Ok(())
     }
 }

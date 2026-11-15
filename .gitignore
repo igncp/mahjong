@@ -14,3 +14,4 @@ perf.data
 perf.data.*
 .direnv
 /result
+/build

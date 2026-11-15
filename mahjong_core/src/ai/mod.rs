@@ -1,6 +1,9 @@
-use crate::game::{DrawError, DrawTileResult};
+use crate::game::{DrawError, DrawTileResult, GameCommand};
 use crate::meld::PossibleMeld;
-use crate::{Game, GamePhase, PlayerId, TileId, Wind, WINDS_ROUND_ORDER};
+use crate::{
+    CommandClaimTile, CommandInitialDraw, CommandPrepareTable, Game, GamePhase, PlayerId, TileId,
+    Wind, WINDS_ROUND_ORDER,
+};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use rustc_hash::FxHashSet;
@@ -147,7 +150,15 @@ impl<'a> StandardAI<'a> {
                 };
             }
             GamePhase::InitialShuffle => {
-                self.game.prepare_table(self.with_dead_wall);
+                match (CommandPrepareTable {
+                    with_dead_wall: self.with_dead_wall,
+                    shuffle_tiles: true,
+                })
+                .run(self.game)
+                {
+                    Ok(()) => {}
+                    Err(never) => match never {},
+                }
 
                 return PlayActionResult {
                     changed: true,
@@ -194,7 +205,7 @@ impl<'a> StandardAI<'a> {
                     exit_location: PlayExitLocation::StartGame,
                 };
             }
-            GamePhase::InitialDraw => match self.game.initial_draw() {
+            GamePhase::InitialDraw => match CommandInitialDraw.run(self.game) {
                 Ok(_) => {
                     if self.sort_on_initial_draw {
                         for player in self.game.table.hands.0.clone().keys() {
@@ -259,7 +270,11 @@ impl<'a> StandardAI<'a> {
                         self.game.round.get_claimable_tile(&meld.player_id)
                     {
                         if claimable_type == *missing_tile {
-                            let was_tile_claimed = self.game.claim_tile(&meld.player_id);
+                            let was_tile_claimed = CommandClaimTile {
+                                player_id: &meld.player_id,
+                            }
+                            .run(self.game)
+                            .is_ok();
 
                             if was_tile_claimed {
                                 return PlayActionResult {

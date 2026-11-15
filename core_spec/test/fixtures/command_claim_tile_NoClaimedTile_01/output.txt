@@ -1,0 +1,2 @@
+-- A board tile cannot be claimed unless it is the recorded current discard.
+Error: NoClaimedTile

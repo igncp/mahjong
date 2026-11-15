@@ -1,0 +1,2 @@
+Meld: Kong
+Tiles: 西,西,西,西

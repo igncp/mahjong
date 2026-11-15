@@ -1,0 +1,3 @@
+Meld: Possible
+Tiles: 二筒,一筒,三筒
+PlayerDiff: 0

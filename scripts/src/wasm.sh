@@ -8,8 +8,8 @@ run_pack_wasm() {
 
   # It is necessary to build with wasm-pack inside Docker in NixOS due to
   # wasm-bindgen not working on NixOS directly, even inside the nix shell
-  podman start -ai mahjong-rust ||
-    podman run -it \
+  docker start -ai mahjong-rust ||
+    docker run -it \
       -v "$PWD:/data" \
       --name mahjong-rust \
       rust:bookworm \

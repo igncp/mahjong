@@ -2,7 +2,7 @@
 
 set -e
 
-podman exec \
+docker exec \
   -it \
   -e PAGER=cat \
   mahjong_db \

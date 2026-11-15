@@ -1,0 +1,2 @@
+-- The player with thirteen tiles claims the current board tile.
+Result: Claimed

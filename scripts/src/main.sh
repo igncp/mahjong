@@ -32,8 +32,6 @@ Run various scripts for the Mahjong project
   - docker_build: Script to build the code, is run inside docker
   - docker_prod: Build docker images for production, locally
   - fix: Run linters in fix mode
-  - gh_checks: Triggers a manual check in GitHub Actions
-  - gh_deploy: Triggers a manual deployment in GitHub Actions
   - pack_wasm: Pack the wasm files (alias: wasm)
   - profile_instruments: Create a trace file to be inspected by Instruments
   - test: Runs tests plus formatting
@@ -64,12 +62,6 @@ main() {
     ;;
   wasm | pack_wasm)
     run_pack_wasm
-    ;;
-  gh_deploy)
-    gh_deploy
-    ;;
-  gh_checks)
-    gh_checks
     ;;
   dev_install | install_dev)
     run_setup_dev_install "$2"

@@ -4,6 +4,7 @@ set -e
 
 run_setup_dev_install() {
   (cd scripts && bash src/main.sh pack_wasm)
+  set -x
 
   cd service
 
@@ -12,22 +13,22 @@ run_setup_dev_install() {
     cp .env.sample .env
   fi
 
-  if [ -n "$(podman ps | grep mahjong_redis)" ]; then
-    podman kill mahjong_redis || true
+  if [ -n "$(docker ps | grep mahjong_redis)" ]; then
+    docker kill mahjong_redis || true
   fi
 
-  podman run \
+  docker run \
     --rm \
     --name mahjong_redis \
     -p 6379:6379 \
     -d \
     redis:7
 
-  if [ -n "$(podman ps | grep mahjong_db)" ]; then
-    podman kill mahjong_db || true
+  if [ -n "$(docker ps | grep mahjong_db)" ]; then
+    docker kill mahjong_db || true
   fi
 
-  podman run \
+  docker run \
     --rm \
     --name mahjong_db \
     -d \
@@ -36,14 +37,22 @@ run_setup_dev_install() {
     -e POSTGRES_USER=postgres \
     -e POSTGRES_PASSWORD=postgres \
     -e POSTGRES_DB=mahjong \
+    -e POSTGRES_INITDB_ARGS='--auth-host=scram-sha-256 --auth-local=trust' \
     postgres:16
 
   echo "Waiting for the database to start..."
   sleep 4
 
+  docker exec mahjong_db sh -lc '
+    if ! grep -Eq "^host[[:space:]]+all[[:space:]]+all[[:space:]]+all[[:space:]]+scram-sha-256$" "$PGDATA/pg_hba.conf"; then
+      printf "\nhost all all all scram-sha-256\n" >> "$PGDATA/pg_hba.conf"
+    fi
+    psql -U postgres -d postgres -c "SELECT pg_reload_conf();" >/dev/null
+  '
+
   if [ "$1" == "--reset" ]; then
     echo "Resetting database"
-    podman exec -it mahjong_db psql -U postgres \
+    docker exec -it mahjong_db psql -U postgres \
       -c "DROP DATABASE mahjong;" \
       -c "CREATE DATABASE mahjong;"
   fi

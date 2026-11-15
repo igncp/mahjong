@@ -1,0 +1,4 @@
+Command: CommandDiscardTile 二筒
+- P1: 一萬,三萬,四萬,五萬,六萬,七萬,八萬,九萬,一索,二索,三索 *一筒,二筒,三筒
+Turn: P1, Dealer: P1, Round: 1, Wind: 東, Phase: Beginning
+Consecutive: 0

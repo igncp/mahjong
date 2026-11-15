@@ -1,0 +1,3 @@
+Meld: Chow
+Tiles: 一筒,一筒,一筒
+Claimed: 三筒

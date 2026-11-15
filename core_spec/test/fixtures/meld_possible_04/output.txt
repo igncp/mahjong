@@ -1,0 +1,2 @@
+-- NO means this valid pung is not a Mahjong declaration.
+三筒,三筒,三筒 NO

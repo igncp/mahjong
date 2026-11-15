@@ -1,0 +1,2 @@
+Meld: Possible
+Tiles: 一筒,二筒,四筒

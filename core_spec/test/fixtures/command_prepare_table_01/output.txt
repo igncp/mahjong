@@ -1,0 +1,2 @@
+-- The table is prepared and the game enters the initial-draw phase.
+Result: Prepared

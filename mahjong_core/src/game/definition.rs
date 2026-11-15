@@ -1,5 +1,6 @@
-use super::Players;
+use super::{PlayerId, Players};
 use crate::{macros::derive_game_common, round::Round, Score, Table, TileId};
+use serde::{Deserialize, Serialize};
 use std::{
     fmt::{Display, Formatter},
     str::FromStr,
@@ -28,6 +29,59 @@ pub enum GameStyle {
 
 pub type GameId = String;
 pub type GameVersion = String;
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CommandInitialDraw;
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CommandPrepareTable {
+    pub with_dead_wall: bool,
+    pub shuffle_tiles: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CommandDrawTile;
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CommandDiscardTile {
+    pub tile_id: TileId,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CommandClaimTile<'a> {
+    pub player_id: &'a PlayerId,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CommandPersistedClaimTile {
+    pub player_id: PlayerId,
+}
+
+impl<'a> From<CommandClaimTile<'a>> for CommandPersistedClaimTile {
+    fn from(command: CommandClaimTile<'a>) -> Self {
+        Self {
+            player_id: command.player_id.clone(),
+        }
+    }
+}
+
+impl<'a> From<&'a CommandPersistedClaimTile> for CommandClaimTile<'a> {
+    fn from(command: &'a CommandPersistedClaimTile) -> Self {
+        Self {
+            player_id: &command.player_id,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "data", rename_all = "snake_case")]
+pub enum Command {
+    CommandDrawTile(CommandDrawTile),
+    CommandDiscardTile(CommandDiscardTile),
+    CommandClaimTile(CommandPersistedClaimTile),
+    CommandInitialDraw(CommandInitialDraw),
+    CommandPrepareTable(CommandPrepareTable),
+}
 
 derive_game_common! {
 #[derive(TS)]

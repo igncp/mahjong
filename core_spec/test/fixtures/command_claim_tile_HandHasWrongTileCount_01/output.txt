@@ -1,0 +1,2 @@
+-- A player must have thirteen tiles before claiming the board tile.
+Error: HandHasWrongTileCount

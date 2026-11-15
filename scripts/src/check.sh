@@ -14,6 +14,9 @@ run_fix() {
 }
 
 run_check() {
+  alejandra flake.nix scripts/nix
+  shfmt -w scripts/src
+  cargo fmt
   cargo check --workspace --release --all-targets
   cargo build --release
   cargo test --release
@@ -21,6 +24,9 @@ run_check() {
   run_clippy
 
   cargo doc --release --no-deps
+
+  fourmolu --mode inplace core_spec/src/*.hs core_spec/test/*.hs
+  hlint core_spec/src core_spec/test
 
   (cd service && sqlfluff lint --dialect postgres migrations/**/*.sql)
 

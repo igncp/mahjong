@@ -3,104 +3,123 @@ mod test {
     use crate::deck::DEFAULT_DECK;
     use crate::hand::HandPossibleMeld;
     use crate::meld::{get_is_chow, get_is_kong, get_is_pung, PlayerDiff, SetCheckOpts};
+    use crate::tests::utils::{fixtures_path, read_fixture};
     use crate::{Hand, Tile};
     use pretty_assertions::assert_eq;
+    use std::fs;
 
-    const PUNG_FIXTURES: &[(&str, bool)] = &[
-        ("一筒,一筒,一筒", true),
-        ("一筒,二筒,一筒", false),
-        ("北,北,北", true),
-        ("竹,竹,竹", false),
-        ("北,北,七筒", false),
-    ];
-
-    const CHOW_FIXTURES: &[(&str, bool, Option<&'static str>, PlayerDiff)] = &[
-        ("一筒,三筒,二筒", true, None, None),
-        ("一筒,三筒,二筒", true, Some("三筒"), Some(1)),
-        ("一筒,三筒,二筒", false, Some("三筒"), Some(-1)),
-        ("一筒,一筒,一筒", false, Some("三筒"), None),
-    ];
-
-    const KONG_FIXTURES: &[(&str, bool)] = &[
-        ("西,西,七筒,七筒", false),
-        ("西,西,西,西", true),
-        ("一筒,二筒,三筒,四筒", false),
-    ];
-
-    const POSSIBLE_MELDS_FIXTURES: &[(&str, PlayerDiff, &[&str])] = &[
-        ("二筒,一筒,三筒", Some(0), &["二筒,一筒,三筒 NO"]),
-        ("一筒,二筒,四筒", None, &[]),
-        (
-            "三筒,一筒,二筒,五筒,五筒,五筒",
-            None,
-            &["三筒,一筒,二筒 NO", "五筒,五筒,五筒 NO"],
-        ),
-    ];
-
-    enum MeldFixtureArray {
-        Small(&'static [(&'static str, bool)]),
-        Full(&'static [(&'static str, bool, Option<&'static str>, PlayerDiff)]),
+    struct MeldFixture {
+        tiles: String,
+        claimed_tile: Option<String>,
+        player_diff: PlayerDiff,
+        expected: String,
     }
 
-    fn test_meld(arr: MeldFixtureArray, func: impl Fn(&SetCheckOpts) -> bool) {
-        let parsed_arr = match arr {
-            MeldFixtureArray::Small(arr) => &arr
+    fn read_meld_fixture(name: &str) -> MeldFixture {
+        let (input, output) = read_fixture(name);
+        let fields = input
+            .trim()
+            .lines()
+            .map(|line| line.split_once(": ").unwrap())
+            .collect::<Vec<_>>();
+        let required = |field| {
+            fields
                 .iter()
-                .map(|(a, b)| (*a, *b, None, None))
-                .collect::<Vec<_>>(),
-            MeldFixtureArray::Full(arr) => &arr.to_vec(),
+                .find(|(field_name, _)| *field_name == field)
+                .unwrap()
+                .1
         };
 
-        for (index, (tiles, expected_result, claimed_tile, board_tile_player_diff)) in
-            parsed_arr.iter().enumerate()
-        {
-            let sub_hand = Hand::from_summary(tiles);
-            let sub_hand_slice = sub_hand
-                .list
+        MeldFixture {
+            tiles: required("Tiles").to_string(),
+            claimed_tile: fields
                 .iter()
-                .map(|h| &DEFAULT_DECK.0[h.id])
-                .collect::<Vec<&Tile>>();
-            let opts = SetCheckOpts {
-                board_tile_player_diff: *board_tile_player_diff,
-                claimed_tile: claimed_tile.map(Tile::id_from_summary),
-                sub_hand: &sub_hand_slice,
-            };
-
-            assert_eq!(func(&opts), *expected_result, "index: {index}");
+                .find(|(field_name, _)| *field_name == "Claimed")
+                .map(|(_, value)| value.to_string()),
+            player_diff: fields
+                .iter()
+                .find(|(field_name, _)| *field_name == "PlayerDiff")
+                .map(|(_, value)| value.parse().unwrap()),
+            expected: output.trim().to_string(),
         }
+    }
+
+    fn meld_fixture_names(meld_type: &str) -> Vec<String> {
+        let prefix = format!("meld_{meld_type}_");
+        let mut fixtures = fs::read_dir(fixtures_path())
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(|entry| entry.file_type().unwrap().is_dir())
+            .filter_map(|entry| entry.file_name().into_string().ok())
+            .filter(|name| name.starts_with(&prefix))
+            .collect::<Vec<_>>();
+        fixtures.sort();
+        fixtures
+    }
+
+    fn check_meld(name: &str, check: impl Fn(&SetCheckOpts) -> bool) {
+        let fixture = read_meld_fixture(name);
+        let hand = Hand::from_summary(&fixture.tiles);
+        let sub_hand = hand
+            .list
+            .iter()
+            .map(|tile| &DEFAULT_DECK.0[tile.id])
+            .collect::<Vec<&Tile>>();
+        let opts = SetCheckOpts {
+            board_tile_player_diff: fixture.player_diff,
+            claimed_tile: fixture
+                .claimed_tile
+                .map(|tile| Tile::id_from_summary(&tile)),
+            sub_hand: &sub_hand,
+        };
+
+        assert_eq!(
+            check(&opts).to_string(),
+            fixture.expected,
+            "fixture: {name}"
+        );
     }
 
     #[test]
     fn test_is_pung() {
-        test_meld(MeldFixtureArray::Small(PUNG_FIXTURES), get_is_pung);
+        for name in meld_fixture_names("pung") {
+            check_meld(&name, get_is_pung);
+        }
     }
 
     #[test]
     fn test_is_chow() {
-        test_meld(MeldFixtureArray::Full(CHOW_FIXTURES), get_is_chow);
+        for name in meld_fixture_names("chow") {
+            check_meld(&name, get_is_chow);
+        }
     }
 
     #[test]
     fn test_get_is_kong() {
-        test_meld(MeldFixtureArray::Small(KONG_FIXTURES), get_is_kong);
+        for name in meld_fixture_names("kong") {
+            check_meld(&name, get_is_kong);
+        }
     }
 
     #[test]
     fn test_get_possible_melds() {
-        for (index, (hand_summary, player_diff, expected_meld_summary)) in
-            POSSIBLE_MELDS_FIXTURES.iter().enumerate()
-        {
-            let hand = Hand::from_summary(hand_summary);
+        for name in meld_fixture_names("possible") {
+            let fixture = read_meld_fixture(&name);
+            let hand = Hand::from_summary(&fixture.tiles);
             let possible_melds = hand
-                .get_possible_melds(*player_diff, None, false)
+                .get_possible_melds(fixture.player_diff, None, false)
                 .into_iter()
-                .map(|m| {
-                    let hand_possible_meld: HandPossibleMeld = m;
+                .map(|meld| {
+                    let hand_possible_meld: HandPossibleMeld = meld;
                     hand_possible_meld.to_summary()
                 })
                 .collect::<Vec<_>>();
+            let expected = match fixture.expected.as_str() {
+                "None" => vec![],
+                output => output.lines().collect(),
+            };
 
-            assert_eq!(possible_melds, *expected_meld_summary, "index: {index}");
+            assert_eq!(possible_melds, expected, "fixture: {name}");
         }
     }
 }

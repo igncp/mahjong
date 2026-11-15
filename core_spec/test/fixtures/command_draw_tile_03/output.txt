@@ -1,0 +1,2 @@
+-- A player may draw at most one wall tile before resolving their turn.
+Result: AlreadyDrawn

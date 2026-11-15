@@ -6,6 +6,7 @@ Hong Kong style mahjong game engine and web application. It uses a server to
 handle games which handles most of the game mechanics.
 
 1. Core library with the game mechanics, tests, and AIs focused in performance and correctness
+    - It has a core specification written in Haskell which shares tests with the Rust implementation
 1. Service that persists and handles games for clients
     - Can be communicated via an HTTP API
     - It creates a WebSocket per active game, to process the game and communicate with clients

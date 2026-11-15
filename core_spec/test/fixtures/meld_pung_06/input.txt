@@ -1,0 +1,2 @@
+Meld: Pung
+Tiles: 中,中,中

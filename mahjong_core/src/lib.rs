@@ -1,6 +1,9 @@
 #![deny(clippy::use_self, clippy::shadow_unrelated)]
 pub use deck::Deck;
-pub use game::{Game, GameId, GamePhase, PlayerId, Players};
+pub use game::{
+    Command, CommandClaimTile, CommandDiscardTile, CommandDrawTile, CommandInitialDraw,
+    CommandPersistedClaimTile, CommandPrepareTable, Game, GameId, GamePhase, PlayerId, Players,
+};
 pub use hand::{Hand, HandTile, SetId};
 pub use hand::{Hands, HandsMap};
 pub use score::{Score, ScoreItem, ScoreMap};

@@ -5,7 +5,7 @@ set -e
 E2E_BASE_URL=${E2E_BASE_URL:-http://localhost:5000}
 ID=$(id -u)
 
-podman run -it \
+docker run -it \
   --rm --net=host \
   -u $ID \
   -v $(pwd)/..:/app \

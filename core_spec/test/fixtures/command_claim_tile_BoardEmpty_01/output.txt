@@ -1,0 +1,2 @@
+-- A recorded discard cannot be claimed after the board tile has been removed.
+Error: BoardEmpty
